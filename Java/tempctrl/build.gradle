@@ -1,0 +1,40 @@
+plugins {
+	id 'org.springframework.boot' version '2.2.1.RELEASE'
+	id 'io.spring.dependency-management' version '1.0.8.RELEASE'
+	id 'java'
+}
+
+group = 'com.easleydp'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '11'
+
+repositories {
+	mavenCentral()
+}
+
+configurations {
+	// We'll use Undertow instead of Tamcat
+    compile.exclude module: 'spring-boot-starter-tomcat'
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	implementation 'org.springframework.boot:spring-boot-starter-mail'
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	testImplementation('org.springframework.boot:spring-boot-starter-test') {
+		exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
+	}
+	testImplementation 'org.springframework.security:spring-security-test'
+	
+	// Use Undertow instead of Tomcat
+    implementation 'org.springframework.boot:spring-boot-starter-undertow'
+
+    implementation('org.apache.commons:commons-lang3:3.+')
+    implementation('commons-io:commons-io:2.+')
+    implementation('com.google.guava:guava:28.+')
+}
+
+test {
+	useJUnitPlatform()
+}

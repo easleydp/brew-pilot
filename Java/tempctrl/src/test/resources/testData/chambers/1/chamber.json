@@ -1,0 +1,6 @@
+{
+  "name": "Beer fridge",
+  "fridgeMinOnTimeMins": 5,
+  "fridgeMinOffTimeMins": 10,
+  "heaterPowerWatts": 20
+}

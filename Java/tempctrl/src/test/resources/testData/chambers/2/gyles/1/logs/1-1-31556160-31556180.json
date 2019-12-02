@@ -1,0 +1,91 @@
+{
+  "readings" : [ {
+    "tTarget" : 150,
+    "tBeer" : 152,
+    "tExternal" : 148,
+    "tChamber" : 154,
+    "tPi" : 153,
+    "coolerOn" : true,
+    "mode" : "AUTO"
+  }, {
+    "tTarget" : 150,
+    "tBeer" : 151,
+    "tExternal" : 151,
+    "tChamber" : 155,
+    "tPi" : 158,
+    "coolerOn" : true,
+    "mode" : "AUTO"
+  }, {
+    "tTarget" : 150,
+    "tBeer" : 151,
+    "tExternal" : 149,
+    "tChamber" : 153,
+    "tPi" : 155,
+    "coolerOn" : true,
+    "mode" : "AUTO"
+  }, {
+    "tTarget" : 150,
+    "tBeer" : 149,
+    "tExternal" : 145,
+    "tChamber" : 151,
+    "tPi" : 151,
+    "coolerOn" : true,
+    "mode" : "AUTO"
+  }, {
+    "tTarget" : 150,
+    "tBeer" : 149,
+    "tExternal" : 148,
+    "tChamber" : 153,
+    "tPi" : 153,
+    "coolerOn" : true,
+    "mode" : "AUTO"
+  }, {
+    "tTarget" : 150,
+    "tBeer" : 150,
+    "tExternal" : 151,
+    "tChamber" : 156,
+    "tPi" : 156,
+    "coolerOn" : true,
+    "mode" : "AUTO"
+  }, {
+    "tTarget" : 150,
+    "tBeer" : 151,
+    "tExternal" : 152,
+    "tChamber" : 156,
+    "tPi" : 158,
+    "coolerOn" : true,
+    "mode" : "AUTO"
+  }, {
+    "tTarget" : 150,
+    "tBeer" : 149,
+    "tExternal" : 146,
+    "tChamber" : 150,
+    "tPi" : 151,
+    "coolerOn" : true,
+    "mode" : "AUTO"
+  }, {
+    "tTarget" : 150,
+    "tBeer" : 150,
+    "tExternal" : 153,
+    "tChamber" : 159,
+    "tPi" : 158,
+    "coolerOn" : true,
+    "mode" : "AUTO"
+  }, {
+    "tTarget" : 150,
+    "tBeer" : 150,
+    "tExternal" : 153,
+    "tChamber" : 158,
+    "tPi" : 158,
+    "coolerOn" : true,
+    "mode" : "AUTO"
+  }, {
+    "tTarget" : 150,
+    "tBeer" : 151,
+    "tExternal" : 148,
+    "tChamber" : 154,
+    "tPi" : 154,
+    "coolerOn" : true,
+    "mode" : "AUTO"
+  } ]
+}

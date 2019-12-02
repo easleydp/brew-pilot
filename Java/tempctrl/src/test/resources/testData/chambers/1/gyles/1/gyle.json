@@ -1,0 +1,11 @@
+{
+  "name": "Dummy gyle for beer fridge",
+  "temperatureProfile": {
+    "points": [
+      {
+        "hoursSinceStart": 0,
+        "targetTemp": 90
+      }
+    ]
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "name": "#45 Reid 1839 BPA",
+  "temperatureProfile": {
+    "points": [
+      {
+        "hoursSinceStart": 0,
+        "targetTemp": 150
+      },
+      {
+        "hoursSinceStart": 8,
+        "targetTemp": 175
+      },
+      {
+        "hoursSinceStart": 192,
+        "targetTemp": 175
+      },
+      {
+        "hoursSinceStart": 200,
+        "targetTemp": 200
+      },
+      {
+        "hoursSinceStart": 240,
+        "targetTemp": 200
+      },
+      {
+        "hoursSinceStart": 246,
+        "targetTemp": -1
+      }
+    ]
+  }
+}

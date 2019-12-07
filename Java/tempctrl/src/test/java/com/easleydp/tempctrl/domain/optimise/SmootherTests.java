@@ -1,6 +1,6 @@
-package com.easleydp.tempctrl.domain;
+package com.easleydp.tempctrl.domain.optimise;
 
-import static com.easleydp.tempctrl.domain.Smoother.*;
+import static com.easleydp.tempctrl.domain.optimise.Smoother.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.ArrayList;
@@ -11,8 +11,9 @@ import java.util.Random;
 import org.junit.jupiter.api.Test;
 import org.springframework.util.Assert;
 
-import com.easleydp.tempctrl.domain.Smoother.IntPropertyAccessor;
-import com.easleydp.tempctrl.domain.Smoother.Tip;
+import com.easleydp.tempctrl.domain.optimise.Smoother;
+import com.easleydp.tempctrl.domain.optimise.Smoother.IntPropertyAccessor;
+import com.easleydp.tempctrl.domain.optimise.Smoother.Tip;
 
 /**
  * Tests the Smoother class - removal of small fluctuations in a data series
@@ -429,7 +430,6 @@ public class SmootherTests
 
         public MyDto(int foo)
         {
-            super();
             this.foo = foo;
         }
 
@@ -457,11 +457,10 @@ public class SmootherTests
                 return false;
             return true;
         }
-
-        @Override  // Not used; just to suppress a warning
+        @Override
         public int hashCode()
         {
-            return super.hashCode();
+            return foo;
         }
     }
 

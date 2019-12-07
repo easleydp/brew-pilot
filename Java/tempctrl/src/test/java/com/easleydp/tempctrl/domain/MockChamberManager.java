@@ -12,6 +12,8 @@ public class MockChamberManager implements ChamberManager
 {
     private ChamberParameters chamberParameters;
 
+    private Random random;
+
     @Override
     public void setParameters(int chamberId, ChamberParameters chamberParameters)
     {
@@ -19,8 +21,10 @@ public class MockChamberManager implements ChamberManager
     }
 
     @Override
-    public ChamberReadings getReadings(int chamberId)
+    public ChamberReadings getReadings(int chamberId, Date timeNow)
     {
+        random = new Random(chamberId);
+
         Assert.state(nowTime != null, "nowTime should be set before calling this method.");
         Assert.state(startTime != null, "startTime should be set before calling this method.");
         int millisSinceStart = (int) (nowTime.getTime() - startTime.getTime());
@@ -48,10 +52,10 @@ public class MockChamberManager implements ChamberManager
         int tExternal = tBeer + randomInt(-4, 4);
         int tChamber = tExternal + randomInt(4, 6);
         int tPi = tExternal + randomInt(5, 7);
-        Integer heaterOutput = getDayOfMonthFromDate(nowTime) % 2 == 0 ? randomInt(1, 100) : null;
-        boolean coolerOn = heaterOutput == null;
+        int heaterOutput = getDayOfMonthFromDate(nowTime) % 2 == 0 ? randomInt(1, 100) : 0;
+        boolean coolerOn = heaterOutput == 0;
         Mode mode = Mode.AUTO;
-        return new ChamberReadings(
+        return new ChamberReadings(timeNow,
                 tTarget, tBeer, tExternal, tChamber, tPi, heaterOutput, coolerOn, mode, params);
     }
 
@@ -62,9 +66,9 @@ public class MockChamberManager implements ChamberManager
         return cal.get(Calendar.DAY_OF_MONTH);
     }
 
-    private static int randomInt(int from, int to)
+    private int randomInt(int from, int to)
     {
-        return from + new Random().nextInt(to - from + 1);
+        return from + random.nextInt(to - from + 1);
     }
 
 

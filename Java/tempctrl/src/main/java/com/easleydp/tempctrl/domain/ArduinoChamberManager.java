@@ -1,5 +1,7 @@
 package com.easleydp.tempctrl.domain;
 
+import java.util.Date;
+
 public class ArduinoChamberManager implements ChamberManager
 {
 
@@ -11,7 +13,7 @@ public class ArduinoChamberManager implements ChamberManager
     }
 
     @Override
-    public ChamberReadings getReadings(int chamberId)
+    public ChamberReadings getReadings(int chamberId, Date timeNow)
     {
         // TODO Auto-generated method stub
         return null;

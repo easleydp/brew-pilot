@@ -1,5 +1,7 @@
 package com.easleydp.tempctrl.domain;
 
+import static com.easleydp.tempctrl.domain.optimise.RedundantValues.*;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -19,6 +21,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.util.Assert;
 
+import com.easleydp.tempctrl.domain.optimise.Smoother;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
@@ -26,6 +29,7 @@ public class Gyle extends GyleDto
 {
     private static final Logger logger = LoggerFactory.getLogger(Gyle.class);
 
+    private Smoother smoother = new Smoother(5, new int[] {3, 2, 1, 1, 1});  // TODO: Make configurable
     private Buffer buffer = null;
 
 
@@ -82,7 +86,7 @@ public class Gyle extends GyleDto
     {
         logger.debug("collectReadings()");
 
-        ChamberReadings chamberReadings = chamberManager.getReadings(chamber.getId());
+        ChamberReadings chamberReadings = chamberManager.getReadings(chamber.getId(), timeNow);
 
         if (logAnalysis == null)
             logAnalysis = new LogAnalysis();  // Fail fast rather than leave this until first flush
@@ -173,7 +177,7 @@ public class Gyle extends GyleDto
     {
         private final Date createdAt;
         private Date lastAddedAt;
-        private List<ChamberReadings> readings = new ArrayList<>();
+        private ArrayList<ChamberReadings> readingsList = new ArrayList<>();
 
         public Buffer(Date createdAt)
         {
@@ -182,26 +186,28 @@ public class Gyle extends GyleDto
 
         public void add(ChamberReadings chamberReadings, Date addedAt)
         {
-            readings.add(chamberReadings);
+            readingsList.add(chamberReadings);
             lastAddedAt = addedAt;
         }
 
         public boolean isReadyToBeFlushed(Date timeNow)
         {
             long diffMinutes = (timeNow.getTime() - createdAt.getTime()) / (1000 * 60);
-            return diffMinutes >= 10;  // TODO: Make configurable
+            return diffMinutes >= 30;  // TODO: Make configurable
         }
 
         /** For Jackson */
         @SuppressWarnings("unused")
         public List<ChamberReadings> getReadings()
         {
-            return readings;
+            return readingsList;
         }
 
         /** Flush to disk file and possibly consolidate existing files. */
         public void flush()
         {
+            optimiseReadings();
+
             try
             {
                 LogFileDescriptor latestLogFileDescriptor = logAnalysis.getLatestLogFileDescriptor();
@@ -213,11 +219,41 @@ public class Gyle extends GyleDto
 
                 ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
                 mapper.writeValue(logFile.toFile(), this);
+
+                // No need to clear `readings`; the caller will now release this buffer.
             }
             catch (IOException e)
             {
                 throw new RuntimeException(e);
             }
+        }
+
+        private void optimiseReadings()
+        {
+            // Must smooth before removing redundant records since the smoothing algorithm assumes readings
+            // are taken with a fixed frequency.
+            smoothTemperatureReadings();
+
+            // For each ChamberReadings property:
+            // If some contiguous readings have a property P with same value V then null-out
+            // all the intermediate values (so they won't be serialised).
+            String[] nullablePropertyNames = ChamberReadings.getNullablePropertyNames();
+            for (String propertyName : nullablePropertyNames)
+                nullOutRedundantValues(readingsList, propertyName);
+
+            // Given that the records have been fed through `nullOutRedundantReadings()`, any intermediate
+            // records where all the nullable properties have been set to null are redundant.
+            removeRedundantIntermediateBeans(readingsList, nullablePropertyNames);
+        }
+
+        /** Removes insignificant fluctuations in the temperature readings. */
+        private void smoothTemperatureReadings()
+        {
+            smoother.smoothOutSmallFluctuations((List) readingsList, ChamberReadings.tTargetAccessor);
+            smoother.smoothOutSmallFluctuations((List) readingsList, ChamberReadings.tBeerAccessor);
+            smoother.smoothOutSmallFluctuations((List) readingsList, ChamberReadings.tExternalAccessor);
+            smoother.smoothOutSmallFluctuations((List) readingsList, ChamberReadings.tChamberAccessor);
+            smoother.smoothOutSmallFluctuations((List) readingsList, ChamberReadings.tPiAccessor);
         }
 
     }

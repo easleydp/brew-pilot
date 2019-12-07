@@ -1,4 +1,4 @@
-package com.easleydp.tempctrl.domain;
+package com.easleydp.tempctrl.domain.optimise;
 
 import java.util.List;
 
@@ -9,8 +9,8 @@ import org.springframework.util.Assert;
 /**
  * Removes small fluctuations in a data series.
  *
- * Points have an index and a value. Assumes the index represents some steady rate sampling, e.g.
- * every 1 minute. This is important because the width of peaks/troughs is considered when
+ * Points have an index and a value. Assumes the index represents some fixed sampling frequency,
+ * e.g. every 1 minute. This is important because the width of peaks/troughs is considered when
  * assessing their significance.
  *
  * Terminology:
@@ -32,7 +32,7 @@ import org.springframework.util.Assert;
  *     constructor) to be flattened. That is,
  *     height > thresholdHeight  ||  width > thresholdWidths[height - 1]
  */
-class Smoother
+public class Smoother
 {
     private int thresholdHeight;
     private int[] thresholdWidths;
@@ -47,7 +47,7 @@ class Smoother
      *      So, spikes of height 3, 4 & 5 will only be flattened if width is 1; ripple of height 1
      *      will only be flattened if width is <= 3.
      */
-    Smoother(int thresholdHeight, int[] thresholdWidths)
+    public Smoother(int thresholdHeight, int[] thresholdWidths)
     {
         // Doesn't make sense to specify a threshold of 0 as that equates to no smoothing
         Assert.isTrue(thresholdHeight > 0, "threshold must be greater than zero");
@@ -98,7 +98,7 @@ class Smoother
      * @param records - the records, one column of which needs to be smoothed
      * @param intAccessor - an IntPropertyAccessor impl to get & set the column of interest.
      */
-    void smoothOutSmallFluctuations(List<Object> records, final IntPropertyAccessor intAccessor)
+    public void smoothOutSmallFluctuations(List<Object> records, final IntPropertyAccessor intAccessor)
     {
         if (records == null  ||  records.size() == 0)
             return;
@@ -117,17 +117,16 @@ class Smoother
                 intAccessor.setValue(record, values[i++]);
         }
     }
-    static interface IntPropertyAccessor
+    public static interface IntPropertyAccessor
     {
         int getValue(Object record);
         void setValue(Object record, int value);
     }
 
     /**
-     * Or just use reflection? Seems to be about x10 slower than using the IntPropertyAccessor
-     * version.
+     * Or just use reflection? Seems to be about x10 slower than using the IntPropertyAccessor version.
      */
-    public void smoothOutSmallFluctuations(List records, String propertyName)
+    void smoothOutSmallFluctuations(List<?> records, String propertyName)
     {
         if (records == null  ||  records.size() == 0)
             return;
@@ -170,35 +169,6 @@ class Smoother
         if (len < 4)
             return false;
 
-//        IndexAndValue firstPeak = findNextLocalMax(0, values, true);
-//        IndexAndValue firstTrough = findNextLocalMin(0, values, true);
-//        int iFirstTip;
-//        if (firstPeak != null)
-//            iFirstTip = firstPeak.index;
-//        else if (firstTrough != null)
-//            iFirstTip = firstTrough.index;
-//        else
-//            return false;
-//
-//        IndexAndValue lastPeak = findNextLocalMax(len - 1, values, false);
-//        IndexAndValue lastTrough = findNextLocalMax(len - 1, values, false);
-//        int iLastTip;
-//        if (lastPeak != null)
-//            iLastTip = lastPeak.index;
-//        else if (lastTrough != null)
-//            iLastTip = lastTrough.index;
-//        else
-//            return false;
-
-
-//        Tip firstTip = findNextTip(0, values, true);
-//        if (firstTip == null)
-//            return false;
-//        Tip lastTip = findNextTip(len - 1, values, false);
-//        Assert.state(lastTip != null, "If there's a firstTip then there should be a lastTip (maybe the same)");
-//        if (firstTip.index == lastTip.index)
-//            return false;
-
         Tip lastTip = findNextTip(len - 1, values, false);
         if (lastTip == null)
             return false;
@@ -212,89 +182,6 @@ class Smoother
             noiseWasRemoved = true;
         }
         return noiseWasRemoved;
-//
-//
-//
-////        int minValue = Integer.MAX_VALUE;
-////        int maxValue = Integer.MIN_VALUE;
-////        for (int value : values)
-////        {
-////            if (value < minValue)
-////                minValue = value;
-////            if (value > maxValue)
-////                maxValue = value;
-////        }
-//
-//        boolean noiseWasRemoved = false;
-//        boolean noiseWasRemovedThisPass;
-//        do {  // Keep scanning the whole array until nothing more needs doing
-//            noiseWasRemovedThisPass = false;
-//            boolean firstPeak = true;
-//            int i = -1;
-//            while (++i < len)  // Scan forwards through the array (note: i may also be incremented within the loop)
-//            {
-//                final int value = values[i];
-////                final int valuePlusThreshold = value + threshold;
-////                final int valueMinusThreshold = value - threshold;
-//                // While flat, skip fwd
-//                while (i + 1 < len  &&  values[i + 1] == value)
-//                    i++;
-//                int j = i + 1;
-//                // So now i refers to the first point OR the last point of a flat section at the
-//                // start, and j refers to the next point (the first point with a different value),
-//                // if there is one.
-//
-//                final boolean incliningUpwards = j < len  &&  value < values[j];
-//                int iPeak = j;  // Record where we meet the peak (or trough) of the ripple
-//                int peakVal = j < len ? values[j] : 0;
-//                int k = j - 1;
-//                while (++k < len)  // Scan forwards
-//                {
-//                    int currVal = values[k];
-////                    // Threshold exceeded?
-////                    if (currVal < valueMinusThreshold  ||  currVal > valuePlusThreshold)
-////                        break;
-//                    // Track highest/lowest point of ripple so far
-//                    if (incliningUpwards && peakVal < currVal  ||  !incliningUpwards && peakVal > currVal)
-//                    {
-//                        peakVal = currVal;
-//                        iPeak = k;
-//                    }
-////                    // Hit tMin or tMax?
-////                    if (!incliningUpwards && currVal == minValue  ||  incliningUpwards && currVal == maxValue)
-////                        break;
-//                    // Hit or crossed-over the start value?
-//                    if (incliningUpwards && currVal <= value  ||  !incliningUpwards && currVal >= value)
-//                    {
-//                        // Avoid smoothing out significant peak or trough
-//                        if (incliningUpwards && isSignificantPeak(iPeak, values)  ||  !incliningUpwards && isSignificantTrough(iPeak, values))
-//                            break;
-//
-//                        // Since sets of records may subsequently be concatenated together (and
-//                        // the result smoothed again), avoid smoothing out this insignificant
-//                        // peak if first or last peak.
-//                        if (firstPeak)
-//                        {
-//                            firstPeak = false;
-//                            break;
-//                        }
-//                        firstPeak = false;
-//                        // Last peak?
-//                        if (incliningUpwards && findPeakValue(k, values, true) == null  ||  !incliningUpwards && findTroughValue(k, values, true) == null)
-//                            break;
-//
-//                        // Set all points up to but not including the current point to the start value
-//                        while (j < k)
-//                            values[j++] = value;
-//                        noiseWasRemovedThisPass = true;
-//                        noiseWasRemoved = true;
-//                        break;
-//                    }
-//                }
-//            }
-//        } while (noiseWasRemovedThisPass);
-//
-//        return noiseWasRemoved;
     }
 
     void flattenTip(Tip tip, int[] values)
@@ -318,42 +205,6 @@ class Smoother
                     values[i] = ceiling;
         }
     }
-
-//    /**
-//     * A peak is a value where there are no higher points to the left or right (before the curve
-//     * begins inclining upwards again). It is significant when the signal difference between the
-//     * peak and the highest neighbouring trough is > the threshold.
-//     */
-//    boolean isPeak(int k, int[] values, boolean significantOnly)
-//    {
-//        Point leftMin = findNextLocalMin(k, values, false);
-//        Point rightMin = findNextLocalMin(k, values, true);
-//        // If left or right is null this signifies there was no trough on that side
-//        if (leftMin == null  ||  rightMin == null)
-//            return false;
-//
-//        if (!significantOnly)
-//            return true;
-//
-//        return new Tip(k, values[k], true, values).significant;
-//    }
-//
-//    /**
-//     * As isPeak() but for troughs.
-//     */
-//    boolean isTrough(int k, int[] values, boolean significantOnly)
-//    {
-//        Point leftMax = findNextLocalMax(k, values, false);
-//        Point rightMax = findNextLocalMax(k, values, true);
-//        // If left or right is null this signifies there was no peak on that side
-//        if (leftMax == null  ||  rightMax == null)
-//            return false;
-//
-//        if (!significantOnly)
-//            return true;
-//
-//        return new Tip(k, values[k], false, values).significant;
-//    }
 
     /**
      * @returns index & value of next local max (seeking to left or right, as specified), or null if none.

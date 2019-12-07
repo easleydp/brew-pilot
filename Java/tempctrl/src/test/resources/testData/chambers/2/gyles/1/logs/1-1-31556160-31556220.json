@@ -1,0 +1,37 @@
+{
+  "readings" : [ {
+    "dt" : 31556160,
+    "tTarget" : 150,
+    "tBeer" : 151,
+    "tExternal" : 153,
+    "tChamber" : 159,
+    "tPi" : 159,
+    "heaterOutput" : 0,
+    "coolerOn" : true,
+    "mode" : "AUTO"
+  }, {
+    "dt" : 31556198,
+    "tTarget" : 150,
+    "tBeer" : 151,
+    "tExternal" : 153,
+    "tChamber" : 159,
+    "tPi" : 159
+  }, {
+    "dt" : 31556200,
+    "tTarget" : 151,
+    "tBeer" : 152,
+    "tExternal" : 154,
+    "tChamber" : 160,
+    "tPi" : 160
+  }, {
+    "dt" : 31556220,
+    "tTarget" : 151,
+    "tBeer" : 152,
+    "tExternal" : 154,
+    "tChamber" : 160,
+    "tPi" : 160,
+    "heaterOutput" : 0,
+    "coolerOn" : true,
+    "mode" : "AUTO"
+  } ]
+}

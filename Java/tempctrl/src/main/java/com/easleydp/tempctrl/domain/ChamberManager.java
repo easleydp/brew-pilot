@@ -1,5 +1,7 @@
 package com.easleydp.tempctrl.domain;
 
+import java.util.Date;
+
 /**
  * Interface to the standalone chamber manager hardware device (e.g. Arduino).
  *
@@ -11,5 +13,5 @@ public interface ChamberManager
 {
     public void setParameters(int chamberId, ChamberParameters params);
 
-    public ChamberReadings getReadings(int chamberId);
+    public ChamberReadings getReadings(int chamberId, Date timeNow);
 }

@@ -1,5 +1,6 @@
 package com.easleydp.tempctrl.domain;
 
+import static com.easleydp.tempctrl.domain.Utils.*;
 import static org.apache.commons.io.FileUtils.*;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -57,7 +58,6 @@ public class GyleTests
         Date startTime = c.getTime();
 
         timeNow = startTime;
-        String expectedLogFileName = "1-1-" + Utils.reduceUtcMillisPrecision(startTime.getTime()) + "-";
 
         chamber = chambers.getChamberById(2);
         assertNotNull(chamber, "Chamber 2 should be found");  // Actually, getChamberById will already have checked not null.
@@ -67,9 +67,11 @@ public class GyleTests
         gyle.setDtStarted(startTime.getTime());  // So now it's the active gyle
         chamberManagerSim = new MockChamberManager(startTime, gyle.getTemperatureProfile());
 
-        // Simulate taking a reading at t0 then every minute for 9 minutes. Confirm no data file created up to this point.
+        final int gen1ReadingsCount = 30;
+        // Simulate taking a reading at t0 then every minute for <gen1ReadingsCount - 1> minutes.
+        // Confirm no data file created up to this point.
         collectReadings();
-        for (int i = 0; i < 9; i++)
+        for (int i = 0; i < gen1ReadingsCount - 1; i++)
         {
             timeNow = addMinutes(timeNow, 1);
             collectReadings();
@@ -80,7 +82,9 @@ public class GyleTests
         // Take a tenth reading at 10 minutes. Confirm all the readings are now flushed to a file.
         timeNow = addMinutes(timeNow, 1);
         collectReadings();
-        expectedLogFileName += Utils.reduceUtcMillisPrecision(timeNow.getTime()) + ".json";
+        String expectedLogFileName =
+                // "<dataBlockSeqNo>-<generation>-<dtStart>-<dtEnd>.json"
+                "1-1-" + reduceUtcMillisPrecision(startTime) + "-" + reduceUtcMillisPrecision(timeNow) + ".json";
         List<File> logFiles = listLogFiles();
         assertEquals(1, logFiles.size());
         assertEquals(expectedLogFileName, logFiles.get(0).getName());

@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.util.Assert;
 
 import com.easleydp.tempctrl.domain.Smoother.IntPropertyAccessor;
+import com.easleydp.tempctrl.domain.Smoother.Tip;
 
 /**
  * Tests the Smoother class - removal of small fluctuations in a data series
@@ -22,7 +23,86 @@ public class SmootherTests
      * First we test some of the Smoother internal helpers.
      */
 
+    /* Tip tests */
+
     @Test
+    public void tipVitalStatistics1()
+    {
+        int[] values = new int[] {0, 1, 2, 1, -1};
+        Smoother smoother = new Smoother(1);
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            smoother.new Tip(2, false, values);
+        }, "The specified index should be that of a trough");
+
+        Tip tip = smoother.new Tip(2, true, values);
+        assertEquals(2, tip.height);
+        assertEquals(3, tip.width);
+        assertEquals(true, tip.peak);
+        assertEquals(true, tip.significant);
+    }
+
+    @Test
+    public void tipVitalStatistics2()
+    {
+        int[] values = new int[] {0, -1, -2, -1, 1};
+        Smoother smoother = new Smoother(1);
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            smoother.new Tip(2, true, values);
+        }, "The specified index should be that of a peak");
+
+        Tip tip = smoother.new Tip(2, false, values);
+        assertEquals(2, tip.height);
+        assertEquals(3, tip.width);
+        assertEquals(false, tip.peak);
+        assertEquals(true, tip.significant);
+    }
+
+    @Test
+    public void tipVitalStatistics3()
+    {
+        {
+            int[] values = new int[] {0, 1, 0};
+            Smoother smoother = new Smoother(1);
+            Tip tip = smoother.new Tip(1, true, values);
+            assertFalse(tip.significant);
+        }
+        {
+            int[] values = new int[] {0, -1, 0};
+            Smoother smoother = new Smoother(1);
+            Tip tip = smoother.new Tip(1, false, values);
+            assertFalse(tip.significant);
+        }
+    }
+
+    @Test
+    public void tipWidthAndSignificance()
+    {
+        // Sanity check a narrow tip
+        int[] values = new int[] {0, 1, 0};
+        Smoother smoother = new Smoother(1);
+        {
+            Tip tip = smoother.new Tip(1, true, values);
+            assertFalse(tip.significant);
+        }
+
+        // Wide tip
+        values = new int[] {0, 1, 1, 0};
+        {
+            Tip tip = smoother.new Tip(1, true, values);
+            assertEquals(2, tip.width);
+            assertTrue(tip.significant);
+        }
+        // Since top is flat, we can specify any of multiple 'peak' values
+        {
+            Tip tip = smoother.new Tip(2, true, values);
+            assertEquals(2, tip.width);
+            assertTrue(tip.significant);
+        }
+    }
+
+    //    @Test
     public void indexOfNextDifferentValueToLeft()
     {
         final boolean toRight = false;
@@ -73,15 +153,11 @@ public class SmootherTests
         final boolean toRight = false;
 
         Smoother smoother = new Smoother(1);
-        assertEquals(4, smoother.findPeakValue(4, new int[] {3, 4, 2, 2, 1}, toRight));
-        assertEquals(4, smoother.findPeakValue(3, new int[] {3, 4, 2, 2, 1}, toRight));
-        assertEquals(4, smoother.findPeakValue(2, new int[] {3, 4, 2, 2, 1}, toRight));
-        assertNull(smoother.findPeakValue(1, new int[] {3, 4, 2, 2, 1}, toRight));
-        assertNull(smoother.findPeakValue(0, new int[] {3, 4, 2, 2, 1}, toRight));
-
-        assertNull(smoother.findPeakValue(2, new int[] {2, 1, 3}, toRight));
-        assertEquals(2, smoother.findPeakValue(1, new int[] {2, 1, 3}, toRight));
-        assertNull(smoother.findPeakValue(0, new int[] {2, 1, 3}, toRight));
+        assertEquals(1, smoother.findNextTip(4, new int[] {3, 4, 2, 2, 1}, toRight).index);
+        assertEquals(1, smoother.findNextTip(3, new int[] {3, 4, 2, 2, 1}, toRight).index);
+        assertEquals(1, smoother.findNextTip(2, new int[] {3, 4, 2, 2, 1}, toRight).index);
+        assertNull(smoother.findNextTip(1, new int[] {3, 4, 2, 2, 1}, toRight));
+        assertNull(smoother.findNextTip(0, new int[] {3, 4, 2, 2, 1}, toRight));
     }
     @Test
     public void findPeakValueToRight()
@@ -89,17 +165,11 @@ public class SmootherTests
         final boolean toRight = true;
 
         Smoother smoother = new Smoother(1);
-        assertEquals(4, smoother.findPeakValue(0, new int[] {3, 4, 2, 2, 1}, toRight));
-        assertNull(smoother.findPeakValue(1, new int[] {3, 4, 2, 2, 1}, toRight));
-        assertNull(smoother.findPeakValue(2, new int[] {3, 4, 2, 2, 1}, toRight));
-        assertNull(smoother.findPeakValue(3, new int[] {3, 4, 2, 2, 1}, toRight));
-        assertNull(smoother.findPeakValue(4, new int[] {3, 4, 2, 2, 1}, toRight));
-
-        assertNull(smoother.findPeakValue(0, new int[] {2, 1, 3}, toRight));
-        assertEquals(3, smoother.findPeakValue(1, new int[] {2, 1, 3}, toRight));
-        assertNull(smoother.findPeakValue(2, new int[] {2, 1, 3}, toRight));
-
-        assertEquals(3, smoother.findPeakValue(1, new int[] {2, 1, 3, 2}, toRight));
+        assertEquals(1, smoother.findNextTip(0, new int[] {3, 4, 2, 2, 1}, toRight).index);
+        assertNull(smoother.findNextTip(1, new int[] {3, 4, 2, 2, 1}, toRight));
+        assertNull(smoother.findNextTip(2, new int[] {3, 4, 2, 2, 1}, toRight));
+        assertNull(smoother.findNextTip(3, new int[] {3, 4, 2, 2, 1}, toRight));
+        assertNull(smoother.findNextTip(4, new int[] {3, 4, 2, 2, 1}, toRight));
     }
     @Test
     public void findTroughValueToLeft()
@@ -107,15 +177,11 @@ public class SmootherTests
         final boolean toRight = false;
 
         Smoother smoother = new Smoother(1);
-        assertEquals(1, smoother.findTroughValue(4, new int[] {4, 1, 2, 2, 3}, toRight));
-        assertEquals(1, smoother.findTroughValue(3, new int[] {4, 1, 2, 2, 3}, toRight));
-        assertEquals(1, smoother.findTroughValue(2, new int[] {4, 1, 2, 2, 3}, toRight));
-        assertNull(smoother.findTroughValue(1, new int[] {4, 1, 2, 2, 3}, toRight));
-        assertNull(smoother.findTroughValue(0, new int[] {4, 1, 2, 2, 3}, toRight));
-
-        assertNull(smoother.findTroughValue(2, new int[] {2, 4, 3}, toRight));
-        assertEquals(2, smoother.findTroughValue(1, new int[] {2, 4, 3}, toRight));
-        assertNull(smoother.findTroughValue(0, new int[] {2, 4, 3}, toRight));
+        assertEquals(1, smoother.findNextTip(4, new int[] {4, 1, 2, 2, 3}, toRight).index);
+        assertEquals(1, smoother.findNextTip(3, new int[] {4, 1, 2, 2, 3}, toRight).index);
+        assertEquals(1, smoother.findNextTip(2, new int[] {4, 1, 2, 2, 3}, toRight).index);
+        assertNull(smoother.findNextTip(1, new int[] {4, 1, 2, 2, 3}, toRight));
+        assertNull(smoother.findNextTip(0, new int[] {4, 1, 2, 2, 3}, toRight));
     }
     @Test
     public void findTroughValueToRight()
@@ -123,74 +189,70 @@ public class SmootherTests
         final boolean toRight = true;
 
         Smoother smoother = new Smoother(1);
-        assertEquals(1, smoother.findTroughValue(0, new int[] {4, 1, 2, 2, 3}, toRight));
-        assertNull(smoother.findTroughValue(1, new int[] {4, 1, 2, 2, 3}, toRight));
-        assertNull(smoother.findTroughValue(2, new int[] {4, 1, 2, 2, 3}, toRight));
-        assertNull(smoother.findTroughValue(3, new int[] {4, 1, 2, 2, 3}, toRight));
-        assertNull(smoother.findTroughValue(4, new int[] {4, 1, 2, 2, 3}, toRight));
-
-        assertNull(smoother.findTroughValue(0, new int[] {2, 4, 3}, toRight));
-        assertEquals(3, smoother.findTroughValue(1, new int[] {2, 4, 3}, toRight));
-        assertNull(smoother.findTroughValue(2, new int[] {2, 4, 3}, toRight));
-
-        assertEquals(2, smoother.findTroughValue(1, new int[] {2, 4, 3, 2}, toRight));
+        assertEquals(1, smoother.findNextTip(0, new int[] {4, 1, 2, 2, 3}, toRight).index);
+        assertNull(smoother.findNextTip(1, new int[] {4, 1, 2, 2, 3}, toRight));
+        assertNull(smoother.findNextTip(2, new int[] {4, 1, 2, 2, 3}, toRight));
+        assertNull(smoother.findNextTip(3, new int[] {4, 1, 2, 2, 3}, toRight));
+        assertNull(smoother.findNextTip(4, new int[] {4, 1, 2, 2, 3}, toRight));
     }
 
     @Test
-    public void isPeak()
+    public void findNextTip()
     {
         Smoother smoother = new Smoother(1);
 
-        assertFalse(smoother.isSignificantPeak(0, new int[] {3}));
+        // Peak to right
+        assertNull(smoother.findNextTip(0, new int[] {1, 2, 2}, true));
+        assertEquals(1, smoother.findNextTip(0, new int[] {1, 2, 1}, true).index);
+        assertEquals(1, smoother.findNextTip(0, new int[] {1, 2, 2, 1}, true).index);
 
-        assertFalse(smoother.isSignificantPeak(0, new int[] {1, 2, 3}));
-        assertFalse(smoother.isSignificantPeak(1, new int[] {1, 2, 3}));
-        assertFalse(smoother.isSignificantPeak(2, new int[] {1, 2, 3}));
+        // Peak to left
+        assertNull(smoother.findNextTip(2, new int[] {1, 2, 2}, false));
+        assertEquals(1, smoother.findNextTip(2, new int[] {1, 2, 1}, false).index);
+        assertEquals(2, smoother.findNextTip(3, new int[] {1, 2, 2, 1}, false).index);
 
-        assertFalse(smoother.isSignificantPeak(0, new int[] {3, 2, 1}));
-        assertFalse(smoother.isSignificantPeak(1, new int[] {3, 2, 1}));
-        assertFalse(smoother.isSignificantPeak(2, new int[] {3, 2, 1}));
+        // Trough to right
+        assertNull(smoother.findNextTip(0, new int[] {2, 1, 1}, true));
+        assertEquals(1, smoother.findNextTip(0, new int[] {2, 1, 2}, true).index);
+        assertEquals(1, smoother.findNextTip(0, new int[] {2, 1, 1, 2}, true).index);
 
-        assertFalse(smoother.isSignificantPeak(0, new int[] {2, 1, 3}));
-        assertFalse(smoother.isSignificantPeak(1, new int[] {2, 1, 3}));
-        assertFalse(smoother.isSignificantPeak(2, new int[] {2, 1, 3}));
-
-        // Peak not above threshold
-        assertFalse(smoother.isSignificantPeak(0, new int[] {1, 3, 2}));
-        assertFalse(smoother.isSignificantPeak(1, new int[] {1, 3, 2}));
-        assertFalse(smoother.isSignificantPeak(2, new int[] {1, 3, 2}));
-
-        assertFalse(smoother.isSignificantPeak(0, new int[] {1, 4, 2}));
-        assertTrue(smoother.isSignificantPeak(1, new int[] {1, 4, 2}));
-        assertFalse(smoother.isSignificantPeak(2, new int[] {1, 4, 2}));
+        // Trough to left
+        assertNull(smoother.findNextTip(2, new int[] {2, 1, 1}, false));
+        assertEquals(1, smoother.findNextTip(2, new int[] {2, 1, 2}, false).index);
+        assertEquals(2, smoother.findNextTip(3, new int[] {2, 1, 1, 2}, false).index);
     }
+
     @Test
-    public void isTrough()
+    public void flattenTip()
+    {
+        assertTipFlattened(
+                2, false,
+                new int[] {1, 5, 1, 5, 1},
+                new int[] {1, 5, 5, 5, 1});
+
+        assertTipFlattened(
+                1, true,
+                new int[] {1, 5, 2},
+                new int[] {1, 2, 2});
+
+        assertTipFlattened(
+                1, false,
+                new int[] {4, 1, 5},
+                new int[] {4, 4, 5});
+
+        // Wide tip
+        assertTipFlattened(
+                2, true,
+                new int[] {1, 5, 5, 5, 2},
+                new int[] {1, 2, 2, 2, 2});
+    }
+
+    private void assertTipFlattened(int index, boolean isPeak, int[] values, int[] expectedValuesAfter)
     {
         Smoother smoother = new Smoother(1);
-
-        assertFalse(smoother.isSignificantTrough(0, new int[] {3}));
-
-        assertFalse(smoother.isSignificantTrough(0, new int[] {1, 2, 3}));
-        assertFalse(smoother.isSignificantTrough(1, new int[] {1, 2, 3}));
-        assertFalse(smoother.isSignificantTrough(2, new int[] {1, 2, 3}));
-
-        assertFalse(smoother.isSignificantTrough(0, new int[] {3, 2, 1}));
-        assertFalse(smoother.isSignificantTrough(1, new int[] {3, 2, 1}));
-        assertFalse(smoother.isSignificantTrough(2, new int[] {3, 2, 1}));
-
-        assertFalse(smoother.isSignificantTrough(0, new int[] {2, 4, 3}));
-        assertFalse(smoother.isSignificantTrough(1, new int[] {2, 4, 3}));
-        assertFalse(smoother.isSignificantTrough(2, new int[] {2, 4, 3}));
-
-        // Trough not above threshold
-        assertFalse(smoother.isSignificantTrough(0, new int[] {1, 0, 2}));
-        assertFalse(smoother.isSignificantTrough(1, new int[] {1, 0, 2}));
-        assertFalse(smoother.isSignificantTrough(2, new int[] {1, 0, 2}));
-
-        assertFalse(smoother.isSignificantTrough(0, new int[] {1, -1, 2}));
-        assertTrue(smoother.isSignificantTrough(1, new int[] {1, -1, 2}));
-        assertFalse(smoother.isSignificantTrough(2, new int[] {1, -1, 2}));
+        Tip tip = smoother.new Tip(index, isPeak, values);
+        smoother.flattenTip(tip, values);
+        assertArrayEquals(expectedValuesAfter, values);
     }
 
     /*
@@ -200,9 +262,20 @@ public class SmootherTests
     @Test
     public void smallestArrayThatCanPossiblyBeSmoothed()
     {
+        final int tooShortToNeedSmoothing = 3;
+
         assertSmoothed(1,
-                new int[] {1, 3, 2, 3},
-                new int[] {1, 3, 3, 3});
+                new int[] {1, 2, 1, 3},
+                new int[] {1, 1, 1, 3});
+
+        final int tries = 100000;
+        for (int i = 0; i < tries; i++)
+        {
+            int[] values = new int[tooShortToNeedSmoothing];
+            for (int j = 0; j < tooShortToNeedSmoothing; j++)
+                values[j] = randomInt(1, 3);
+            assertNotSmoothed(10, values);
+        }
     }
 
     @Test
@@ -237,29 +310,29 @@ public class SmootherTests
         assertNotSmoothed(1,  new int[] {1, 5/*max*/, 1, 3/*diff>threshold*/, 1});
         assertNotSmoothed(2,  new int[] {1, 5/*max*/, 1, 4/*diff>threshold*/, 1});
         assertSmoothed(9,
-                new int[] {1, 5/*max*/, 1, 5/*max again*/, 1},
-                new int[] {1, 5/*max*/, 5, 5/*max again*/, 1});
+                new int[] {1, 5, 1, 5, 1},
+                new int[] {1, 1, 1, 5, 1});
     }
 
     @Test
-    public void firstAndLastRippleNotSmoothed()
+    public void lastRippleNotSmoothed()
     {
         assertSmoothed(1,
                 new int[] {1, 2, 1, 1, 2, 1},
-                new int[] {1, 2, 2, 2, 2, 1});
+                new int[] {1, 1, 1, 1, 2, 1});
         assertSmoothed(1,
                 new int[] {1, 0, 1, 1, 0, 1},
-                new int[] {1, 0, 0, 0, 0, 1});
+                new int[] {1, 1, 1, 1, 0, 1});
 
-        assertNotSmoothed(1,  new int[] {1, 2, 1, 1, 0, 1});
+        assertNotSmoothed(1,  new int[] {1, 1, 1, 1, 0, 1});
 
         assertSmoothed(1,
                 new int[] {1, 2, 1, 2, 1, 2, 1},
-                new int[] {1, 2, 2, 2, 2, 2, 1});
+                new int[] {1, 1, 1, 1, 1, 2, 1});
 
         assertSmoothed(1,
                 new int[] {1, 2, 1, 1, 2, 1, 1, 0, 1, 1, 0, 1},
-                new int[] {1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 0, 1});
+                new int[] {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1});
     }
 
     @Test
@@ -267,39 +340,43 @@ public class SmootherTests
     {
         assertSmoothed(1,
                 new int[] {1, 0, 1, 2, 1, 2, 1, 2, 1, 0, 1},
-                new int[] {1, 0, 1, 1, 1, 1, 1, 2, 1, 0, 1});
+                new int[] {1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1});
         assertSmoothed(1,
                 new int[] {1, 0, 1, 0, 1, 0, 1, 2, 1, 0, 1},
-                new int[] {1, 0, 0, 0, 0, 0, 1, 2, 1, 0, 1});
+                new int[] {1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1});
     }
 
     @Test
     public void significantPeaksAndTroughsNotSmoothedOut()
     {
-        assertNotSmoothed(1,  new int[] {1, 0, 1, 3, 1, 3, 1, 3, 1, 0, 1});
-        assertNotSmoothed(1,  new int[] {1, 0, 2, 0, 2, 0, 2, 2, 1, 0, 1});
+        assertNotSmoothed(1,  new int[] {0, 1, 3, 1, 3, 1, 3, 1, 0, 1});
+        assertNotSmoothed(1,  new int[] {0, 2, 0, 2, 0, 2, 2, 1, 0, 1});
     }
 
     @Test
     public void smoothedOut()
     {
         assertSmoothed(1,
-                new int[] {1, 9, 1, 3, 1, 2/*diff=threshold*/, 1/*back to 1*/, 9, 1},
-                new int[] {1, 9, 1, 3, 1, 1/*smoothed*/,       1,              9, 1});
+                new int[] {9, 1, 3, 1, 2, 1, 9, 1},
+                new int[] {9, 1, 3, 2, 2, 1, 9, 1});
+
+        assertSmoothed(1,
+                new int[] {1, 9, 1, 3, 1, 2, 1, 9, 1},
+                new int[] {1, 9, 1, 3, 2, 2, 1, 9, 1});
 
         // Same again but ends with crossing rather than hit
         assertSmoothed(1,
-                new int[] {1, 9, 1, 3, 1, 2/*diff=threshold*/, 0/*crosses over 1*/, 9, 1},
-                new int[] {1, 9, 1, 3, 1, 1/*smoothed*/,       0,                   9, 1});
+                new int[] {1, 9, 1, 3, 1, 2, 0, 9, 1},
+                new int[] {1, 9, 1, 3, 2, 2, 0, 9, 1});
     }
 
     @Test
     public void realistic()
     {
         int[] before = new int[]
-                {150, 150, 151, 149/*min*/, 149, 150, 152, 154, 156, 156, 157, 156, 160, 162, 160, 162, 164, 164, 165, 165, 167, 165, 165, 168/*>threshold*/, 165, 166, 167, 167, 168, 169, 170/*max*/, 169};
+                {150, 150, 151, 149, 149, 150, 152, 154, 156, 156, 157, 156, 160, 162, 160, 162, 164, 164, 165, 165, 167, 165, 165, 168, 165, 166, 167, 167, 168, 169, 170, 169};
         int[] after = new int[]
-                {150, 150, 150, 149/*min*/, 149, 150, 152, 154, 156, 156, 156, 156, 160, 160, 160, 162, 164, 164, 165, 165, 165, 165, 165, 168/*>threshold*/, 165, 166, 167, 167, 168, 169, 170/*max*/, 169};
+                {150, 150, 150, 150, 150, 150, 152, 154, 156, 156, 156, 156, 160, 160, 160, 162, 164, 164, 165, 165, 165, 165, 165, 168, 165, 166, 167, 167, 168, 169, 170, 169};
         assertSmoothed(2, before, after);
 
         // Smoothing an already smoothed column again should have no further affect.
@@ -323,9 +400,9 @@ public class SmootherTests
     public void smoothRecords()
     {
         List<MyDto> records =
-                Arrays.asList(new MyDto(1), new MyDto(3), new MyDto(2), new MyDto(3));
+                Arrays.asList(new MyDto(1), new MyDto(2), new MyDto(1), new MyDto(3));
         List<MyDto> expectedSmoothedRecords =
-                Arrays.asList(new MyDto(1), new MyDto(3), new MyDto(3), new MyDto(3));
+                Arrays.asList(new MyDto(1), new MyDto(1), new MyDto(1), new MyDto(3));
         Assert.isTrue(records.size() == expectedSmoothedRecords.size(), "The two lists must be same length");
 
         assertNotEquals(expectedSmoothedRecords, records);
@@ -393,9 +470,9 @@ public class SmootherTests
     public void smoothRecords_reflection()
     {
         List<MyDto> records =
-                Arrays.asList(new MyDto(1), new MyDto(3), new MyDto(2), new MyDto(3));
+                Arrays.asList(new MyDto(1), new MyDto(2), new MyDto(1), new MyDto(3));
         List<MyDto> expectedSmoothedRecords =
-                Arrays.asList(new MyDto(1), new MyDto(3), new MyDto(3), new MyDto(3));
+                Arrays.asList(new MyDto(1), new MyDto(1), new MyDto(1), new MyDto(3));
         Assert.isTrue(records.size() == expectedSmoothedRecords.size(), "The two lists must be same length");
 
         assertNotEquals(expectedSmoothedRecords, records);

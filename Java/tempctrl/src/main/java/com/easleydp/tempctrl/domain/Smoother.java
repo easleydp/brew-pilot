@@ -7,22 +7,76 @@ import org.springframework.beans.BeanWrapperImpl;
 import org.springframework.util.Assert;
 
 /**
- * Removes small fluctuations in a data series
+ * Removes small fluctuations in a data series.
+ *
+ * Points have an index and a value. Assumes the index represents some steady rate sampling, e.g.
+ * every 1 minute. This is important because the width of peaks/troughs is considered when
+ * assessing their significance.
+ *
+ * Terminology:
+ *   - NextMinLeft - If there are points descending to the left (possibly after a flat section),
+ *     the lowest point to the left. Otherwise null. Note: this is not necessarily a trough
+ *     since could be start of array.
+ *   - NextMinRight - As NextMinLeft but to the right. Note: the lowest point to the right is
+ *     not necessarily a trough since could be end of array.
+ *   - NextMaxLeft, NextMaxRight - as NextMinLeft, NextMinRight
+ *   - Peak - point where the slope descends on both sides, i.e with a non-null NextMinLeft &
+ *     NextMinRight.
+ *   - Trough - as peak, but slope ascends on both sides.
+ *   - Tip - a peak or a trough
+ *   - Tip height: For a peak, peak value - Max(NextMinLeft, NextMinRight).
+ *   - For a trough, Min(NextMaxLeft, NextMaxRight) - trough value
+ *   - Tip width - the number of points that would be flattened (>= 1)
+ *   - Tip significance - a tip is insignificant if its height and width are sufficiently low
+ *     (according to the thresholdHeight and thresholdWidths supplied to the Smoother
+ *     constructor) to be flattened. That is,
+ *     height > thresholdHeight  ||  width > thresholdWidths[height - 1]
  */
 class Smoother
 {
-    private int threshold;
+    private int thresholdHeight;
+    private int[] thresholdWidths;
 
     /**
-     * @param threshold - any fluctuations <= to this value will be smoothed out,
-     *                    hence must be > 0 (or no point calling this routine).
+     * @param thresholdHeight - any tips with height <= to this value may be flattened (depending
+     *      on the tip width), hence must be > 0 (or no point calling this routine).
+     * @param thresholdWidths - for each height value 1..thresholdHeight, a max width (width being
+     *      the number of points that would be flattened). Each successive value must be <= the
+     *      preceding value. The final value is typically 1. Example:
+     *      thresholdHeight: 5, thresholdWidths: [3, 2, 1, 1, 1]
+     *      So, spikes of height 3, 4 & 5 will only be flattened if width is 1; ripple of height 1
+     *      will only be flattened if width is <= 3.
      */
-    Smoother(int threshold)
+    Smoother(int thresholdHeight, int[] thresholdWidths)
     {
         // Doesn't make sense to specify a threshold of 0 as that equates to no smoothing
-        Assert.isTrue(threshold > 0, "threshold must be greater than zero");
+        Assert.isTrue(thresholdHeight > 0, "threshold must be greater than zero");
 
-        this.threshold = threshold;
+        Assert.isTrue(thresholdHeight == thresholdWidths.length, "thresholdHeight should equal thresholdWidths.length");
+
+        int prevWidth = Integer.MAX_VALUE;
+        for (int i = 0; i < thresholdHeight; i++)
+        {
+            int width = thresholdWidths[i];
+            Assert.isTrue(width > 0, "each width should be > 0");
+            Assert.isTrue(width <= prevWidth, "each width should be <= the previous width");
+        }
+
+        this.thresholdHeight = thresholdHeight;
+        this.thresholdWidths = thresholdWidths;
+    }
+    /** Convenience ctor giving (e.g.) for thresholdHeight of 3, thresholdWidths: [3, 2, 1] */
+    Smoother(int thresholdHeight)
+    {
+        this(thresholdHeight, getDefaultWidths(thresholdHeight));
+    }
+    private static int[] getDefaultWidths(int height)
+    {
+        int len = height;
+        int[] widths = new int[height];
+        for (int i = 0; i < height; i++)
+            widths[i] = len--;
+        return widths;
     }
 
     /**
@@ -38,12 +92,11 @@ class Smoother
      * Note, however, local extreme values (peaks and troughs) that exceed the threshold are not
      * smoothed out.
      *
+     * Note that the last fluctuation is never smoothed because, should further values be appended
+     * to the series, it might become significant.
+     *
      * @param records - the records, one column of which needs to be smoothed
      * @param intAccessor - an IntPropertyAccessor impl to get & set the column of interest.
-     *
-     * TODO: The algorithm should preserve local tMin & tMax, not just overall. E.g. before
-     * removing a fluctuation, check whether it represents a min or max in the surrounding
-     * N points.
      */
     void smoothOutSmallFluctuations(List<Object> records, final IntPropertyAccessor intAccessor)
     {
@@ -112,125 +165,202 @@ class Smoother
         final int len = values.length;
 
         // Optimisation. 3 values or fewer can't possibly need smoothing, e.g. [1, 2, 1],
-        // whereas 4 can, e.g. (w/ threshold=1) [1, 3, 2, 3] => [1, 3, 3, 3]
+        // whereas 4 can, e.g. (w/ threshold=1) [1, 2, 1, 3] => [1, 1, 1, 3]
+        // See test smallestArrayThatCanPossiblyBeSmoothed()
         if (len < 4)
             return false;
 
-//        int minValue = Integer.MAX_VALUE;
-//        int maxValue = Integer.MIN_VALUE;
-//        for (int value : values)
-//        {
-//            if (value < minValue)
-//                minValue = value;
-//            if (value > maxValue)
-//                maxValue = value;
-//        }
+//        IndexAndValue firstPeak = findNextLocalMax(0, values, true);
+//        IndexAndValue firstTrough = findNextLocalMin(0, values, true);
+//        int iFirstTip;
+//        if (firstPeak != null)
+//            iFirstTip = firstPeak.index;
+//        else if (firstTrough != null)
+//            iFirstTip = firstTrough.index;
+//        else
+//            return false;
+//
+//        IndexAndValue lastPeak = findNextLocalMax(len - 1, values, false);
+//        IndexAndValue lastTrough = findNextLocalMax(len - 1, values, false);
+//        int iLastTip;
+//        if (lastPeak != null)
+//            iLastTip = lastPeak.index;
+//        else if (lastTrough != null)
+//            iLastTip = lastTrough.index;
+//        else
+//            return false;
+
+
+//        Tip firstTip = findNextTip(0, values, true);
+//        if (firstTip == null)
+//            return false;
+//        Tip lastTip = findNextTip(len - 1, values, false);
+//        Assert.state(lastTip != null, "If there's a firstTip then there should be a lastTip (maybe the same)");
+//        if (firstTip.index == lastTip.index)
+//            return false;
+
+        Tip lastTip = findNextTip(len - 1, values, false);
+        if (lastTip == null)
+            return false;
 
         boolean noiseWasRemoved = false;
-        boolean noiseWasRemovedThisPass;
-        do {  // Keep scanning the whole array until nothing more needs doing
-            noiseWasRemovedThisPass = false;
-            boolean firstPeak = true;
-            int i = -1;
-            while (++i < len)  // Scan forwards through the array (note: i may also be incremented within the loop)
-            {
-                final int value = values[i];
-//                final int valuePlusThreshold = value + threshold;
-//                final int valueMinusThreshold = value - threshold;
-                // While flat, skip fwd
-                while (i + 1 < len  &&  values[i + 1] == value)
-                    i++;
-                int j = i + 1;
-                // So now i refers to the first point OR the last point of a flat section at the
-                // start, and j refers to the next point (the first point with a different value),
-                // if there is one.
-
-                final boolean incliningUpwards = j < len  &&  value < values[j];
-                int iPeak = j;  // Record where we meet the peak (or trough) of the ripple
-                int peakVal = j < len ? values[j] : 0;
-                int k = j - 1;
-                while (++k < len)  // Scan forwards
-                {
-                    int currVal = values[k];
-//                    // Threshold exceeded?
-//                    if (currVal < valueMinusThreshold  ||  currVal > valuePlusThreshold)
-//                        break;
-                    // Track highest/lowest point of ripple so far
-                    if (incliningUpwards && peakVal < currVal  ||  !incliningUpwards && peakVal > currVal)
-                    {
-                        peakVal = currVal;
-                        iPeak = k;
-                    }
-//                    // Hit tMin or tMax?
-//                    if (!incliningUpwards && currVal == minValue  ||  incliningUpwards && currVal == maxValue)
-//                        break;
-                    // Hit or crossed-over the start value?
-                    if (incliningUpwards && currVal <= value  ||  !incliningUpwards && currVal >= value)
-                    {
-                        // Avoid smoothing out significant peak or trough
-                        if (incliningUpwards && isSignificantPeak(iPeak, values)  ||  !incliningUpwards && isSignificantTrough(iPeak, values))
-                            break;
-
-                        // Since sets of records may subsequently be concatenated together (and
-                        // the result smoothed again), avoid smoothing out this insignificant
-                        // peak if first or last peak.
-                        if (firstPeak)
-                        {
-                            firstPeak = false;
-                            break;
-                        }
-                        firstPeak = false;
-                        // Last peak?
-                        if (incliningUpwards && findPeakValue(k, values, true) == null  ||  !incliningUpwards && findTroughValue(k, values, true) == null)
-                            break;
-
-                        // Set all points up to but not including the current point to the start value
-                        while (j < k)
-                            values[j++] = value;
-                        noiseWasRemovedThisPass = true;
-                        noiseWasRemoved = true;
-                        break;
-                    }
-                }
-            }
-        } while (noiseWasRemovedThisPass);
-
+        for (Tip tip = findNextInsignificantTip(0, values, true);  // First insignificant tip
+                tip != null && !tip.isEffectivelyEqualTo(lastTip, values);  // Avoid removing the last tip
+                tip = findNextInsignificantTip(tip.index, values, true))  // Next insignificant tip
+        {
+            flattenTip(tip, values);
+            noiseWasRemoved = true;
+        }
         return noiseWasRemoved;
+//
+//
+//
+////        int minValue = Integer.MAX_VALUE;
+////        int maxValue = Integer.MIN_VALUE;
+////        for (int value : values)
+////        {
+////            if (value < minValue)
+////                minValue = value;
+////            if (value > maxValue)
+////                maxValue = value;
+////        }
+//
+//        boolean noiseWasRemoved = false;
+//        boolean noiseWasRemovedThisPass;
+//        do {  // Keep scanning the whole array until nothing more needs doing
+//            noiseWasRemovedThisPass = false;
+//            boolean firstPeak = true;
+//            int i = -1;
+//            while (++i < len)  // Scan forwards through the array (note: i may also be incremented within the loop)
+//            {
+//                final int value = values[i];
+////                final int valuePlusThreshold = value + threshold;
+////                final int valueMinusThreshold = value - threshold;
+//                // While flat, skip fwd
+//                while (i + 1 < len  &&  values[i + 1] == value)
+//                    i++;
+//                int j = i + 1;
+//                // So now i refers to the first point OR the last point of a flat section at the
+//                // start, and j refers to the next point (the first point with a different value),
+//                // if there is one.
+//
+//                final boolean incliningUpwards = j < len  &&  value < values[j];
+//                int iPeak = j;  // Record where we meet the peak (or trough) of the ripple
+//                int peakVal = j < len ? values[j] : 0;
+//                int k = j - 1;
+//                while (++k < len)  // Scan forwards
+//                {
+//                    int currVal = values[k];
+////                    // Threshold exceeded?
+////                    if (currVal < valueMinusThreshold  ||  currVal > valuePlusThreshold)
+////                        break;
+//                    // Track highest/lowest point of ripple so far
+//                    if (incliningUpwards && peakVal < currVal  ||  !incliningUpwards && peakVal > currVal)
+//                    {
+//                        peakVal = currVal;
+//                        iPeak = k;
+//                    }
+////                    // Hit tMin or tMax?
+////                    if (!incliningUpwards && currVal == minValue  ||  incliningUpwards && currVal == maxValue)
+////                        break;
+//                    // Hit or crossed-over the start value?
+//                    if (incliningUpwards && currVal <= value  ||  !incliningUpwards && currVal >= value)
+//                    {
+//                        // Avoid smoothing out significant peak or trough
+//                        if (incliningUpwards && isSignificantPeak(iPeak, values)  ||  !incliningUpwards && isSignificantTrough(iPeak, values))
+//                            break;
+//
+//                        // Since sets of records may subsequently be concatenated together (and
+//                        // the result smoothed again), avoid smoothing out this insignificant
+//                        // peak if first or last peak.
+//                        if (firstPeak)
+//                        {
+//                            firstPeak = false;
+//                            break;
+//                        }
+//                        firstPeak = false;
+//                        // Last peak?
+//                        if (incliningUpwards && findPeakValue(k, values, true) == null  ||  !incliningUpwards && findTroughValue(k, values, true) == null)
+//                            break;
+//
+//                        // Set all points up to but not including the current point to the start value
+//                        while (j < k)
+//                            values[j++] = value;
+//                        noiseWasRemovedThisPass = true;
+//                        noiseWasRemoved = true;
+//                        break;
+//                    }
+//                }
+//            }
+//        } while (noiseWasRemovedThisPass);
+//
+//        return noiseWasRemoved;
     }
+
+    void flattenTip(Tip tip, int[] values)
+    {
+        if (tip.peak)
+        {
+            int floor = tip.value - tip.height;
+            int i = findNextLocalMin(tip.index, values, false).index;
+            int j = findNextLocalMin(tip.index, values, true).index;
+            while (++i < j)
+                if (values[i] > floor)
+                    values[i] = floor;
+        }
+        else  // trough
+        {
+            int ceiling = tip.value + tip.height;
+            int i = findNextLocalMax(tip.index, values, false).index;
+            int j = findNextLocalMax(tip.index, values, true).index;
+            while (++i < j)
+                if (values[i] < ceiling)
+                    values[i] = ceiling;
+        }
+    }
+
+//    /**
+//     * A peak is a value where there are no higher points to the left or right (before the curve
+//     * begins inclining upwards again). It is significant when the signal difference between the
+//     * peak and the highest neighbouring trough is > the threshold.
+//     */
+//    boolean isPeak(int k, int[] values, boolean significantOnly)
+//    {
+//        Point leftMin = findNextLocalMin(k, values, false);
+//        Point rightMin = findNextLocalMin(k, values, true);
+//        // If left or right is null this signifies there was no trough on that side
+//        if (leftMin == null  ||  rightMin == null)
+//            return false;
+//
+//        if (!significantOnly)
+//            return true;
+//
+//        return new Tip(k, values[k], true, values).significant;
+//    }
+//
+//    /**
+//     * As isPeak() but for troughs.
+//     */
+//    boolean isTrough(int k, int[] values, boolean significantOnly)
+//    {
+//        Point leftMax = findNextLocalMax(k, values, false);
+//        Point rightMax = findNextLocalMax(k, values, true);
+//        // If left or right is null this signifies there was no peak on that side
+//        if (leftMax == null  ||  rightMax == null)
+//            return false;
+//
+//        if (!significantOnly)
+//            return true;
+//
+//        return new Tip(k, values[k], false, values).significant;
+//    }
 
     /**
-     * A peak is a value where there are no higher points to the left or right (before the curve
-     * begins inclining upwards again). It is significant when the signal difference between the
-     * peak and the highest neighbouring trough is > the threshold.
+     * @returns index & value of next local max (seeking to left or right, as specified), or null if none.
+     * Note: A max is not necessarily a tip; e.g. if seeking rightwards, could be a rising value (or last
+     * flat after rising) at end of the values array.
      */
-    boolean isSignificantPeak(int k, int[] values)
-    {
-        Integer leftTroughValue = findTroughValue(k, values, false);
-        Integer rightTroughValue = findTroughValue(k, values, true);
-        // If left or right is null this signifies there was no trough on that side
-        if (leftTroughValue == null  ||  rightTroughValue == null)
-            return false;
-
-        int highestTrough = Math.max(leftTroughValue, rightTroughValue);
-        return values[k] - highestTrough > threshold;
-    }
-    /**
-     * As isSignificantPeak() but for troughs.
-     */
-    boolean isSignificantTrough(int k, int[] values)
-    {
-        Integer leftPeakValue = findPeakValue(k, values, false);
-        Integer rightPeakValue = findPeakValue(k, values, true);
-        // If left or right is null this signifies there was no peak on that side
-        if (leftPeakValue == null  ||  rightPeakValue == null)
-            return false;
-
-        int lowestPeak = Math.min(leftPeakValue, rightPeakValue);
-        return lowestPeak - values[k] > threshold;
-    }
-
-    /** @returns peak value (to left or right, as specified) or null if none */
-    Integer findPeakValue(int i, int[] values, boolean toRight)
+    Point findNextLocalMax(int i, int[] values, boolean toRight)
     {
         int value = values[i];
         int iDifferentValue = indexOfNextDifferentValue(i, values, toRight);
@@ -239,8 +369,8 @@ class Smoother
         int differentValue = values[iDifferentValue];
         if (differentValue < value)
             return null;
-        // So values are increasing in the specified direction. Keep going until peak found.
-        // differentValue is the current highest.
+        // So values are increasing in the specified direction. We will return a non-null result.
+        // Keep going until peak found. differentValue is the current highest.
 
         do {
             int iNextDifferentValue = indexOfNextDifferentValue(iDifferentValue, values, toRight);
@@ -253,10 +383,11 @@ class Smoother
             iDifferentValue = iNextDifferentValue;
             differentValue = nextDifferentValue;
         } while (true);
-        return differentValue;
+        return new Point(iDifferentValue, differentValue);
     }
-    /** @returns trough value (to left or right, as specified) or null if none */
-    Integer findTroughValue(int i, int[] values, boolean toRight)
+
+    /** As findNextLocalMaxima but for looks for a local min */
+    Point findNextLocalMin(int i, int[] values, boolean toRight)
     {
         int value = values[i];
         int iDifferentValue = indexOfNextDifferentValue(i, values, toRight);
@@ -265,8 +396,8 @@ class Smoother
         int differentValue = values[iDifferentValue];
         if (differentValue > value)
             return null;
-        // So values are diminishing in the specified direction. Keep going until trough found.
-        // differentValue is the current lowest.
+        // So values are diminishing in the specified direction. We will return a non-null result.
+        // Keep going until trough found. differentValue is the current lowest.
 
         do {
             int iNextDifferentValue = indexOfNextDifferentValue(iDifferentValue, values, toRight);
@@ -279,7 +410,43 @@ class Smoother
             iDifferentValue = iNextDifferentValue;
             differentValue = nextDifferentValue;
         } while (true);
-        return differentValue;
+        return new Point(iDifferentValue, differentValue);
+    }
+
+    Tip findNextTip(int i, int[] values, boolean toRight)
+    {
+        {
+            Point nextLocalMax = findNextLocalMax(i, values, toRight);
+            if (nextLocalMax != null)
+            {
+                // If there's a point to the right (or left) that's smaller then it's a peak
+                if (findNextLocalMin(nextLocalMax.index, values, toRight) != null)
+                    return new Tip(nextLocalMax.index, true, values);
+            }
+        }
+        {
+            Point nextLocalMin = findNextLocalMin(i, values, toRight);
+            if (nextLocalMin != null)
+            {
+                // If there's a point to the right (or left) that's larger then it's a peak
+                if (findNextLocalMax(nextLocalMin.index, values, toRight) != null)
+                    return new Tip(nextLocalMin.index, false, values);
+            }
+        }
+
+        return null;
+    }
+
+    private Tip findNextInsignificantTip(int i, int[] values, boolean toRight)
+    {
+        do {
+            Tip tip = findNextTip(i, values, toRight);
+            if (tip == null)
+                return null;
+            if (!tip.significant)
+                return tip;
+            i = tip.index;
+        } while (true);
     }
 
     /** @returns index of next different value (to left or right, as specified) or -1 if none */
@@ -294,6 +461,90 @@ class Smoother
                 return -1;
         } while (values[i] == value);
         return i;
+    }
+
+    static class Point
+    {
+        final int index;
+        final int value;
+        public Point(int index, int value)
+        {
+            this.index = index;
+            this.value = value;
+        }
+    }
+
+    class Tip extends Point
+    {
+        final boolean peak;
+        final int width;
+        final int height;
+        final boolean significant;
+
+        /** Note: `values` is only used on construction for calculating width & height; no reference is retained. */
+        public Tip(int index, boolean peak, int[] values)
+        {
+            super(index, values[index]);
+            this.peak = peak;
+
+            if (peak)
+            {
+                Point pLeft  = findNextLocalMin(index, values, false);
+                Point pRight = findNextLocalMin(index, values, true);
+                Assert.isTrue(pLeft != null  &&  pRight != null, "The specified index should be that of a peak");
+                int floor = Math.max(pLeft.value, pRight.value);
+                height = value - floor;
+
+                // Width is the number of points between pLeft & pRights that would be flattened
+                int w = 0;
+                for (int i = pLeft.index + 1; i < pRight.index; i++)
+                    if (values[i] > floor)
+                        w++;
+                width = w;
+            }
+            else  // trough
+            {
+                Point pLeft  = findNextLocalMax(index, values, false);
+                Point pRight = findNextLocalMax(index, values, true);
+                Assert.isTrue(pLeft != null  &&  pRight != null, "The specified index should be that of a trough");
+                int floor = Math.min(pLeft.value, pRight.value);
+                height = floor - value;
+
+                // Width is the number of points between pLeft & pRights that would be flattened
+                int w = 0;
+                for (int i = pLeft.index + 1; i < pRight.index; i++)
+                    if (values[i] < floor)
+                        w++;
+                width = w;
+            }
+
+            this.significant = height > thresholdHeight  ||  width > thresholdWidths[height - 1];
+        }
+
+        /**
+         * A flat-topped peak (or flat-bottomed trough) may have any index along the flat
+         * region (though typically first or last).
+         */
+        public boolean isEffectivelyEqualTo(Tip other, int[] values)
+        {
+            if (value != other.value)
+                return false;
+
+            // If every point between the two tips is the same value, they're equal.
+            for (int i = index; i < other.index; i++)
+                if (values[i] != value)
+                    return false;
+
+            // Having determined that it's effectively the same tip, it just remains to confirm that
+            // the other is equal in other respects too. (This is by way of an assertion since it would
+            // be a logic error if this ever failed.)
+            Assert.state(value == other.value, "value should be same");
+            Assert.state(width == other.width, "width should be same");
+            Assert.state(height == other.height, "height should be same");
+            Assert.state(peak == other.peak, "peak should be same");
+
+            return true;
+        }
     }
 
 }

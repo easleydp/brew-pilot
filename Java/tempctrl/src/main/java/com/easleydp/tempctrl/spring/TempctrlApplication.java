@@ -40,13 +40,13 @@ public class TempctrlApplication {
     @Bean
     public Chambers chambers(Path dataDir)
     {
-        return new Chambers(dataDir);
+        return new Chambers(dataDir, env);
     }
 
     @Bean
     public ChamberManager chamberManager()
     {
-        return new ArduinoChamberManager();
+        return new ArduinoChamberManager(env);
     }
 //
 //    @Bean

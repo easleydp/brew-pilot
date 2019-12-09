@@ -66,7 +66,7 @@ public class Smoother
         this.thresholdWidths = thresholdWidths;
     }
     /** Convenience ctor giving (e.g.) for thresholdHeight of 3, thresholdWidths: [3, 2, 1] */
-    Smoother(int thresholdHeight)
+    public Smoother(int thresholdHeight)
     {
         this(thresholdHeight, getDefaultWidths(thresholdHeight));
     }

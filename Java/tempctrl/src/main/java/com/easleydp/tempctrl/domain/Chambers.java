@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.core.env.Environment;
 import org.springframework.util.Assert;
 
 /**
@@ -25,7 +26,7 @@ public class Chambers
     /** Latest first */
     private final Queue<Chamber> chambers = new ConcurrentLinkedQueue<>();
 
-    public Chambers(Path dataDir)
+    public Chambers(Path dataDir, Environment env)
     {
         Assert.state(Files.exists(dataDir), "data dir should exist");
         chambersDir = dataDir.resolve("chambers");
@@ -37,7 +38,7 @@ public class Chambers
 
         // Now we can create a correctly order list of Chambers.
         chamberDirs.stream()
-            .map(Chamber::new)
+            .map(cd -> new Chamber(cd, env))
             .forEach(c -> {
                 chambers.add(c);
             });

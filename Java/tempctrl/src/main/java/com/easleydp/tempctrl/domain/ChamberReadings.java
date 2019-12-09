@@ -39,8 +39,10 @@ public class ChamberReadings
         this.chamberParameters = chamberParameters;
     }
 
+    public ChamberReadings() {}  // Default ctor needed for Jackson deserialisation
 
-    private final int dt;
+
+    private int dt;
 
     /*
      * Temperatures.
@@ -114,7 +116,7 @@ public class ChamberReadings
      * Enables a sanity check between the controlling application and the chamber manager (Arduino).
      */
     @JsonIgnore
-    public final ChamberParameters chamberParameters;
+    public ChamberParameters chamberParameters;
 
 
     public int getDt()

@@ -1,14 +1,17 @@
 package com.easleydp.tempctrl.domain.optimise;
 
-import java.util.ArrayList;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.BeanWrapperImpl;
 import org.springframework.util.Assert;
 
 public class RedundantValues
 {
+    private static final Logger logger = LoggerFactory.getLogger(RedundantValues.class);
+
     /**
      * For each bean property:
      * If some contiguous beans have a property P with same (non-null) value V
@@ -52,12 +55,18 @@ public class RedundantValues
         }
     }
 
-    public static void removeRedundantIntermediateBeans(ArrayList<?> beans, String[] nullablePropertyNames)
+    public static void removeRedundantIntermediateBeans(List<?> beans, String[] nullablePropertyNames)
     {
-        for (int i = beans.size() - 2; i > 0; i--)
+        int startSize = beans.size();
+        if (startSize < 3)
+            return;
+        for (int i = startSize - 2; i > 0; i--)
             if (allNullablePropertiesAreNull(beans.get(i), nullablePropertyNames))
                 beans.remove(i);
-        Assert.state(beans.size() >= 2, "Should always be left with at least the first & last beans");
+        int endSize = beans.size();
+        Assert.state(endSize >= 2, "Should always be left with at least the first & last beans");
+        if (endSize < startSize)
+            logger.debug("removed redundant intermediate beans: " + (startSize - endSize));
     }
     private static boolean allNullablePropertiesAreNull(Object bean, String[] nullablePropertyNames)
     {

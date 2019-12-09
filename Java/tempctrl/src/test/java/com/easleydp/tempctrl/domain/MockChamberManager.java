@@ -4,6 +4,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.Random;
 
+import org.springframework.core.env.Environment;
 import org.springframework.util.Assert;
 
 import com.easleydp.tempctrl.domain.ChamberReadings.Mode;
@@ -14,6 +15,16 @@ public class MockChamberManager implements ChamberManager
 
     private Random random;
 
+    /**
+     * When the temperatureProfile should be considered to have started.
+     * @param startTime  Some point in time >= startTime
+     */
+    public MockChamberManager(Date startTime, TemperatureProfile temperatureProfile, Environment env)
+    {
+        this.startTime = startTime;
+        this.temperatureProfile = temperatureProfile;
+    }
+
     @Override
     public void setParameters(int chamberId, ChamberParameters chamberParameters)
     {
@@ -23,7 +34,7 @@ public class MockChamberManager implements ChamberManager
     @Override
     public ChamberReadings getReadings(int chamberId, Date timeNow)
     {
-        random = new Random(chamberId);
+        random = new Random(timeNow.hashCode() + chamberId * 3);
 
         Assert.state(nowTime != null, "nowTime should be set before calling this method.");
         Assert.state(startTime != null, "startTime should be set before calling this method.");
@@ -82,16 +93,6 @@ public class MockChamberManager implements ChamberManager
     private final Date startTime;
     /** nowTime - startTime is used when interpolating temperatureProfile. */
     private Date nowTime = null;
-
-    /**
-     * When the temperatureProfile should be considered to have started.
-     * @param startTime  Some point in time >= startTime
-     */
-    public MockChamberManager(Date startTime, TemperatureProfile temperatureProfile)
-    {
-        this.startTime = startTime;
-        this.temperatureProfile = temperatureProfile;
-    }
 
     /**
      * Whereas a genuine ChamberManager impl simply returns current values, this simulator doesn't operate

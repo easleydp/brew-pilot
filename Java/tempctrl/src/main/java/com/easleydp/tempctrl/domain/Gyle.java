@@ -1,9 +1,15 @@
 package com.easleydp.tempctrl.domain;
 
+import static com.easleydp.tempctrl.domain.Gyle.LogFileDescriptor.*;
 import static com.easleydp.tempctrl.domain.PropertyUtils.*;
+import static com.easleydp.tempctrl.domain.Utils.*;
 import static com.easleydp.tempctrl.domain.optimise.RedundantValues.*;
 
+import java.io.BufferedWriter;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -24,19 +30,27 @@ import org.springframework.core.env.Environment;
 import org.springframework.util.Assert;
 
 import com.easleydp.tempctrl.domain.optimise.Smoother;
+import com.easleydp.tempctrl.domain.optimise.Smoother.IntPropertyAccessor;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.databind.SequenceWriter;
 
 public class Gyle extends GyleDto
 {
     private static final Logger logger = LoggerFactory.getLogger(Gyle.class);
+
+    /** NDJSON is JSON (non-pretty printed) with a new line delimiter after each line. */
+    private static final String NDJSON_LINE_DELIM = "\n";
 
     private static Smoother smoother;
     private static int gen1ReadingsCount;
     private static boolean smoothTemperatureReadings;
     private static boolean nullOutRedundantValues;
     private static boolean removeRedundantIntermediateReadings;
+
+    private ObjectMapper ndjsonMapper = new ObjectMapper();
+    private ObjectWriter ndjsonObjectWriter = ndjsonMapper.writerFor(ChamberReadings.class).withRootValueSeparator(NDJSON_LINE_DELIM);
 
     private Buffer buffer = null;
 
@@ -45,6 +59,7 @@ public class Gyle extends GyleDto
     public final Path gyleDir;
     public final Path logsDir;
 
+    private final Environment env;
     private LogAnalysis logAnalysis;
 
     public Gyle(Chamber chamber, Path gyleDir, Environment env)
@@ -52,6 +67,7 @@ public class Gyle extends GyleDto
         this.chamber = chamber;
         this.gyleDir = gyleDir;
         this.logsDir = gyleDir.resolve("logs");
+        this.env = env;
 
         if (smoother == null)
         {
@@ -70,7 +86,7 @@ public class Gyle extends GyleDto
         Assert.state(Files.exists(jsonFile), "gyle.json should exist");
         try
         {
-            String json = FileUtils.readFileToString(jsonFile.toFile(), "UTF-8");
+            String json = FileUtils.readFileToString(jsonFile.toFile(), StandardCharsets.UTF_8);
             ObjectMapper mapper = new ObjectMapper();
             BeanUtils.copyProperties(mapper.readValue(json, GyleDto.class), this);
         }
@@ -120,18 +136,33 @@ public class Gyle extends GyleDto
         buffer.add(chamberReadings, timeNow);
         if (buffer.isReadyToBeFlushed())
         {
-            buffer.flush(logsDir, logAnalysis);
+            buffer.flush(logsDir, logAnalysis, ndjsonObjectWriter);
             buffer = null;
-            // TODO: maybeConsolidateLogFiles();
+            logAnalysis.maybeConsolidateLogFiles();
+        }
+        else
+        {
+            // Now that a little time has passed since the last consolidation, the redundant gen1
+            // files can be removed.
+            logAnalysis.performAnyPostConsolidationCleanup();
         }
     }
 
     private class LogAnalysis
     {
+        final int genMultiplier;
+        final int maxGenerations;
         final List<LogFileDescriptor> logFileDescriptors;
+        private int nextDataBlockSeqNo;
+        private List<LogFileDescriptor> awaitingCleanup = new ArrayList<>();
 
         LogAnalysis()
         {
+            genMultiplier = PropertyUtils.getInteger(env, "readings.gen.multiplier", 10);
+            maxGenerations = PropertyUtils.getInteger(env, "readings.gen.max", 4);
+            Assert.state(genMultiplier >= 2, "readings.gen.multiplier must be at least 2");
+            Assert.state(maxGenerations >= 2, "readings.gen.max must be at least 2");
+
             try
             {
                 if (!Files.exists(logsDir))
@@ -148,14 +179,27 @@ public class Gyle extends GyleDto
                         .map(LogFileDescriptor::new)
                         .collect(Collectors.toList());
 
-                // Sort chronologically (latest last)
-                Collections.sort(logFileDescriptors, new Comparator<LogFileDescriptor>() {
-                    @Override
-                    public int compare(LogFileDescriptor fd1, LogFileDescriptor fd2)
-                    {
-                        return fd1.dataBlockSeqNo - fd2.dataBlockSeqNo;
-                    }
-                });
+                if (!logFileDescriptors.isEmpty())
+                {
+                    logger.warn(logFileDescriptors.size() + " gyle log file(s) found on start-up in " + logsDir);
+
+                    // Sort chronologically
+                    Collections.sort(logFileDescriptors, new Comparator<LogFileDescriptor>() {
+                        @Override
+                        public int compare(LogFileDescriptor fd1, LogFileDescriptor fd2)
+                        {
+                            return fd1.dataBlockSeqNo - fd2.dataBlockSeqNo;
+                        }
+                    });
+
+                    LogFileDescriptor latest = logFileDescriptors.get(logFileDescriptors.size() - 1);
+                    // Leave a gap to highlight the discontinuity.
+                    nextDataBlockSeqNo = latest.dataBlockSeqNo + 10;
+                }
+                else
+                {
+                    nextDataBlockSeqNo = 1;
+                }
             }
             catch (IOException e)
             {
@@ -163,9 +207,9 @@ public class Gyle extends GyleDto
             }
         }
 
-        LogFileDescriptor getLatestLogFileDescriptor()
+        int getNextDataBlockSeqNo()
         {
-            return logFileDescriptors.isEmpty() ? null : logFileDescriptors.get(logFileDescriptors.size() - 1);
+            return nextDataBlockSeqNo++;
         }
 
         /**
@@ -176,9 +220,84 @@ public class Gyle extends GyleDto
         {
             logFileDescriptors.add(new LogFileDescriptor(logFile));
         }
+
+        void maybeConsolidateLogFiles()
+        {
+            int gen = 1;
+            do {
+                List<LogFileDescriptor> genNDescriptors = getGenNDescriptors(gen);
+                if (genNDescriptors.size() < genMultiplier)
+                    break;
+                consolidateLogFiles(genNDescriptors, ++gen);
+                awaitingCleanup.addAll(genNDescriptors);
+            } while (gen < maxGenerations);
+        }
+        private void consolidateLogFiles(List<LogFileDescriptor> genNDescriptors, int gen)
+        {
+            LogFileDescriptor first = genNDescriptors.get(0);
+            LogFileDescriptor last = genNDescriptors.get(genNDescriptors.size() - 1);
+            Path newLogFile = logsDir.resolve(buildLogFilename(first.dataBlockSeqNo, gen, first.dtStart, last.dtEnd));
+            try (BufferedWriter out = new BufferedWriter(
+                    new OutputStreamWriter(new FileOutputStream(newLogFile.toFile()), StandardCharsets.UTF_8)))
+            {
+                for (LogFileDescriptor desc : genNDescriptors)
+                {
+                    try (Stream<String> stream = Files.lines(desc.logFile))
+                    {
+                        stream.forEach(ln -> writeLine(out, ln));
+                    }
+                }
+            }
+            catch (IOException e)
+            {
+                throw new RuntimeException(e);
+            }
+            logAnalysis.addLogFileDescriptor(newLogFile);
+        }
+        private void writeLine(BufferedWriter out, String line)
+        {
+            try
+            {
+                // Unfortunately, Jackson doesn't add a newline after the last line.
+                // Simple workaround is to trim off any existing newline and add a fresh one.
+                out.write(line.trim() + NDJSON_LINE_DELIM);
+            }
+            catch (IOException e)
+            {
+                throw new RuntimeException(e);
+            }
+        }
+
+        public void performAnyPostConsolidationCleanup()
+        {
+            if (!awaitingCleanup.isEmpty())
+            {
+                try
+                {
+                    for (LogFileDescriptor desc : awaitingCleanup)
+                    {
+                        Files.delete(desc.logFile);
+                        boolean removed = logFileDescriptors.remove(desc);
+                        Assert.state(removed, desc.logFile + " should be removed.");
+                    }
+                }
+                catch (IOException e)
+                {
+                    throw new RuntimeException(e);
+                }
+                awaitingCleanup = new ArrayList<>();
+            }
+        }
+
+        private List<LogFileDescriptor> getGenNDescriptors(int gen)
+        {
+            return logFileDescriptors.stream()
+                    .filter(ld -> ld.generation == gen)
+                    .collect(Collectors.toList());
+        }
     }
 
-    private static final Pattern logFilePattern = Pattern.compile("^(\\d+)-(\\d+)-(\\d+)-(\\d+)\\.json$");
+    private static final Pattern logFilePattern = Pattern.compile("^(\\d+)-(\\d+)-(\\d+)-(\\d+)\\.ndjson$");
 
     static class LogFileDescriptor
     {
@@ -205,6 +324,17 @@ public class Gyle extends GyleDto
         public String getFilename()
         {
             return logFile.getFileName().toString();
+        }
+
+        public static final String sep = "-";
+        public static String buildLogFilename(int dataBlockSeqNo, int generation, int dtStart, int dtEnd)
+        {
+            return dataBlockSeqNo + sep + generation + sep + dtStart + sep + dtEnd + ".ndjson";
+        }
+        public static String buildLogFilename(int dataBlockSeqNo, int generation, Date dtStart, Date dtEnd)
+        {
+            return buildLogFilename(dataBlockSeqNo, generation,
+                    reduceUtcMillisPrecision(dtStart.getTime()), reduceUtcMillisPrecision(dtEnd.getTime()));
         }
     }
 
@@ -241,26 +371,23 @@ public class Gyle extends GyleDto
         }
 
         /**
-         * Flush to disk file and possibly consolidate existing files.
+         * Flush this buffer to disk file.
          * Impl note: passing params rather than make the class non-static because Jackson needs
          * static class when deserialising.
          */
-        public void flush(Path logsDir, LogAnalysis logAnalysis)
+        public void flush(Path logsDir, LogAnalysis logAnalysis, ObjectWriter ndjsonObjectWriter)
         {
             optimiseReadings();
 
             try
             {
-                LogFileDescriptor latestLogFileDescriptor = logAnalysis.getLatestLogFileDescriptor();
-                int dataBlockSeqNo = latestLogFileDescriptor == null ? 1 : latestLogFileDescriptor.dataBlockSeqNo + 1;
-                String logFileName = dataBlockSeqNo + "-1-" + Utils.reduceUtcMillisPrecision(createdAt.getTime()) +
-                        "-" + Utils.reduceUtcMillisPrecision(lastAddedAt.getTime()) + ".json";
+                String logFileName = buildLogFilename(logAnalysis.getNextDataBlockSeqNo(), 1, createdAt, lastAddedAt);
                 Path logFile = logsDir.resolve(logFileName);
                 Files.createFile(logFile);
                 logAnalysis.addLogFileDescriptor(logFile);
 
-                ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
-                mapper.writeValue(logFile.toFile(), this);
+                SequenceWriter sw = ndjsonObjectWriter.writeValues(logFile.toFile());
+                sw.writeAll(getReadings());
 
                 // No need to clear `readings`; the caller will now release this buffer.
             }
@@ -272,34 +399,24 @@ public class Gyle extends GyleDto
 
         private void optimiseReadings()
         {
+            // Removes insignificant fluctuations in the temperature readings.
             // Must smooth before removing redundant records since the smoothing algorithm assumes readings
             // are taken with a fixed frequency.
             if (smoothTemperatureReadings)
-                smoothTemperatureReadings();
+                for (IntPropertyAccessor temperatureAccessor : ChamberReadings.allTemperatureAccessors)
+                    smoother.smoothOutSmallFluctuations((List) readingsList, temperatureAccessor);
 
             // For each ChamberReadings property:
             // If some contiguous readings have a property P with same value V then null-out
             // all the intermediate values (so they won't be serialised).
             if (nullOutRedundantValues)
-            {
                 for (String propertyName : ChamberReadings.getNullablePropertyNames())
                     nullOutRedundantValues(readingsList, propertyName);
-            }
 
             // Given that the records have been fed through `nullOutRedundantReadings()`, any intermediate
             // records where all the nullable properties have been set to null are redundant.
             if (removeRedundantIntermediateReadings)
                 removeRedundantIntermediateBeans(readingsList, ChamberReadings.getNullablePropertyNames());
-        }
-
-        /** Removes insignificant fluctuations in the temperature readings. */
-        private void smoothTemperatureReadings()
-        {
-            smoother.smoothOutSmallFluctuations((List) readingsList, ChamberReadings.tTargetAccessor);
-            smoother.smoothOutSmallFluctuations((List) readingsList, ChamberReadings.tBeerAccessor);
-            smoother.smoothOutSmallFluctuations((List) readingsList, ChamberReadings.tExternalAccessor);
-            smoother.smoothOutSmallFluctuations((List) readingsList, ChamberReadings.tChamberAccessor);
-            smoother.smoothOutSmallFluctuations((List) readingsList, ChamberReadings.tPiAccessor);
         }
 
     }

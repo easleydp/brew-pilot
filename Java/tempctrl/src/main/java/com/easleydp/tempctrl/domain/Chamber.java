@@ -1,6 +1,7 @@
 package com.easleydp.tempctrl.domain;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
@@ -39,7 +40,7 @@ public class Chamber extends ChamberDto
 
         try
         {
-            String json = FileUtils.readFileToString(jsonFile.toFile(), "UTF-8");
+            String json = FileUtils.readFileToString(jsonFile.toFile(), StandardCharsets.UTF_8);
             ObjectMapper mapper = new ObjectMapper();
             BeanUtils.copyProperties(mapper.readValue(json, ChamberDto.class), this);
 

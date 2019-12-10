@@ -38,7 +38,7 @@ public class MockChamberManager implements ChamberManager
 
         Assert.state(nowTime != null, "nowTime should be set before calling this method.");
         Assert.state(startTime != null, "startTime should be set before calling this method.");
-        int millisSinceStart = (int) (nowTime.getTime() - startTime.getTime());
+        long millisSinceStart = nowTime.getTime() - startTime.getTime();
         Assert.state(millisSinceStart >= 0, "nowTime should not be before startTime.");
         Assert.state(temperatureProfile != null, "temperatureProfile should be set before calling this method.");
 
@@ -46,7 +46,7 @@ public class MockChamberManager implements ChamberManager
         ChamberParameters params = this.chamberParameters;
         if (params == null) {
             tTarget = temperatureProfile.getTargetTempAt(millisSinceStart);
-            tTargetNext = temperatureProfile.getTargetTempAt(millisSinceStart + 1000 * 60 * 60);
+            tTargetNext = temperatureProfile.getTargetTempAt(millisSinceStart + 1000L * 60 * 60);
             tMin = -5 * 10;
             tMax = 40 * 10;
             params = new ChamberParameters(tTarget, tTargetNext, tMin, tMax);

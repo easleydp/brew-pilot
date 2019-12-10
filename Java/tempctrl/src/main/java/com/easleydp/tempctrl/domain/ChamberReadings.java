@@ -177,7 +177,7 @@ public class ChamberReadings
     {
         this.heaterOutput = heaterOutput;
     }
-    @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public Boolean getCoolerOn()
     {
         return coolerOn;
@@ -266,5 +266,8 @@ public class ChamberReadings
             ((ChamberReadings) record).tPi = value;
         }
     };
+
+    public static IntPropertyAccessor[] allTemperatureAccessors = new IntPropertyAccessor[] {
+            tTargetAccessor, tBeerAccessor, tExternalAccessor, tChamberAccessor, tPiAccessor};
 
 }

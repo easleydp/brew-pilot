@@ -5,6 +5,7 @@ import static org.apache.commons.io.FileUtils.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -23,6 +24,7 @@ import org.springframework.util.Assert;
 import org.springframework.util.FileSystemUtils;
 
 import com.easleydp.tempctrl.domain.Gyle.LogFileDescriptor;
+import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class GyleTests
@@ -35,7 +37,9 @@ public class GyleTests
     private Date timeNow;
     private MockEnvironment env;
 
-    private static final int readingsPerGeneration = 10;
+    private static final int gen1ReadingsCount = 10;
+    private static final int genMultiplier = 4;
+    private static final int maxGenerations = 3;
 
     private void collectReadings()
     {
@@ -47,8 +51,10 @@ public class GyleTests
     public void beforeEach() throws Exception
     {
         env = new MockEnvironment();
+        env.setProperty("readings.gen.multiplier", "" + genMultiplier);
+        env.setProperty("readings.gen1.readingsCount", "" + gen1ReadingsCount);
+        env.setProperty("readings.gen.max", "" + maxGenerations);
         env.setProperty("readings.periodMillis", "60000");
-        env.setProperty("readings.gen1.readingsCount", "10");
         env.setProperty("readings.temp.smoothing.thresholdHeight", "2");
         env.setProperty("readings.temp.smoothing.thresholdWidths", "2, 1");
         env.setProperty("readings.optimise.smoothTemperatureReadings", "" + false);
@@ -88,7 +94,7 @@ public class GyleTests
         // Simulate taking a reading every minute for <gen1ReadingsCount - 1> minutes.
         // Confirm no data file created up to this point.
         timeNow = startTime;
-        for (int i = 0; i < readingsPerGeneration - 1; i++)
+        for (int i = 0; i < gen1ReadingsCount - 1; i++)
         {
             timeNow = addMinutes(timeNow, 1);
             collectReadings();
@@ -100,17 +106,17 @@ public class GyleTests
         timeNow = addMinutes(timeNow, 1);
         collectReadings();
         String expectedLogFileName =
-                // "<dataBlockSeqNo>-<generation>-<dtStart>-<dtEnd>.json"
-                "1-1-" + reduceUtcMillisPrecision(addMinutes(startTime, 1)) + "-" + reduceUtcMillisPrecision(timeNow) + ".json";
+                // "<dataBlockSeqNo>-<generation>-<dtStart>-<dtEnd>.ndjson"
+                "1-1-" + reduceUtcMillisPrecision(addMinutes(startTime, 1)) + "-" + reduceUtcMillisPrecision(timeNow) + ".ndjson";
         List<LogFileDescriptor> logFileDescs = listLogFiles();
         assertEquals(1, logFileDescs.size());
         assertEquals(expectedLogFileName, logFileDescs.get(0).getFilename());
-        assertEquals(readingsPerGeneration, countReadings(logFileDescs.get(0).logFile));
+        assertReadingsLookOk(gen1ReadingsCount, logFileDescs.get(0).logFile);
 
 
         // It should take <gen1ReadingsCount> minutes until a second file appears
-        startTime = addMinutes(startTime, readingsPerGeneration);
-        for (int i = 0; i < readingsPerGeneration - 1; i++)
+        startTime = addMinutes(startTime, gen1ReadingsCount);
+        for (int i = 0; i < gen1ReadingsCount - 1; i++)
         {
             timeNow = addMinutes(timeNow, 1);
             collectReadings();
@@ -122,22 +128,36 @@ public class GyleTests
         timeNow = addMinutes(timeNow, 1);
         collectReadings();
         expectedLogFileName =
-                // "<dataBlockSeqNo>-<generation>-<dtStart>-<dtEnd>.json"
-                "2-1-" + reduceUtcMillisPrecision(addMinutes(startTime, 1)) + "-" + reduceUtcMillisPrecision(timeNow) + ".json";
+                // "<dataBlockSeqNo>-<generation>-<dtStart>-<dtEnd>.ndjson"
+                "2-1-" + reduceUtcMillisPrecision(addMinutes(startTime, 1)) + "-" + reduceUtcMillisPrecision(timeNow) + ".ndjson";
         logFileDescs = listLogFiles();
         assertEquals(2, logFileDescs.size());
         assertEquals(expectedLogFileName, logFileDescs.get(1).getFilename());
 
-        assertEquals(readingsPerGeneration, countReadings(logFileDescs.get(1).logFile));
+        assertReadingsLookOk(gen1ReadingsCount, logFileDescs.get(1).logFile);
+    }
+
+    private void assertReadingsLookOk(int expectedCCount, Path logFile) throws IOException
+    {
+        List<ChamberReadings> readings = getReadings(logFile);
+        assertEquals(expectedCCount, readings.size());
+
+        // Confirm they're in chronological order
+        int lastDt = Integer.MIN_VALUE;
+        for (ChamberReadings r : readings)
+        {
+            assertTrue(r.getDt() > lastDt);
+            lastDt = r.getDt();
+        }
     }
 
     private List<LogFileDescriptor> listLogFiles()
     {
-        List<LogFileDescriptor> fileDescs = new ArrayList<>(listFiles(gyle.logsDir.toFile(), new String[] {"json"}, false)).stream()
+        List<LogFileDescriptor> fileDescs = new ArrayList<>(listFiles(gyle.logsDir.toFile(), new String[] {"ndjson"}, false)).stream()
                 .map(f -> new LogFileDescriptor(f.toPath()))
                 .collect(Collectors.toList());
 
-        // Sort chronologically (latest last)
+        // Sort chronologically
         fileDescs.sort(new Comparator<LogFileDescriptor>() {
             @Override
             public int compare(LogFileDescriptor fd1, LogFileDescriptor fd2)
@@ -148,12 +168,11 @@ public class GyleTests
         return fileDescs;
     }
 
-    private int countReadings(Path logFile) throws IOException
+    private List<ChamberReadings> getReadings(Path logFile) throws IOException
     {
-        String json = FileUtils.readFileToString(logFile.toFile(), "UTF-8");
-        ObjectMapper mapper = new ObjectMapper();
-        Gyle.Buffer buffer = mapper.readValue(json, Gyle.Buffer.class);
-        return buffer.getReadings().size();
+        String ndjson = FileUtils.readFileToString(logFile.toFile(), StandardCharsets.UTF_8);
+        MappingIterator<ChamberReadings> iterator = new ObjectMapper().readerFor(ChamberReadings.class).readValues(ndjson);
+        return iterator.readAll();
     }
 
     /**
@@ -170,24 +189,92 @@ public class GyleTests
         Path logsDir = gyle.gyleDir.resolve("logs");
         if (!Files.exists(logsDir))
             Files.createDirectories(logsDir);
-        String logFileName = "7-1-12345-23456.json";
+        String logFileName = "7-1-12345-23456.ndjson";
         Path logFile = logsDir.resolve(logFileName);
         Files.createFile(logFile);
 
         // Take enough readings for first file to appear
         timeNow = startTime;
-        for (int i = 0; i < readingsPerGeneration; i++)
+        for (int i = 0; i < gen1ReadingsCount; i++)
         {
             timeNow = addMinutes(timeNow, 1);
             collectReadings();
         }
 
+        // Note: When finding existing log files on creating the 'first' log file, the number
+        // allocator leaves a gap of 10 to highlight the discontinuity.
         String expectedLogFileName =
-                // "<dataBlockSeqNo>-<generation>-<dtStart>-<dtEnd>.json"
-                "8-1-" + reduceUtcMillisPrecision(addMinutes(startTime, 1)) + "-" + reduceUtcMillisPrecision(timeNow) + ".json";
+                // "<dataBlockSeqNo>-<generation>-<dtStart>-<dtEnd>.ndjson"
+                "17-1-" + reduceUtcMillisPrecision(addMinutes(startTime, 1)) + "-" + reduceUtcMillisPrecision(timeNow) + ".ndjson";
         List<LogFileDescriptor> logFileDescs = listLogFiles();
         assertEquals(2, logFileDescs.size());
         assertEquals(expectedLogFileName, logFileDescs.get(1).getFilename());
+    }
+
+    @Test
+    public void shouldConsolidateGen1LogFiles() throws Exception
+    {
+        timeNow = startTime;
+        for (int i = 0; i < genMultiplier - 1; i++)
+            collectEnoughReadingsForOneGen1File();
+        assertEquals(genMultiplier - 1, listLogFiles().size());
+
+        // On creation of the last file of gen1, not only should the new gen1 file appear
+        // but also the first gen2 file.
+        collectEnoughReadingsForOneGen1File();
+        assertEquals(genMultiplier + 1, listLogFiles().size());
+
+        // On collecting the next set of readings, the original gen1 files should be tidied away.
+        collectEnoughReadingsForOneGen1File();
+        assertEquals(2, listLogFiles().size());
+    }
+
+    @Test
+    public void shouldConsolidateGen2LogFiles() throws Exception
+    {
+        timeNow = startTime;
+        for (int i = 0; i < genMultiplier; i++)
+            for (int j = 0; j < genMultiplier; j++)
+                collectEnoughReadingsForOneGen1File();
+        assertEquals(genMultiplier * 2 + 1, listLogFiles().size());
+
+        // On collecting the next set of readings, the original gen1 files should be tidied away.
+        collectEnoughReadingsForOneGen1File();
+        List<LogFileDescriptor> logFileDescs = listLogFiles();
+        assertEquals(2, logFileDescs.size());
+
+        assertReadingsLookOk(gen1ReadingsCount * genMultiplier * genMultiplier, logFileDescs.get(0).logFile);
+        assertReadingsLookOk(gen1ReadingsCount, logFileDescs.get(1).logFile);
+    }
+
+    @Test
+    public void shouldConsolidateGen3LogFiles() throws Exception
+    {
+        timeNow = startTime;
+        for (int i = 0; i < genMultiplier; i++)
+            for (int j = 0; j < genMultiplier; j++)
+                for (int k = 0; k < genMultiplier; k++)
+                    collectEnoughReadingsForOneGen1File();
+        // Since maxGenerations is 3, shouldn't have consolidated the gen3 files a a gen4.
+        assertEquals(genMultiplier * maxGenerations, listLogFiles().size());
+
+        // On collecting the next set of readings, the original gen1 files should be tidied away.
+        collectEnoughReadingsForOneGen1File();
+        List<LogFileDescriptor> logFileDescs = listLogFiles();
+        assertEquals(genMultiplier + 1, logFileDescs.size());
+
+        assertReadingsLookOk(gen1ReadingsCount * genMultiplier * genMultiplier, logFileDescs.get(0).logFile);
+        assertReadingsLookOk(gen1ReadingsCount * genMultiplier * genMultiplier, logFileDescs.get(logFileDescs.size() - 2).logFile);
+        assertReadingsLookOk(gen1ReadingsCount, logFileDescs.get(logFileDescs.size() - 1).logFile);
+    }
+
+    private void collectEnoughReadingsForOneGen1File()
+    {
+        for (int i = 0; i < gen1ReadingsCount; i++)
+        {
+            timeNow = addMinutes(timeNow, 1);
+            collectReadings();
+        }
     }
 
     private static Date addMinutes(Date d, int mins)

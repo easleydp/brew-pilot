@@ -50,7 +50,7 @@ public class TemperatureProfile extends TemperatureProfileDto
      * If the specified millisSinceStart is between two points an interpolated value is calculated.
      * If the specified millisSinceStart is after the last point the last set point temperature is returned.
      */
-    public int getTargetTempAt(final int millisSinceStart)
+    public int getTargetTempAt(final long millisSinceStart)
     {
         if (millisSinceStart < 0)
             throw new IllegalArgumentException("millisSinceStart cannot be -ve");
@@ -77,12 +77,12 @@ public class TemperatureProfile extends TemperatureProfileDto
                 Assert.state(prevPoint != null, "prevPoint should be non-null");
                 final int yA = prevPoint.getTargetTemp();
                 final int yB = point.getTargetTemp();
-                final int xA = prevPoint.getMillisSinceStart();
-                final int xB = point.getMillisSinceStart();
-                final int x = millisSinceStart;
+                final long xA = prevPoint.getMillisSinceStart();
+                final long xB = point.getMillisSinceStart();
+                final long x = millisSinceStart;
                 // https://en.wikipedia.org/wiki/Interpolation#Linear_interpolation
-                final int y = yA + (yB - yA) * (x - xA) / (xB - xA);
-                return y;
+                final long y = yA + (yB - yA) * (x - xA) / (xB - xA);
+                return (int) y;
             }
         }
         return point.getTargetTemp();

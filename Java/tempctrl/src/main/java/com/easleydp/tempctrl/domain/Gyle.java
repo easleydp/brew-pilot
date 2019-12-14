@@ -228,14 +228,6 @@ public class Gyle extends GyleDto
                             lastDtEnd = fd.dtEnd;
                         }
                     }
-
-                    LogFileDescriptor latest = logFileDescriptors.get(logFileDescriptors.size() - 1);
-                    // Leave a gap to highlight the discontinuity.
-                    nextDataBlockSeqNo = latest.dataBlockSeqNo + 10;
-                }
-                else
-                {
-                    nextDataBlockSeqNo = 1;
                 }
             }
             catch (IOException e)
@@ -273,7 +265,7 @@ public class Gyle extends GyleDto
         {
             LogFileDescriptor first = genNDescriptors.get(0);
             LogFileDescriptor last = genNDescriptors.get(genNDescriptors.size() - 1);
-            Path newLogFile = logsDir.resolve(buildLogFilename(first.dataBlockSeqNo, gen, first.dtStart, last.dtEnd));
+            Path newLogFile = logsDir.resolve(buildLogFilename(gen, first.dtStart, last.dtEnd));
 
             byte[] buff = new byte[1024 * 8];
             try (OutputStream out = new BufferedOutputStream(new FileOutputStream(newLogFile.toFile())))
@@ -323,12 +315,11 @@ public class Gyle extends GyleDto
         }
     }
 
-    private static final Pattern logFilePattern = Pattern.compile("^(\\d+)-(\\d+)-(\\d+)-(\\d+)\\.ndjson$");
+    private static final Pattern logFilePattern = Pattern.compile("^(\\d+)-(\\d+)-(\\d+)\\.ndjson$");
 
     static class LogFileDescriptor
     {
         final Path logFile;
-        final int dataBlockSeqNo;
         final int generation;
         final int dtStart;
         final int dtEnd;
@@ -341,10 +332,9 @@ public class Gyle extends GyleDto
             Matcher matcher = logFilePattern.matcher(logfileName);
             Assert.state(matcher.matches(), "Invalid log file name: " + logfileName);
 
-            this.dataBlockSeqNo = Integer.parseInt(matcher.group(1), 10);
-            this.generation = Integer.parseInt(matcher.group(2), 10);
-            this.dtStart = Integer.parseInt(matcher.group(3), 10);
-            this.dtEnd = Integer.parseInt(matcher.group(4), 10);
+            this.generation = Integer.parseInt(matcher.group(1), 10);
+            this.dtStart = Integer.parseInt(matcher.group(2), 10);
+            this.dtEnd = Integer.parseInt(matcher.group(3), 10);
         }
 
         public String getFilename()
@@ -353,13 +343,13 @@ public class Gyle extends GyleDto
         }
 
         public static final String sep = "-";
-        public static String buildLogFilename(int dataBlockSeqNo, int generation, int dtStart, int dtEnd)
+        public static String buildLogFilename(int generation, int dtStart, int dtEnd)
         {
-            return dataBlockSeqNo + sep + generation + sep + dtStart + sep + dtEnd + ".ndjson";
+            return generation + sep + dtStart + sep + dtEnd + ".ndjson";
         }
-        public static String buildLogFilename(int dataBlockSeqNo, int generation, Date dtStart, Date dtEnd)
+        public static String buildLogFilename(int generation, Date dtStart, Date dtEnd)
         {
-            return buildLogFilename(dataBlockSeqNo, generation,
+            return buildLogFilename(generation,
                     reduceUtcMillisPrecision(dtStart.getTime()), reduceUtcMillisPrecision(dtEnd.getTime()));
         }
     }
@@ -411,7 +401,7 @@ public class Gyle extends GyleDto
 
             try
             {
-                String logFileName = buildLogFilename(logAnalysis.getNextDataBlockSeqNo(), 1, createdAt, lastAddedAt);
+                String logFileName = buildLogFilename(1, createdAt, lastAddedAt);
                 Path logFile = logsDir.resolve(logFileName);
                 Files.createFile(logFile);
                 logAnalysis.addLogFileDescriptor(logFile);

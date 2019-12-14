@@ -107,8 +107,8 @@ public class GyleTests
         timeNow = addMinutes(timeNow, 1);
         collectReadings();
         String expectedLogFileName =
-                // "<dataBlockSeqNo>-<generation>-<dtStart>-<dtEnd>.ndjson"
-                "1-1-" + reduceUtcMillisPrecision(addMinutes(startTime, 1)) + "-" + reduceUtcMillisPrecision(timeNow) + ".ndjson";
+                // "<generation>-<dtStart>-<dtEnd>.ndjson"
+                "1-" + reduceUtcMillisPrecision(addMinutes(startTime, 1)) + "-" + reduceUtcMillisPrecision(timeNow) + ".ndjson";
         List<LogFileDescriptor> logFileDescs = listLogFiles();
         assertEquals(1, logFileDescs.size());
         assertEquals(expectedLogFileName, logFileDescs.get(0).getFilename());
@@ -129,8 +129,8 @@ public class GyleTests
         timeNow = addMinutes(timeNow, 1);
         collectReadings();
         expectedLogFileName =
-                // "<dataBlockSeqNo>-<generation>-<dtStart>-<dtEnd>.ndjson"
-                "2-1-" + reduceUtcMillisPrecision(addMinutes(startTime, 1)) + "-" + reduceUtcMillisPrecision(timeNow) + ".ndjson";
+                // "<generation>-<dtStart>-<dtEnd>.ndjson"
+                "1-" + reduceUtcMillisPrecision(addMinutes(startTime, 1)) + "-" + reduceUtcMillisPrecision(timeNow) + ".ndjson";
         logFileDescs = listLogFiles();
         assertEquals(2, logFileDescs.size());
         assertEquals(expectedLogFileName, logFileDescs.get(1).getFilename());
@@ -163,7 +163,7 @@ public class GyleTests
             @Override
             public int compare(LogFileDescriptor fd1, LogFileDescriptor fd2)
             {
-                return fd1.dataBlockSeqNo - fd2.dataBlockSeqNo;
+                return fd1.dtStart - fd2.dtStart;
             }});
 
         return fileDescs;
@@ -174,41 +174,6 @@ public class GyleTests
         String ndjson = FileUtils.readFileToString(logFile.toFile(), StandardCharsets.UTF_8);
         MappingIterator<ChamberReadings> iterator = new ObjectMapper().readerFor(ChamberReadings.class).readValues(ndjson);
         return iterator.readAll();
-    }
-
-    /**
-     * When creating the first memory buffer after a restart there may be some existing log files.
-     * In this case their filenames should be scanned to determine the next "dataBlockSeqNo".
-     */
-    @Test
-    public void shouldDetermineNextDataBlockSeqNo() throws Exception
-    {
-        // Create a dummy pre-existing log file
-        chamber = chambers.getChamberById(2);
-        gyle = chamber.getGyleById(1);
-        Path logsDir = gyle.gyleDir.resolve("logs");
-        if (!Files.exists(logsDir))
-            Files.createDirectories(logsDir);
-        String logFileName = "7-1-12345-23456.ndjson";
-        Path logFile = logsDir.resolve(logFileName);
-        Files.createFile(logFile);
-
-        // Take enough readings for first file to appear
-        timeNow = startTime;
-        for (int i = 0; i < gen1ReadingsCount; i++)
-        {
-            timeNow = addMinutes(timeNow, 1);
-            collectReadings();
-        }
-
-        // Note: When finding existing log files on creating the 'first' log file, the number
-        // allocator leaves a gap of 10 to highlight the discontinuity.
-        String expectedLogFileName =
-                // "<dataBlockSeqNo>-<generation>-<dtStart>-<dtEnd>.ndjson"
-                "17-1-" + reduceUtcMillisPrecision(addMinutes(startTime, 1)) + "-" + reduceUtcMillisPrecision(timeNow) + ".ndjson";
-        List<LogFileDescriptor> logFileDescs = listLogFiles();
-        assertEquals(2, logFileDescs.size());
-        assertEquals(expectedLogFileName, logFileDescs.get(1).getFilename());
     }
 
     /**
@@ -224,11 +189,11 @@ public class GyleTests
         if (!Files.exists(logsDir))
             Files.createDirectories(logsDir);
         String[] logFileNames = new String[] {
-                "1-1-163-181.ndjson",
-                "2-1-183-201.ndjson",
-                "3-1-203-221.ndjson",
-                "4-1-223-241.ndjson",
-                "1-2-163-241.ndjson",
+                "1-163-181.ndjson",
+                "1-183-201.ndjson",
+                "1-203-221.ndjson",
+                "1-223-241.ndjson",
+                "2-163-241.ndjson",
         };
         for (String logFileName : logFileNames)
         {
@@ -243,7 +208,7 @@ public class GyleTests
         // All bar the gen2 file should have been purged
         List<LogFileDescriptor> logFileDescs = listLogFiles();
         assertEquals(1, logFileDescs.size());
-        assertEquals("1-2-163-241.ndjson", logFileDescs.get(0).getFilename());
+        assertEquals("2-163-241.ndjson", logFileDescs.get(0).getFilename());
     }
 
     @Test

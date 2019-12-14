@@ -55,7 +55,7 @@ public class Gyle extends GyleDto
     private Smoother smoother;
     private BufferConfig bufferConfig;
     private Buffer buffer;
-
+    private boolean firstReadingsCollected = false;
 
     public final Chamber chamber;
     public final Path gyleDir;
@@ -129,10 +129,19 @@ public class Gyle extends GyleDto
             logAnalysis = new LogAnalysis();  // Fail fast rather than leave this until first flush
 
         // Ensure we have a buffer and write the readings to it.
-        // If the memory buffer is ready to be flushed, flush and delete. (Note, flushing should also
-        // trigger file consolidation if necessary.)
+        // If the memory buffer is ready to be flushed, flush & release, and consolidate log files as necessary.
         if (buffer == null)
-            buffer = new Buffer(timeNow, bufferConfig, smoother);
+        {
+            if (!firstReadingsCollected && PropertyUtils.getBoolean(env, "readings.staggerFirstReadings", true))
+            {
+                // Stagger each active gyle storing its first buffer by inflating the initial reading count.
+                buffer = new Buffer(timeNow, bufferConfig.withInflatedReadingsCount(chamber.getId()), smoother);
+            }
+            else
+            {
+                buffer = new Buffer(timeNow, bufferConfig, smoother);
+            }
+        }
         buffer.add(chamberReadings, timeNow);
         if (buffer.isReadyToBeFlushed())
         {
@@ -146,6 +155,8 @@ public class Gyle extends GyleDto
             // files can be removed.
             logAnalysis.performAnyPostConsolidationCleanup();
         }
+
+        firstReadingsCollected = true;
     }
 
     private class LogAnalysis
@@ -458,6 +469,12 @@ public class Gyle extends GyleDto
             this.smoothTemperatureReadings = smoothTemperatureReadings;
             this.nullOutRedundantValues = nullOutRedundantValues;
             this.removeRedundantIntermediateReadings = removeRedundantIntermediateReadings;
+        }
+
+        public BufferConfig withInflatedReadingsCount(int extraReadingsCount)
+        {
+            return new BufferConfig(gen1ReadingsCount + extraReadingsCount, smoothTemperatureReadings,
+                    nullOutRedundantValues, removeRedundantIntermediateReadings);
         }
 
     }

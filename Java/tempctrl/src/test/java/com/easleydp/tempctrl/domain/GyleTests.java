@@ -60,6 +60,7 @@ public class GyleTests
         env.setProperty("readings.optimise.smoothTemperatureReadings", "" + false);
         env.setProperty("readings.optimise.nullOutRedundantValues", "" + false);
         env.setProperty("readings.optimise.removeRedundantIntermediate", "" + false);
+        env.setProperty("readings.staggerFirstReadings", "" + false);
 
         Path dataDir = Paths.get(".", "src/test/resources/testData");
         Assert.state(Files.exists(dataDir), "data dir should exist.");

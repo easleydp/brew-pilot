@@ -27,7 +27,7 @@ public class CollectReadingsScheduler
     public void takeReadings()
     {
         Date nowTime = new Date();
-        // For each chamber, if it has an active gyle, collect its readings.
+        // For each chamber, if it has an active gyle, collect a set of readings.
         chambers.getChambers().stream()
             .map(Chamber::getActiveGyle)
             .filter(ag -> ag != null)

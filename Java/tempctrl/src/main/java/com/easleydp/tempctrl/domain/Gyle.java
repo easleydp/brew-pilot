@@ -5,10 +5,12 @@ import static com.easleydp.tempctrl.domain.PropertyUtils.*;
 import static com.easleydp.tempctrl.domain.Utils.*;
 import static com.easleydp.tempctrl.domain.optimise.RedundantValues.*;
 
-import java.io.BufferedWriter;
+import java.io.BufferedOutputStream;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
@@ -25,6 +27,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
@@ -233,14 +236,15 @@ public class Gyle extends GyleDto
             LogFileDescriptor first = genNDescriptors.get(0);
             LogFileDescriptor last = genNDescriptors.get(genNDescriptors.size() - 1);
             Path newLogFile = logsDir.resolve(buildLogFilename(first.dataBlockSeqNo, gen, first.dtStart, last.dtEnd));
-            try (BufferedWriter out = new BufferedWriter(
-                    new OutputStreamWriter(new FileOutputStream(newLogFile.toFile()), StandardCharsets.UTF_8)))
+
+            byte[] buff = new byte[1024 * 8];
+            try (OutputStream out = new BufferedOutputStream(new FileOutputStream(newLogFile.toFile())))
             {
                 for (LogFileDescriptor desc : genNDescriptors)
                 {
-                    try (Stream<String> stream = Files.lines(desc.logFile))
+                    try (InputStream in = new FileInputStream(desc.logFile.toFile()))
                     {
-                        stream.forEach(ln -> writeLine(out, ln));
+                        IOUtils.copyLarge(in, out, buff);
                     }
                 }
             }
@@ -248,18 +252,8 @@ public class Gyle extends GyleDto
             {
                 throw new RuntimeException(e);
             }
+
             logAnalysis.addLogFileDescriptor(newLogFile);
-        }
-        private void writeLine(BufferedWriter out, String line)
-        {
-            try
-            {
-                out.write(line + NDJSON_NEWLINE_DELIM);
-            }
-            catch (IOException e)
-            {
-                throw new RuntimeException(e);
-            }
         }
 
         public void performAnyPostConsolidationCleanup()

@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -182,14 +183,40 @@ public class Gyle extends GyleDto
                 {
                     logger.warn(logFileDescriptors.size() + " gyle log file(s) found on start-up in " + logsDir);
 
-                    // Sort chronologically
+                    // Sort chronologically by dtStart. In the case of a tie (which should only
+                    // happen when consolidated files didn't get purged), put the latest
+                    // generation first so the following redundant files can be conveniently
+                    // removed (see next block).
                     Collections.sort(logFileDescriptors, new Comparator<LogFileDescriptor>() {
                         @Override
                         public int compare(LogFileDescriptor fd1, LogFileDescriptor fd2)
                         {
-                            return fd1.dataBlockSeqNo - fd2.dataBlockSeqNo;
+                            int diff = fd1.dtStart - fd2.dtStart;
+                            if (diff == 0)
+                                diff = fd2.generation - fd1.generation;
+                            if (diff == 0)
+                                throw new IllegalStateException(fd1.getFilename() + ", " + fd2.getFilename());
+                            return diff;
                         }
                     });
+
+                    // Purge any files that seem to have been consolidated. (They must have just
+                    // missed being purged before the app last terminated.)
+                    int lastDtEnd = Integer.MIN_VALUE;
+                    for (Iterator<LogFileDescriptor> iter = logFileDescriptors.iterator(); iter.hasNext();)
+                    {
+                        LogFileDescriptor fd = iter.next();
+                        if (fd.dtEnd <= lastDtEnd)
+                        {
+                            logger.warn("Purging redundant log file on start-up: " + fd.getFilename());
+                            Files.delete(fd.logFile);
+                            iter.remove();
+                        }
+                        else
+                        {
+                            lastDtEnd = fd.dtEnd;
+                        }
+                    }
 
                     LogFileDescriptor latest = logFileDescriptors.get(logFileDescriptors.size() - 1);
                     // Leave a gap to highlight the discontinuity.

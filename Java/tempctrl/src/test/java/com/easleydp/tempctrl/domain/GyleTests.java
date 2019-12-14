@@ -178,7 +178,6 @@ public class GyleTests
     /**
      * When creating the first memory buffer after a restart there may be some existing log files.
      * In this case their filenames should be scanned to determine the next "dataBlockSeqNo".
-     * @throws Exception
      */
     @Test
     public void shouldDetermineNextDataBlockSeqNo() throws Exception
@@ -209,6 +208,41 @@ public class GyleTests
         List<LogFileDescriptor> logFileDescs = listLogFiles();
         assertEquals(2, logFileDescs.size());
         assertEquals(expectedLogFileName, logFileDescs.get(1).getFilename());
+    }
+
+    /**
+     *
+     */
+    @Test
+    public void shouldPurgeRedundantLogFilesOnStartup() throws Exception
+    {
+        // Create some dummy pre-existing log files
+        chamber = chambers.getChamberById(2);
+        gyle = chamber.getGyleById(1);
+        Path logsDir = gyle.gyleDir.resolve("logs");
+        if (!Files.exists(logsDir))
+            Files.createDirectories(logsDir);
+        String[] logFileNames = new String[] {
+                "1-1-163-181.ndjson",
+                "2-1-183-201.ndjson",
+                "3-1-203-221.ndjson",
+                "4-1-223-241.ndjson",
+                "1-2-163-241.ndjson",
+        };
+        for (String logFileName : logFileNames)
+        {
+            Path logFile = logsDir.resolve(logFileName);
+            Files.createFile(logFile);
+        }
+
+        // Log files are analysed (and purged) lazily on taking the first set of readings.
+        timeNow = startTime;
+        collectReadings();
+
+        // All bar the gen2 file should have been purged
+        List<LogFileDescriptor> logFileDescs = listLogFiles();
+        assertEquals(1, logFileDescs.size());
+        assertEquals("1-2-163-241.ndjson", logFileDescs.get(0).getFilename());
     }
 
     @Test

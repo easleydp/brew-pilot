@@ -9,6 +9,8 @@ import java.io.BufferedWriter;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.io.StringWriter;
+import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -41,18 +43,14 @@ public class Gyle extends GyleDto
     private static final Logger logger = LoggerFactory.getLogger(Gyle.class);
 
     /** NDJSON is JSON (non-pretty printed) with a new line delimiter after each line. */
-    private static final String NDJSON_LINE_DELIM = "\n";
+    private static final String NDJSON_NEWLINE_DELIM = "\n";
 
-    private static Smoother smoother;
-    private static int gen1ReadingsCount;
-    private static boolean smoothTemperatureReadings;
-    private static boolean nullOutRedundantValues;
-    private static boolean removeRedundantIntermediateReadings;
+    private static ObjectMapper ndjsonMapper = new ObjectMapper();
+    private static ObjectWriter ndjsonObjectWriter = ndjsonMapper.writerFor(ChamberReadings.class).withRootValueSeparator(NDJSON_NEWLINE_DELIM);
 
-    private ObjectMapper ndjsonMapper = new ObjectMapper();
-    private ObjectWriter ndjsonObjectWriter = ndjsonMapper.writerFor(ChamberReadings.class).withRootValueSeparator(NDJSON_LINE_DELIM);
-
-    private Buffer buffer = null;
+    private Smoother smoother;
+    private BufferConfig bufferConfig;
+    private Buffer buffer;
 
 
     public final Chamber chamber;
@@ -69,18 +67,16 @@ public class Gyle extends GyleDto
         this.logsDir = gyleDir.resolve("logs");
         this.env = env;
 
-        if (smoother == null)
-        {
-            int thresholdHeight = getInteger(env, "readings.temp.smoothing.thresholdHeight", 2);
-            int[] thresholdWidths = getIntArray(env, "readings.temp.smoothing.thresholdWidths", null);
-            smoother = thresholdWidths == null ?
-                    new Smoother(thresholdHeight) : new Smoother(thresholdHeight, thresholdWidths);
+        int thresholdHeight = getInteger(env, "readings.temp.smoothing.thresholdHeight", 2);
+        int[] thresholdWidths = getIntArray(env, "readings.temp.smoothing.thresholdWidths", null);
+        smoother = thresholdWidths == null ?
+                new Smoother(thresholdHeight) : new Smoother(thresholdHeight, thresholdWidths);
 
-            gen1ReadingsCount = getInteger(env, "readings.gen1.readingsCount", 30);
-            smoothTemperatureReadings = getBoolean(env, "readings.optimise.smoothTemperatureReadings", true);
-            nullOutRedundantValues = getBoolean(env, "readings.optimise.nullOutRedundantValues", true);
-            removeRedundantIntermediateReadings = getBoolean(env, "readings.optimise.removeRedundantIntermediate", true);
-        }
+        bufferConfig = new BufferConfig(
+                getInteger(env, "readings.gen1.readingsCount", 30),
+                getBoolean(env, "readings.optimise.smoothTemperatureReadings", true),
+                getBoolean(env, "readings.optimise.nullOutRedundantValues", true),
+                getBoolean(env, "readings.optimise.removeRedundantIntermediate", true));
 
         Path jsonFile = gyleDir.resolve("gyle.json");
         Assert.state(Files.exists(jsonFile), "gyle.json should exist");
@@ -132,11 +128,11 @@ public class Gyle extends GyleDto
         // If the memory buffer is ready to be flushed, flush and delete. (Note, flushing should also
         // trigger file consolidation if necessary.)
         if (buffer == null)
-            buffer = new Buffer(timeNow);
+            buffer = new Buffer(timeNow, bufferConfig, smoother);
         buffer.add(chamberReadings, timeNow);
         if (buffer.isReadyToBeFlushed())
         {
-            buffer.flush(logsDir, logAnalysis, ndjsonObjectWriter);
+            buffer.flush(logsDir, logAnalysis);
             buffer = null;
             logAnalysis.maybeConsolidateLogFiles();
         }
@@ -258,9 +254,7 @@ public class Gyle extends GyleDto
         {
             try
             {
-                // Unfortunately, Jackson doesn't add a newline after the last line.
-                // Simple workaround is to trim off any existing newline and add a fresh one.
-                out.write(line.trim() + NDJSON_LINE_DELIM);
+                out.write(line + NDJSON_NEWLINE_DELIM);
             }
             catch (IOException e)
             {
@@ -340,13 +334,17 @@ public class Gyle extends GyleDto
 
     static class Buffer
     {
+        private BufferConfig config;
+        private Smoother smoother;
         private Date createdAt;
         private Date lastAddedAt;
         private List<ChamberReadings> readingsList = Collections.synchronizedList(new ArrayList<>());
 
-        public Buffer(Date createdAt)
+        public Buffer(Date createdAt, BufferConfig config, Smoother smoother)
         {
             this.createdAt = createdAt;
+            this.config = config;
+            this.smoother = smoother;
         }
 
         /** Jackson needs a default ctor */
@@ -361,7 +359,7 @@ public class Gyle extends GyleDto
         @JsonIgnore
         public boolean isReadyToBeFlushed()
         {
-            return readingsList.size() >= gen1ReadingsCount;
+            return readingsList.size() >= config.gen1ReadingsCount;
         }
 
         /** For Jackson */
@@ -375,7 +373,7 @@ public class Gyle extends GyleDto
          * Impl note: passing params rather than make the class non-static because Jackson needs
          * static class when deserialising.
          */
-        public void flush(Path logsDir, LogAnalysis logAnalysis, ObjectWriter ndjsonObjectWriter)
+        public void flush(Path logsDir, LogAnalysis logAnalysis)
         {
             optimiseReadings();
 
@@ -386,8 +384,13 @@ public class Gyle extends GyleDto
                 Files.createFile(logFile);
                 logAnalysis.addLogFileDescriptor(logFile);
 
-                SequenceWriter sw = ndjsonObjectWriter.writeValues(logFile.toFile());
-                sw.writeAll(getReadings());
+                Writer writer = new StringWriter();
+                try (SequenceWriter sw = ndjsonObjectWriter.writeValues(writer))
+                {
+                    sw.writeAll(getReadings());
+                }
+                String ndjson = writer.toString() + NDJSON_NEWLINE_DELIM;
+                Files.writeString(logFile, ndjson, StandardCharsets.UTF_8);
 
                 // No need to clear `readings`; the caller will now release this buffer.
             }
@@ -402,21 +405,38 @@ public class Gyle extends GyleDto
             // Removes insignificant fluctuations in the temperature readings.
             // Must smooth before removing redundant records since the smoothing algorithm assumes readings
             // are taken with a fixed frequency.
-            if (smoothTemperatureReadings)
+            if (config.smoothTemperatureReadings)
                 for (IntPropertyAccessor temperatureAccessor : ChamberReadings.allTemperatureAccessors)
                     smoother.smoothOutSmallFluctuations((List) readingsList, temperatureAccessor);
 
             // For each ChamberReadings property:
             // If some contiguous readings have a property P with same value V then null-out
             // all the intermediate values (so they won't be serialised).
-            if (nullOutRedundantValues)
+            if (config.nullOutRedundantValues)
                 for (String propertyName : ChamberReadings.getNullablePropertyNames())
                     nullOutRedundantValues(readingsList, propertyName);
 
             // Given that the records have been fed through `nullOutRedundantReadings()`, any intermediate
             // records where all the nullable properties have been set to null are redundant.
-            if (removeRedundantIntermediateReadings)
+            if (config.removeRedundantIntermediateReadings)
                 removeRedundantIntermediateBeans(readingsList, ChamberReadings.getNullablePropertyNames());
+        }
+    }
+
+    static class BufferConfig
+    {
+        final int gen1ReadingsCount;
+        final boolean smoothTemperatureReadings;
+        final boolean nullOutRedundantValues;
+        final boolean removeRedundantIntermediateReadings;
+
+        public BufferConfig(int gen1ReadingsCount, boolean smoothTemperatureReadings,
+                boolean nullOutRedundantValues, boolean removeRedundantIntermediateReadings)
+        {
+            this.gen1ReadingsCount = gen1ReadingsCount;
+            this.smoothTemperatureReadings = smoothTemperatureReadings;
+            this.nullOutRedundantValues = nullOutRedundantValues;
+            this.removeRedundantIntermediateReadings = removeRedundantIntermediateReadings;
         }
 
     }

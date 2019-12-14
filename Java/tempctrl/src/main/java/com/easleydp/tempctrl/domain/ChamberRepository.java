@@ -19,14 +19,14 @@ import org.springframework.util.Assert;
 /**
  * Produces and collects Chamber instances.
  */
-public class Chambers
+public class ChamberRepository
 {
     private final Path chambersDir;
 
     /** Latest first */
     private final Queue<Chamber> chambers = new ConcurrentLinkedQueue<>();
 
-    public Chambers(Path dataDir, Environment env)
+    public ChamberRepository(Path dataDir, Environment env)
     {
         Assert.state(Files.exists(dataDir), "data dir should exist");
         chambersDir = dataDir.resolve("chambers");

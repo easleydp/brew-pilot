@@ -14,7 +14,7 @@ import org.springframework.util.Assert;
 
 import com.easleydp.tempctrl.domain.ArduinoChamberManager;
 import com.easleydp.tempctrl.domain.ChamberManager;
-import com.easleydp.tempctrl.domain.Chambers;
+import com.easleydp.tempctrl.domain.ChamberRepository;
 
 @SpringBootApplication
 @EnableScheduling
@@ -38,9 +38,9 @@ public class TempctrlApplication {
 //    }
 
     @Bean
-    public Chambers chambers(Path dataDir)
+    public ChamberRepository chamberRepository(Path dataDir)
     {
-        return new Chambers(dataDir, env);
+        return new ChamberRepository(dataDir, env);
     }
 
     @Bean

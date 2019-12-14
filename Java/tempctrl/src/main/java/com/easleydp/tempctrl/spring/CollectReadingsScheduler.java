@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 
 import com.easleydp.tempctrl.domain.Chamber;
 import com.easleydp.tempctrl.domain.ChamberManager;
-import com.easleydp.tempctrl.domain.Chambers;
+import com.easleydp.tempctrl.domain.ChamberRepository;
 
 /**
  * Note: Scheduling of taking readings is separated from the actual collecting of readings for the sake of testability
@@ -18,7 +18,7 @@ import com.easleydp.tempctrl.domain.Chambers;
 public class CollectReadingsScheduler
 {
     @Autowired
-    private Chambers chambers;
+    private ChamberRepository chamberRepository;
 
     @Autowired
     private ChamberManager chamberManager;
@@ -28,7 +28,7 @@ public class CollectReadingsScheduler
     {
         Date nowTime = new Date();
         // For each chamber, if it has an active gyle, collect a set of readings.
-        chambers.getChambers().stream()
+        chamberRepository.getChambers().stream()
             .map(Chamber::getActiveGyle)
             .filter(ag -> ag != null)
             .forEach(ag -> ag.collectReadings(chamberManager, nowTime));

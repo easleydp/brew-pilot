@@ -7,8 +7,8 @@ public class GyleDto
 {
     private String name;
     private TemperatureProfileDto temperatureProfile;
-    private Long dtStarted;  // Null is not started
-    private Long dtEnded;  // Null is not ended
+    private Long dtStarted;  // Null if not started
+    private Long dtEnded;  // Null if not ended
 
     public String getName()
     {

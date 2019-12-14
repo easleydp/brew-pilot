@@ -30,7 +30,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class GyleTests
 {
     private MockChamberManager chamberManagerSim;
-    private Chambers chambers;
+    private ChamberRepository chambers;
     private Chamber chamber;
     private Gyle gyle;
     private Date startTime;
@@ -64,7 +64,7 @@ public class GyleTests
 
         Path dataDir = Paths.get(".", "src/test/resources/testData");
         Assert.state(Files.exists(dataDir), "data dir should exist.");
-        chambers = new Chambers(dataDir, env);
+        chambers = new ChamberRepository(dataDir, env);
 
         // Remove any "logs" dirs left over from a previous test
         for (Chamber ch : chambers.getChambers())
@@ -136,6 +136,13 @@ public class GyleTests
         assertEquals(expectedLogFileName, logFileDescs.get(1).getFilename());
 
         assertReadingsLookOk(gen1ReadingsCount, logFileDescs.get(1).logFile);
+    }
+
+    @Test
+    public void shouldStaggerFirstReadingsOfEachChamber() throws Exception
+    {
+        env.setProperty("readings.staggerFirstReadings", "" + true);
+        // TODO
     }
 
     private void assertReadingsLookOk(int expectedCCount, Path logFile) throws IOException

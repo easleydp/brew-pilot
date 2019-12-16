@@ -12,7 +12,7 @@ public class LogChartController
     @GetMapping("/log-chart/status")
     public StatusReportResponse getStatusReport()
     {
-        return new StatusReportResponse(101, null);
+        return new StatusReportResponse(101, "Foo");
     }
 
     private static final class StatusReportResponse

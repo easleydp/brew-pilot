@@ -1,11 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
+// https://www.npmjs.com/package/highcharts
+import * as Highcharts from 'highcharts/highstock';
+//import * as Exporting from 'highcharts/modules/exporting';
+//Exporting(Highcharts);
+
+//import '../lib/highstockPatch-7.2.1';
+
 const Home: React.FC = () => {
   useEffect(() => {
     console.log(0, 'mount');
+    debugger;
     return () => {
       console.log(1, 'unmount');
+      debugger;
     };
   }, []);
 

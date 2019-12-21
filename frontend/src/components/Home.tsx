@@ -6,8 +6,6 @@ import * as Highcharts from 'highcharts/highstock';
 //import * as Exporting from 'highcharts/modules/exporting';
 //Exporting(Highcharts);
 
-//import '../lib/highstockPatch-7.2.1';
-
 const Home: React.FC = () => {
   useEffect(() => {
     console.log(0, 'mount');

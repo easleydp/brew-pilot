@@ -1,6 +1,6 @@
 import React from 'react';
 //import logo from '../logo.svg';
-import './App.css';
+import './App.scss';
 import { BrowserRouter as Router, Switch, Route, NavLink } from 'react-router-dom';
 // import { LinkContainer } from 'react-router-bootstrap';
 import { Nav, Navbar, NavDropdown } from 'react-bootstrap';

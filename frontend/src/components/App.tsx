@@ -1,19 +1,19 @@
 import React from 'react';
 //import logo from '../logo.svg';
 import './App.css';
+import { BrowserRouter as Router, Switch, Route, NavLink } from 'react-router-dom';
+// import { LinkContainer } from 'react-router-bootstrap';
+import { Nav, Navbar, NavDropdown } from 'react-bootstrap';
+
 import Home from './Home';
 import Status from './Status';
-import { BrowserRouter as Router, Switch, Route } from 'react-router-dom';
-import Navbar from 'react-bootstrap/Navbar';
-import Nav from 'react-bootstrap/Nav';
-import NavDropdown from 'react-bootstrap/NavDropdown';
 
 const App: React.FC = () => {
   return (
     <Router>
       <div>
         <Navbar bg="light" expand="lg">
-          <Navbar.Brand href="/">
+          <Navbar.Brand as={NavLink} to="/">
             <img
               src="/brew-pilot-logo.png"
               className="d-inline-block align-top"
@@ -24,14 +24,24 @@ const App: React.FC = () => {
           <Navbar.Toggle aria-controls="basic-navbar-nav" />
           <Navbar.Collapse id="basic-navbar-nav">
             <Nav className="mr-auto">
-              <Nav.Link href="/">Home</Nav.Link>
+              <Nav.Link as={NavLink} to="/">
+                Home
+              </Nav.Link>
               <NavDropdown title="Chambers" id="basic-nav-dropdown">
-                <NavDropdown.Item href="/chamber/1">Fermenter</NavDropdown.Item>
+                <NavDropdown.Item as={NavLink} to="/chamber/1">
+                  Fermenter
+                </NavDropdown.Item>
                 <NavDropdown.Divider />
-                <NavDropdown.Item href="/chamber/2">Beer fridge</NavDropdown.Item>
+                <NavDropdown.Item as={NavLink} to="/chamber/2">
+                  Beer fridge
+                </NavDropdown.Item>
               </NavDropdown>
-              <Nav.Link href="/profiles">Temperature profiles</Nav.Link>
-              <Nav.Link href="/status">Backend status</Nav.Link>
+              <Nav.Link as={NavLink} to="/profiles">
+                Temperature profiles
+              </Nav.Link>
+              <Nav.Link as={NavLink} to="/status">
+                Backend status
+              </Nav.Link>
             </Nav>
           </Navbar.Collapse>
         </Navbar>

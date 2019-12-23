@@ -17,17 +17,10 @@
   //   background-color: pink;
   // }
 
+  $gauge-height: 220px;
   .gauge-card {
     // background-color: green;
     text-align: center;
-  }
-
-  $gauge-height: 220px;
-  .card1 {
-    width: $gauge-height;
-    margin: 10px auto 20px;
-  }
-  .card2 {
     width: $gauge-height;
     margin: 10px auto 20px;
   }
@@ -37,11 +30,9 @@
   }
   @media (min-width: 1281px) {
     $gauge-height: 350px;
-    .card1 {
-      width: $gauge-height;
-      margin: 10px auto 20px;
-    }
-    .card2 {
+    .gauge-card {
+      // background-color: green;
+      text-align: center;
       width: $gauge-height;
       margin: 10px auto 20px;
     }

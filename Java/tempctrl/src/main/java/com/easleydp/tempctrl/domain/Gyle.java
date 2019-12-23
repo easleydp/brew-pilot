@@ -56,6 +56,7 @@ public class Gyle extends GyleDto
     private BufferConfig bufferConfig;
     private Buffer buffer;
     private boolean firstReadingsCollected = false;
+    private ChamberReadings latestChamberReadings;
 
     public final Chamber chamber;
     public final Path gyleDir;
@@ -124,6 +125,7 @@ public class Gyle extends GyleDto
         logger.debug("collectReadings()");
 
         ChamberReadings chamberReadings = chamberManager.getReadings(chamber.getId(), timeNow);
+        latestChamberReadings = chamberReadings;
 
         if (logAnalysis == null)
             logAnalysis = new LogAnalysis();  // Fail fast rather than leave this until first flush
@@ -157,6 +159,11 @@ public class Gyle extends GyleDto
         }
 
         firstReadingsCollected = true;
+    }
+
+    public ChamberReadings getLatestReadings()
+    {
+        return latestChamberReadings;
     }
 
     private class LogAnalysis

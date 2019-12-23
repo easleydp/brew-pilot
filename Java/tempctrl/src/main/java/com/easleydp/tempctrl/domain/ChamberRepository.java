@@ -23,7 +23,6 @@ public class ChamberRepository
 {
     private final Path chambersDir;
 
-    /** Latest first */
     private final Queue<Chamber> chambers = new ConcurrentLinkedQueue<>();
 
     public ChamberRepository(Path dataDir, Environment env)
@@ -32,19 +31,14 @@ public class ChamberRepository
         chambersDir = dataDir.resolve("chambers");
         Assert.state(Files.exists(chambersDir), "chambers dir should exist");
 
-        // Every chamber is configured in a numbered sub-dir "1", "2", etc.
-        // First step is to get such dirs in (reverse) order (2, 1).
-        List<Path> chamberDirs = getChamberDirs();
-
-        // Now we can create a correctly order list of Chambers.
-        chamberDirs.stream()
+        getChamberDirs().stream()
             .map(cd -> new Chamber(cd, env))
             .forEach(c -> {
                 chambers.add(c);
             });
     }
 
-    /** Finds chamber dirs in reverse order (i.e. latest ID first). */
+    /** Finds chamber dirs in order (1, 2, ...) */
     private List<Path> getChamberDirs()
     {
         try (Stream<Path> stream = Files.walk(chambersDir, 1)) {
@@ -60,7 +54,7 @@ public class ChamberRepository
                 {
                     int n1 = Integer.parseInt(p1.getFileName().toString());
                     int n2 = Integer.parseInt(p2.getFileName().toString());
-                    return n2 - n1;
+                    return n1 - n2;
                 }
             });
 

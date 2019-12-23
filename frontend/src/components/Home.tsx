@@ -1,34 +1,49 @@
 import './Home.scss';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { isMobile } from 'react-device-detect';
 
 import Gauge from './Gauge';
 
 //const Home: React.FC = () => {
 const Home = () => {
-  return (
+  interface IChamberSummary {
+    id: number;
+    name: string;
+    tTarget: number | null;
+  }
+
+  const [chamberSummaries, setChamberSummaries] = useState<IChamberSummary[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const response = await axios('/chamber-summaries');
+      setChamberSummaries(response.data);
+    };
+    fetchData();
+  }, []);
+
+  const instruction = `${isMobile ? 'Tap' : 'Click '} gauge for details`;
+  return chamberSummaries.length ? (
     <div className="home container-fluid">
       <div className="row">
-        <div className="col-sm-6 bg-yellow">
-          <div className="gauge-card card1">
-            <div className="inner">
-              <h3>Fermenter</h3>
-              <Gauge id="container-1" targetTemp={17.5} />
-              <div className="instruction">Click gauge for details</div>
+        {chamberSummaries.map(cs => {
+          return (
+            <div key={cs.id} className="col-sm-6">
+              <div className="gauge-card">
+                <div className="inner">
+                  <h3>{cs.name}</h3>
+                  <Gauge chamberId={cs.id} tTarget={cs.tTarget} />
+                  <div className="instruction">{instruction}</div>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-        <div className="col-sm-6 bg-pink">
-          <div className="gauge-card card2">
-            <div className="inner">
-              <h3>Beer fridge</h3>
-              <Gauge id="container-2" targetTemp={9} />
-              <div className="instruction">Click gauge for details</div>
-            </div>
-          </div>
-        </div>
+          );
+        })}
       </div>
     </div>
+  ) : (
+    <div>None found</div>
   );
 };
 

@@ -7,7 +7,7 @@ import org.springframework.core.env.Environment;
 public class ArduinoChamberManager implements ChamberManager
 {
 
-    public ArduinoChamberManager(Environment env)
+    public ArduinoChamberManager(ChamberRepository chamberRepository, Environment env)
     {
         // TODO Auto-generated constructor stub
     }

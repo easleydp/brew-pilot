@@ -17,6 +17,8 @@ import org.springframework.util.Assert;
 import com.easleydp.tempctrl.domain.ArduinoChamberManager;
 import com.easleydp.tempctrl.domain.ChamberManager;
 import com.easleydp.tempctrl.domain.ChamberRepository;
+import com.easleydp.tempctrl.domain.DummyChamberManager;
+import com.easleydp.tempctrl.domain.PropertyUtils;
 
 @SpringBootApplication(exclude = { SecurityAutoConfiguration.class, ManagementWebSecurityAutoConfiguration.class })
 @EnableScheduling
@@ -46,9 +48,11 @@ public class TempctrlApplication {
     }
 
     @Bean
-    public ChamberManager chamberManager()
+    public ChamberManager chamberManager(ChamberRepository chamberRepository)
     {
-        return new ArduinoChamberManager(env);
+        return PropertyUtils.getBoolean(env, "dummy.chambers", false) ?
+                    new DummyChamberManager(chamberRepository, env) :
+                    new ArduinoChamberManager(chamberRepository, env);
     }
 //
 //    @Bean

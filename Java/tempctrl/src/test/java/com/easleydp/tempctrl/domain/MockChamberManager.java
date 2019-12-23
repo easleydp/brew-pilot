@@ -2,6 +2,8 @@ package com.easleydp.tempctrl.domain;
 
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 
 import org.springframework.core.env.Environment;
@@ -11,7 +13,7 @@ import com.easleydp.tempctrl.domain.ChamberReadings.Mode;
 
 public class MockChamberManager implements ChamberManager
 {
-    private ChamberParameters chamberParameters;
+    private Map<Integer, ChamberParameters> chamberParametersById = new HashMap<>();
 
     private Random random;
 
@@ -28,7 +30,7 @@ public class MockChamberManager implements ChamberManager
     @Override
     public void setParameters(int chamberId, ChamberParameters chamberParameters)
     {
-        this.chamberParameters = chamberParameters;
+        chamberParametersById.put(chamberId,  chamberParameters);
     }
 
     @Override
@@ -43,7 +45,7 @@ public class MockChamberManager implements ChamberManager
         Assert.state(temperatureProfile != null, "temperatureProfile should be set before calling this method.");
 
         int tTarget, tTargetNext, tMin, tMax;
-        ChamberParameters params = this.chamberParameters;
+        ChamberParameters params = chamberParametersById.get(chamberId);
         if (params == null) {
             tTarget = temperatureProfile.getTargetTempAt(millisSinceStart);
             tTargetNext = temperatureProfile.getTargetTempAt(millisSinceStart + 1000L * 60 * 60);
@@ -54,9 +56,6 @@ public class MockChamberManager implements ChamberManager
         else
         {
             tTarget = params.tTarget;
-            tTargetNext = params.tTargetNext;
-            tMin = params.tMin;
-            tMax = params.tMax;
         }
 
         int tBeer = tTarget + randomInt(-2, 2);

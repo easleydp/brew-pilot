@@ -1,26 +1,73 @@
 import './Gauge.scss';
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 
 // https://www.npmjs.com/package/highcharts
 import * as HighchartsMore from 'highcharts/highcharts-more';
-//import * as HighchartsGauge from 'highcharts/modules/solid-gauge';
 import * as Highcharts from 'highcharts';
 (HighchartsMore as any)(Highcharts);
 
 type GaugeProps = {
-  id: string;
-  targetTemp: number;
+  chamberId: number;
+  tTarget: number | null;
 };
 
-const Gauge = ({ id, targetTemp }: GaugeProps) => {
+const Gauge = ({ chamberId, tTarget }: GaugeProps) => {
+  interface ISummaryStatus {
+    tTarget: number | null;
+    tBeer: number | null;
+  }
+
+  const [summaryStatus, setSummaryStatus] = useState<ISummaryStatus>({
+    tTarget: null,
+    tBeer: null,
+  });
+
   let interval: number;
+  const containerId = 'container-' + chamberId;
+  const minTemp = -1;
+  const maxTemp = 41;
+
+  interface PlotBand {
+    from: number;
+    to: number;
+    color: string;
+    innerRadius?: string;
+    outerRadius?: string;
+  }
+  const plotBands: PlotBand[] = [
+    {
+      from: minTemp,
+      to: 10,
+      color: '#66aaff', // blue
+    },
+    {
+      from: 10,
+      to: 30,
+      color: '#DDDF0D', // yellow
+    },
+    {
+      from: 30,
+      to: maxTemp,
+      color: '#e36b6b', // red
+    },
+  ];
+  if (tTarget) {
+    tTarget = tTarget / 10;
+    plotBands.push({
+      from: tTarget - 0.25,
+      to: tTarget + 0.25,
+      color: '#0b0',
+      innerRadius: '102%',
+      outerRadius: '111%',
+    });
+  }
+
   useEffect(() => {
     (Highcharts as any).chart(
-      id,
+      containerId,
       {
-        credits: {
-          enabled: false,
-        },
+        credits: { enabled: false },
         chart: {
           type: 'gauge',
           plotBackgroundColor: null,
@@ -29,9 +76,7 @@ const Gauge = ({ id, targetTemp }: GaugeProps) => {
           plotShadow: false,
           backgroundColor: 'none',
         },
-        title: {
-          text: undefined, //'Beer fridge temperature',
-        },
+        title: { text: undefined },
         pane: {
           startAngle: -150,
           endAngle: 150,
@@ -59,7 +104,6 @@ const Gauge = ({ id, targetTemp }: GaugeProps) => {
               outerRadius: '107%',
             },
             {
-              // default background
               backgroundColor: '#fff',
             },
             {
@@ -73,8 +117,8 @@ const Gauge = ({ id, targetTemp }: GaugeProps) => {
 
         // the value axis
         yAxis: {
-          min: -1,
-          max: 41,
+          min: minTemp,
+          max: maxTemp,
 
           minorTickInterval: 1,
           minorTickWidth: 1,
@@ -96,85 +140,64 @@ const Gauge = ({ id, targetTemp }: GaugeProps) => {
           title: {
             text: '°C',
           },
-          plotBands: [
-            {
-              from: -1,
-              to: 10,
-              color: '#66aaff', // blue
-            },
-            // {
-            //   from: 10,
-            //   to: 19,
-            //   color: '#DDDF0D', // yellow
-            // },
-            // {
-            //   from: 19,
-            //   to: 21,
-            //   color: '#55BF3B', // green
-            // },
-            // {
-            //   from: 21,
-            //   to: 30,
-            //   color: '#DDDF0D', // yellow
-            // },
-            {
-              from: 10,
-              to: 30,
-              color: '#DDDF0D', // yellow
-            },
-            {
-              from: 30,
-              to: 41,
-              color: '#e36b6b', // red
-            },
-            {
-              from: targetTemp - 0.25,
-              to: targetTemp + 0.25,
-              // color: '#333',
-              color: '#0b0',
-              innerRadius: '102%',
-              outerRadius: '111%',
-            },
-          ],
+          plotBands: plotBands,
         },
 
         series: [
           {
             name: 'Temperature',
-            data: [20],
-            // tooltip: {
-            //   valueSuffix: '°C',
-            // },
+            data: [0],
           },
         ],
         tooltip: { enabled: false },
       },
 
-      // Add some life
       function(chart: any) {
-        interval = window.setInterval(function() {
-          let point = chart.series[0].points[0],
-            newVal,
-            inc = (Math.random() - 0.5) * 20;
+        const point = chart.series[0].points[0];
+        function getReadings() {
+          axios
+            .get(`/chamber/${chamberId}/summary-status`)
+            .then(function(response) {
+              const status: ISummaryStatus = response.data;
+              setSummaryStatus(status);
+              const tTarget = (status.tTarget || 0) / 10;
+              const tBeer = (status.tBeer || 0) / 10;
+              console.log(chamberId, response, tTarget, tBeer);
 
-          newVal = point.y + inc;
-          if (newVal < -1 || newVal > 41) {
-            newVal = point.y - inc;
-          }
+              point.update(tBeer);
+            })
+            .catch(function(error) {
+              console.log(-1 * chamberId, error);
+              point.update(0);
+            });
+        }
 
-          newVal = Math.round(newVal * 10) / 10;
+        getReadings();
+        interval = window.setInterval(getReadings, 3000);
 
-          point.update(newVal);
-        }, 3000);
+        // interval = window.setInterval(() => {
+        //   let point = chart.series[0].points[0],
+        //     newVal,
+        //     inc = (Math.random() - 0.5) * 20;
+
+        //   newVal = point.y + inc;
+        //   if (newVal < minTemp || newVal > maxTemp) {
+        //     newVal = point.y - inc;
+        //   }
+
+        //   point.update(Math.round(newVal * 10) / 10);
+        // }, 3000);
       }
     );
 
     return () => {
-      clearInterval(interval);
+      if (interval) {
+        clearInterval(interval);
+      }
     };
   }, []);
 
-  return <div id={id}></div>;
+  return <div id={containerId}></div>;
 };
 
 export default Gauge;

@@ -1,38 +1,4 @@
-$gauge-height: 280px;
-
-.home {
-  /* Clear floats after the columns */
-  .chamber-cards:after {
-    content: '';
-    display: table;
-    clear: both;
-  }
-
-  // .bg-yellow {
-  //   background-color: rgb(0, 238, 255);
-  // }
-  // .bg-pink {
-  //   background-color: pink;
-  // }
-
-  .gauge-card {
-    // background-color: green;
-    text-align: center;
-  }
-  .card1 {
-    width: $gauge-height;
-    margin: 10px auto 50px;
-  }
-  .card2 {
-    width: $gauge-height;
-    margin: 10px auto 20px;
-  }
-
-  #container-1,
-  #container-2 {
-    height: $gauge-height;
-  }
-
+.gauge {
   .highcharts-figure,
   .highcharts-data-table table {
     min-width: 310px;
@@ -80,4 +46,6 @@ $gauge-height: 280px;
       fill: #333;
     }
   }
+
+  // .highcharts-pane-group > .highcharts-pane:nth-child(3) {}
 }

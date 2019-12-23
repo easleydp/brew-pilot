@@ -12,6 +12,12 @@ code {
 
 /* ----------------------------- */
 
+body,
+html {
+  background-image: url('background-tile.jpg');
+  background-repeat: repeat;
+}
+
 h3,
 h2,
 h1 {
@@ -22,10 +28,10 @@ h1 {
   .navbar-brand {
     color: #da4526;
     padding-bottom: 0.425rem;
-  }
-  .navbar-brand > img {
-    width: 25px;
-    height: 25px;
-    margin: 3px 4px 0 0;
+    > img {
+      width: 25px;
+      height: 25px;
+      margin: 3px 4px 0 0;
+    }
   }
 }

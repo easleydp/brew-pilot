@@ -27,7 +27,6 @@ const Gauge = ({ id, targetTemp }: GaugeProps) => {
           plotBackgroundImage: null,
           plotBorderWidth: 0,
           plotShadow: false,
-          //containerHeight: 200,
           backgroundColor: 'none',
         },
         title: {

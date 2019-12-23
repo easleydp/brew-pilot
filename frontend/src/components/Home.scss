@@ -1,6 +1,8 @@
-$gauge-height: 280px;
-
 .home {
+  h3 {
+    margin: 1rem 0 -0.25rem;
+  }
+
   /* Clear floats after the columns */
   .chamber-cards:after {
     content: '';
@@ -19,18 +21,38 @@ $gauge-height: 280px;
     // background-color: green;
     text-align: center;
   }
+
+  $gauge-height: 220px;
   .card1 {
     width: $gauge-height;
-    margin: 10px auto 50px;
+    margin: 10px auto 20px;
   }
   .card2 {
     width: $gauge-height;
     margin: 10px auto 20px;
   }
-
   #container-1,
   #container-2 {
     height: $gauge-height;
+  }
+  @media (min-width: 1281px) {
+    $gauge-height: 350px;
+    .card1 {
+      width: $gauge-height;
+      margin: 10px auto 20px;
+    }
+    .card2 {
+      width: $gauge-height;
+      margin: 10px auto 20px;
+    }
+    #container-1,
+    #container-2 {
+      height: $gauge-height;
+    }
+  }
+
+  .instruction {
+    margin-top: -0.5rem;
   }
 
   .highcharts-figure,

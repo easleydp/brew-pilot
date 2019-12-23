@@ -14,7 +14,7 @@ const Home = () => {
             <div className="inner">
               <h3>Fermenter</h3>
               <Gauge id="container-1" targetTemp={17.5} />
-              <div>Click gauge for details</div>
+              <div className="instruction">Click gauge for details</div>
             </div>
           </div>
         </div>
@@ -23,7 +23,7 @@ const Home = () => {
             <div className="inner">
               <h3>Beer fridge</h3>
               <Gauge id="container-2" targetTemp={9} />
-              <div>Click gauge for details</div>
+              <div className="instruction">Click gauge for details</div>
             </div>
           </div>
         </div>

@@ -8,14 +8,9 @@ import { Nav, Navbar, NavDropdown } from 'react-bootstrap';
 
 import Home from './Home';
 import Status from './Status';
+import { IChamberSummary } from '../api/IChamberSummary';
 
 const App: React.FC = () => {
-  interface IChamberSummary {
-    id: number;
-    name: string;
-    tTarget: number | null;
-  }
-
   const [chamberSummaries, setChamberSummaries] = useState<IChamberSummary[]>([]);
 
   useEffect(() => {
@@ -76,14 +71,13 @@ const App: React.FC = () => {
           </Navbar.Collapse>
         </Navbar>
 
-        {/* A <Switch> looks through its children <Route>s and
-            renders the first one that matches the current URL. */}
+        {/* A <Switch> looks through its child <Route>s and renders the first one that matches the current URL. */}
         <Switch>
           <Route path="/status">
             <Status />
           </Route>
           <Route path="/">
-            <Home />
+            <Home chamberSummaries={chamberSummaries} />
           </Route>
         </Switch>
       </div>

@@ -4,25 +4,14 @@ import axios from 'axios';
 import { isMobile } from 'react-device-detect';
 
 import Gauge from './Gauge';
+import { IChamberSummary } from '../api/IChamberSummary';
+
+type HomeProps = {
+  chamberSummaries: IChamberSummary[];
+};
 
 //const Home: React.FC = () => {
-const Home = () => {
-  interface IChamberSummary {
-    id: number;
-    name: string;
-    tTarget: number | null;
-  }
-
-  const [chamberSummaries, setChamberSummaries] = useState<IChamberSummary[]>([]);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      const response = await axios('/chamber-summaries');
-      setChamberSummaries(response.data);
-    };
-    fetchData();
-  }, []);
-
+const Home = ({ chamberSummaries }: HomeProps) => {
   const instruction = `${isMobile ? 'Tap' : 'Click '} gauge for details`;
   return chamberSummaries.length ? (
     <div className="home container-fluid">

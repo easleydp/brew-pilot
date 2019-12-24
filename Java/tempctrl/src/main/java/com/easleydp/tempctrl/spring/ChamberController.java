@@ -33,15 +33,9 @@ public class ChamberController
     }
     private static final class ChamberSummary
     {
-        @SuppressWarnings("unused")
-        public final int id;
-
-        @SuppressWarnings("unused")
-        public final String name;
-
-        @SuppressWarnings("unused")
-        public final Integer tTarget;
-
+        @SuppressWarnings("unused") public final int id;
+        @SuppressWarnings("unused") public final String name;
+        @SuppressWarnings("unused") public final Integer tTarget;
         public ChamberSummary(int id, String name, Integer tTarget)
         {
             this.id = id;
@@ -62,12 +56,8 @@ public class ChamberController
     }
     private static final class SummaryStatusResponse
     {
-        @SuppressWarnings("unused")
-        public final Integer tTarget;
-
-        @SuppressWarnings("unused")
-        public final Integer tBeer;
-
+        @SuppressWarnings("unused") public final Integer tTarget;
+        @SuppressWarnings("unused") public final Integer tBeer;
         public SummaryStatusResponse(Integer tTarget, Integer tBeer)
         {
             this.tTarget = tTarget;

@@ -13,11 +13,11 @@ const Status: React.FC = () => {
     axios
       .get('/log-chart/status')
       .then(function(response) {
-        console.log(1, response);
+        console.log('/log-chart/status', response);
         setStatus(response.data);
       })
       .catch(function(error) {
-        console.log(-1, error);
+        console.log('/log-chart/status ERROR', error);
       });
   }, []);
 

@@ -24,14 +24,17 @@ h1 {
   color: #444;
 }
 
-.navbar-light {
-  .navbar-brand {
-    color: #da4526;
-    padding-bottom: 0.425rem;
-    > img {
-      width: 25px;
-      height: 25px;
-      margin: 3px 4px 0 0;
+.navbar {
+  box-shadow: 0 5px 20px -10px #000;
+  &.navbar-light {
+    .navbar-brand {
+      color: #da4526;
+      padding-bottom: 0.425rem;
+      > img {
+        width: 25px;
+        height: 25px;
+        margin: 3px 4px 0 0;
+      }
     }
   }
 }

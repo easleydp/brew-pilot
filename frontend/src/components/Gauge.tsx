@@ -173,20 +173,7 @@ const Gauge = ({ chamberId, tTarget }: GaugeProps) => {
         }
 
         getReadings();
-        interval = window.setInterval(getReadings, 3000);
-
-        // interval = window.setInterval(() => {
-        //   let point = chart.series[0].points[0],
-        //     newVal,
-        //     inc = (Math.random() - 0.5) * 20;
-
-        //   newVal = point.y + inc;
-        //   if (newVal < minTemp || newVal > maxTemp) {
-        //     newVal = point.y - inc;
-        //   }
-
-        //   point.update(Math.round(newVal * 10) / 10);
-        // }, 3000);
+        interval = window.setInterval(getReadings, 60 * 1000);
       }
     );
 

@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 //import logo from '../logo.svg';
 import './App.scss';
+import axios from 'axios';
 import { BrowserRouter as Router, Switch, Route, NavLink } from 'react-router-dom';
 // import { LinkContainer } from 'react-router-bootstrap';
 import { Nav, Navbar, NavDropdown } from 'react-bootstrap';
@@ -9,10 +10,36 @@ import Home from './Home';
 import Status from './Status';
 
 const App: React.FC = () => {
+  interface IChamberSummary {
+    id: number;
+    name: string;
+    tTarget: number | null;
+  }
+
+  const [chamberSummaries, setChamberSummaries] = useState<IChamberSummary[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const response = await axios('/chamber-summaries');
+      setChamberSummaries(response.data);
+    };
+    fetchData();
+  }, []);
+
+  // Approximation of https://github.com/react-bootstrap/react-bootstrap/issues/1301#issuecomment-251281488
+  // NOTE: Not at all good that we're currently relying on `onMouseDown` on `Nav.Link`.
+  const [navExpanded, setNavExpanded] = useState<boolean>(false);
+  const setNavExpandedWrap = function(expanded: boolean) {
+    setNavExpanded(expanded);
+  };
+  const closeNav = function() {
+    setNavExpanded(false);
+  };
+
   return (
     <Router>
       <div>
-        <Navbar bg="light" expand="lg">
+        <Navbar bg="light" expand="lg" onToggle={setNavExpandedWrap} expanded={navExpanded}>
           <Navbar.Brand as={NavLink} to="/">
             <img
               src="/brew-pilot-logo.png"
@@ -23,23 +50,26 @@ const App: React.FC = () => {
           </Navbar.Brand>
           <Navbar.Toggle aria-controls="basic-navbar-nav" />
           <Navbar.Collapse id="basic-navbar-nav">
-            <Nav className="mr-auto">
-              <Nav.Link as={NavLink} to="/">
+            <Nav className="mr-auto" onSelect={closeNav}>
+              <Nav.Link as={NavLink} to="/" onMouseDown={closeNav}>
                 Home
               </Nav.Link>
               <NavDropdown title="Chambers" id="basic-nav-dropdown">
-                <NavDropdown.Item as={NavLink} to="/chamber/1">
-                  Fermenter
-                </NavDropdown.Item>
-                <NavDropdown.Divider />
-                <NavDropdown.Item as={NavLink} to="/chamber/2">
-                  Beer fridge
-                </NavDropdown.Item>
+                {chamberSummaries.map((cs, index) => {
+                  return (
+                    <div key={cs.id}>
+                      {index > 0 && <NavDropdown.Divider />}
+                      <NavDropdown.Item as={NavLink} to={`/chamber/${cs.id}`} onSelect={closeNav}>
+                        {cs.name}
+                      </NavDropdown.Item>
+                    </div>
+                  );
+                })}
               </NavDropdown>
-              <Nav.Link as={NavLink} to="/profiles">
+              <Nav.Link as={NavLink} to="/profiles" onMouseDown={closeNav}>
                 Temperature profiles
               </Nav.Link>
-              <Nav.Link as={NavLink} to="/status">
+              <Nav.Link as={NavLink} to="/status" onMouseDown={closeNav}>
                 Backend status
               </Nav.Link>
             </Nav>

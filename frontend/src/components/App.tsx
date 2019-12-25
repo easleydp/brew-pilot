@@ -12,11 +12,16 @@ import { IChamberSummary } from '../api/IChamberSummary';
 
 const App: React.FC = () => {
   const [chamberSummaries, setChamberSummaries] = useState<IChamberSummary[]>([]);
+  const [chamberSummariesError, setChamberSummariesError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
-      const response = await axios('/chamber-summaries');
-      setChamberSummaries(response.data);
+      try {
+        const response = await axios('/chamber-summaries');
+        setChamberSummaries(response.data);
+      } catch (error) {
+        setChamberSummariesError('' + error);
+      }
     };
     fetchData();
   }, []);
@@ -77,7 +82,10 @@ const App: React.FC = () => {
             <Status />
           </Route>
           <Route path="/">
-            <Home chamberSummaries={chamberSummaries} />
+            <Home
+              chamberSummaries={chamberSummaries}
+              chamberSummariesError={chamberSummariesError}
+            />
           </Route>
         </Switch>
       </div>

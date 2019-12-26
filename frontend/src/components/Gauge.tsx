@@ -1,5 +1,5 @@
 import './Gauge.scss';
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import axios from 'axios';
 
 // https://www.npmjs.com/package/highcharts
@@ -18,15 +18,7 @@ const Gauge = ({ chamberId, tTarget }: GaugeProps) => {
     tBeer: number | null;
   }
 
-  const [summaryStatus, setSummaryStatus] = useState<ISummaryStatus>({
-    tTarget: null,
-    tBeer: null,
-  });
-
-  let interval: number;
   const containerId = 'container-' + chamberId;
-  const minTemp = -1;
-  const maxTemp = 41;
 
   interface PlotBand {
     from: number;
@@ -35,35 +27,38 @@ const Gauge = ({ chamberId, tTarget }: GaugeProps) => {
     innerRadius?: string;
     outerRadius?: string;
   }
-  const plotBands: PlotBand[] = [
-    {
-      from: minTemp,
-      to: 10,
-      color: '#66aaff', // blue
-    },
-    {
-      from: 10,
-      to: 30,
-      color: '#DDDF0D', // yellow
-    },
-    {
-      from: 30,
-      to: maxTemp,
-      color: '#e36b6b', // red
-    },
-  ];
-  if (tTarget) {
-    tTarget = tTarget / 10;
-    plotBands.push({
-      from: tTarget - 0.25,
-      to: tTarget + 0.25,
-      color: '#0b0',
-      innerRadius: '102%',
-      outerRadius: '111%',
-    });
-  }
-
   useEffect(() => {
+    const minTemp = -1;
+    const maxTemp = 41;
+    const plotBands: PlotBand[] = [
+      {
+        from: minTemp,
+        to: 10,
+        color: '#66aaff', // blue
+      },
+      {
+        from: 10,
+        to: 30,
+        color: '#DDDF0D', // yellow
+      },
+      {
+        from: 30,
+        to: maxTemp,
+        color: '#e36b6b', // red
+      },
+    ];
+    if (tTarget) {
+      const _tTarget = tTarget / 10;
+      plotBands.push({
+        from: _tTarget - 0.25,
+        to: _tTarget + 0.25,
+        color: '#0b0',
+        innerRadius: '102%',
+        outerRadius: '111%',
+      });
+    }
+
+    let interval: number;
     (Highcharts as any).chart(
       containerId,
       {
@@ -159,10 +154,8 @@ const Gauge = ({ chamberId, tTarget }: GaugeProps) => {
             .get(`/chamber/${chamberId}/summary-status`)
             .then(function(response) {
               const status: ISummaryStatus = response.data;
-              setSummaryStatus(status);
-              const tTarget = (status.tTarget || 0) / 10;
               const tBeer = (status.tBeer || 0) / 10;
-              console.log(chamberId, response, tTarget, tBeer);
+              // console.debug(chamberId, response, tBeer);
 
               point.update(tBeer);
             })
@@ -182,7 +175,7 @@ const Gauge = ({ chamberId, tTarget }: GaugeProps) => {
         clearInterval(interval);
       }
     };
-  }, []);
+  }, [chamberId, containerId, tTarget]);
 
   return <div id={containerId}></div>;
 };

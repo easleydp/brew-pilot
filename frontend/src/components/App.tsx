@@ -3,12 +3,15 @@ import React, { useState, useEffect } from 'react';
 import './App.scss';
 import axios from 'axios';
 import { BrowserRouter as Router, Switch, Route, NavLink } from 'react-router-dom';
+import PrivateRoute from './PrivateRoute';
 // import { LinkContainer } from 'react-router-bootstrap';
 import { Nav, Navbar, NavDropdown } from 'react-bootstrap';
 
 import Home from './Home';
 import Status from './Status';
-import { IChamberSummary } from '../api/IChamberSummary';
+import Login from './Login';
+import Logout from './Logout';
+import IChamberSummary from '../api/IChamberSummary';
 
 const App: React.FC = () => {
   const [chamberSummaries, setChamberSummaries] = useState<IChamberSummary[]>([]);
@@ -72,21 +75,24 @@ const App: React.FC = () => {
               <Nav.Link as={NavLink} to="/status" onMouseDown={closeNav}>
                 Backend status
               </Nav.Link>
+              <Nav.Link as={NavLink} to="/logout" onMouseDown={closeNav}>
+                Logout
+              </Nav.Link>
             </Nav>
           </Navbar.Collapse>
         </Navbar>
 
         {/* A <Switch> looks through its child <Route>s and renders the first one that matches the current URL. */}
         <Switch>
-          <Route path="/status">
-            <Status />
-          </Route>
-          <Route path="/">
+          <Route path="/login" component={Login} />
+          <PrivateRoute path="/logout" component={Logout} />
+          <PrivateRoute path="/status" component={Status} />
+          <PrivateRoute path="/">
             <Home
               chamberSummaries={chamberSummaries}
               chamberSummariesError={chamberSummariesError}
             />
-          </Route>
+          </PrivateRoute>
         </Switch>
       </div>
     </Router>

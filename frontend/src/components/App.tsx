@@ -30,8 +30,12 @@ const Nested = () => {
 
     const fetchData = async () => {
       try {
-        const response = await axios('/guest/chamber-summaries');
-        setChamberSummaries(response.data);
+        const response = await axios('/guest/chamber-summaries-and-user-type');
+        setChamberSummaries(response.data.chamberSummaries);
+        dispatch({
+          type: 'LOGIN',
+          isAdmin: response.data.isAdmin,
+        });
       } catch (error) {
         console.debug(error);
         const status = error.response && error.response.status;

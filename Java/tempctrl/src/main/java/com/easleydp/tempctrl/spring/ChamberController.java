@@ -19,7 +19,7 @@ public class ChamberController
     @Autowired
     private ChamberRepository chamberRepository;
 
-    @GetMapping("/chamber-summaries")
+    @GetMapping("/guest/chamber-summaries")
     public List<ChamberSummary> getChamberSummaries()
     {
         return chamberRepository.getChambers().stream()
@@ -44,7 +44,7 @@ public class ChamberController
         }
     }
 
-    @GetMapping("/chamber/{chamberId}/summary-status")
+    @GetMapping("/guest/chamber/{chamberId}/summary-status")
     public SummaryStatusResponse getSummaryStatus(@PathVariable("chamberId") int chamberId)
     {
         Chamber chamber = chamberRepository.getChamberById(chamberId);

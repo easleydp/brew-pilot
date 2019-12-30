@@ -9,7 +9,7 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 @RestController
 public class LogChartController
 {
-    @GetMapping("/log-chart/status")
+    @GetMapping("/admin/log-chart/status")
     public StatusReportResponse getStatusReport()
     {
         return new StatusReportResponse(101, "Foo");

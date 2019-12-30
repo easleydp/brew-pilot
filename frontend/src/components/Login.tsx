@@ -1,22 +1,125 @@
-import React from 'react';
+import './Login.scss';
+import React, { useState, useEffect, useContext } from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
-import { fakeAuth } from '../api/Auth';
+import axios from 'axios';
+import NavbarCollapse from 'react-bootstrap/NavbarCollapse';
+import { useAppState } from './state';
 
 const Login: React.FC = () => {
   let history = useHistory();
   let location = useLocation();
 
-  let { from } = location.state || { from: { pathname: '/' } };
-  let login = () => {
-    fakeAuth.authenticate(() => {
-      history.replace(from);
-    });
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [isButtonDisabled, setIsButtonDisabled] = useState(true);
+  const [helperText, setHelperText] = useState('');
+  const [error, setError] = useState(false);
+
+  const { dispatch } = useAppState();
+
+  useEffect(() => {
+    if (username.trim() && password.trim()) {
+      setIsButtonDisabled(false);
+    } else {
+      setIsButtonDisabled(true);
+    }
+  }, [username, password]);
+
+  const handleLogin = () => {
+    setIsButtonDisabled(true);
+    setHelperText('');
+
+    // axios would by default JSON encode, which Spring won't understand. Mimic regular form encoding.
+    const params = new URLSearchParams();
+    params.append('username', username);
+    params.append('password', password);
+    axios
+      .post('/login', params, {
+        headers: {
+          'X-XSRF-TOKEN': '_csrf',
+          //'Content-Type': 'application/json;charset=ISO-8859-1',
+          'Content-Type': 'application/x-www-form-urlencoded',
+          //multipart/form-data
+        },
+      })
+      .then(function(response) {
+        console.debug(response);
+        setError(false);
+        dispatch({
+          type: 'LOGIN',
+          isAdmin: response.data.isAdmin,
+        });
+
+        console.log('After successful login, location.state is:', location.state);
+        let { from } = location.state || { from: { pathname: '/' } };
+        history.replace(from);
+      })
+      .catch(function(error) {
+        console.debug(error);
+        setError(true);
+        setHelperText('Incorrect username or password');
+        setIsButtonDisabled(false);
+      });
   };
 
+  const handleKeyPress = (e: any) => {
+    if (e.keyCode === 13 || e.which === 13) {
+      isButtonDisabled || handleLogin();
+    }
+    return false;
+  };
+
+  const handleSubmit = (event: React.FormEvent) => {
+    isButtonDisabled || handleLogin();
+    event.preventDefault();
+    event.stopPropagation();
+    return false;
+  };
+
+  // let { from } = location.state || { from: { pathname: '/' } };
+  // let login = () => {
+  //   fakeAuth.authenticate(() => {
+  //     history.replace(from);
+  //   });
+  // };
+
   return (
-    <div>
-      <p>You must log in to view the page at {from.pathname}</p>
-      <button onClick={login}>Log in</button>
+    <div className="login wrapper fadeInDown">
+      {/* <p>You must log in to view the page at {from.pathname}</p>
+      <button onClick={login}>Log in</button> */}
+      <div id="formContent">
+        {/* <div className="fadeIn first">
+          <img src="http://danielzawadzki.com/codepen/01/icon.svg" id="icon" alt="User Icon" />
+        </div> */}
+
+        <form action="/login" onSubmit={handleSubmit}>
+          <input
+            type="text"
+            id="login"
+            className="fadeIn second"
+            name="login"
+            placeholder="username"
+            onChange={e => setUsername(e.target.value)}
+            onKeyPress={e => handleKeyPress(e)}
+          />
+          <input
+            type="password"
+            id="password"
+            className="fadeIn third"
+            name="password"
+            placeholder="password"
+            onChange={e => setPassword(e.target.value)}
+            onKeyPress={e => handleKeyPress(e)}
+          />
+          <input
+            type="submit"
+            className="fadeIn fourth"
+            value="Login"
+            disabled={isButtonDisabled}
+          />
+          <div className="helper-text">{helperText}</div>
+        </form>
+      </div>
     </div>
   );
 };

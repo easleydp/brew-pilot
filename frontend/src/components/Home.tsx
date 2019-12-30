@@ -1,5 +1,7 @@
 import './Home.scss';
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useHistory } from 'react-router-dom';
+import { useAppState, Auth } from './state';
 import { Link } from 'react-router-dom';
 import { isMobile } from 'react-device-detect';
 
@@ -13,6 +15,22 @@ type HomeProps = {
 
 //const Home: React.FC = () => {
 const Home = ({ chamberSummaries, chamberSummariesError }: HomeProps) => {
+  const history = useHistory();
+  const { state } = useAppState();
+  const isAuth = state && state.isAuth;
+
+  useEffect(() => {
+    console.info(
+      Auth[isAuth],
+      chamberSummaries,
+      '=================== Home useEffect invoked ======================'
+    );
+    // If we know the user is definitely not logged in, go straight to login form.
+    if (isAuth === Auth.NotLoggedIn) {
+      history.push('/login', { from: '/home' });
+    }
+  }, []);
+
   function gaugeCard(cs: IChamberSummary) {
     const instruction = cs.tTarget ? `${isMobile ? 'Tap' : 'Click '} for details` : 'Inactive';
     return (
@@ -33,7 +51,7 @@ const Home = ({ chamberSummaries, chamberSummariesError }: HomeProps) => {
           return (
             <div key={cs.id} className="col-sm-6">
               {cs.tTarget ? (
-                <Link to={`/chamber-chart/${cs.id}`}>{gaugeCard(cs)}</Link>
+                <Link to={`/guest/chamber-chart/${cs.id}`}>{gaugeCard(cs)}</Link>
               ) : (
                 gaugeCard(cs)
               )}

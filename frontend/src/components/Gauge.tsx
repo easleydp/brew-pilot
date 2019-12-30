@@ -9,7 +9,7 @@ import * as Highcharts from 'highcharts';
 
 type GaugeProps = {
   chamberId: number;
-  tTarget: number | null;
+  tTarget: number | null; // null signifying inactive
 };
 
 const Gauge = ({ chamberId, tTarget }: GaugeProps) => {
@@ -80,7 +80,7 @@ const Gauge = ({ chamberId, tTarget }: GaugeProps) => {
               backgroundColor: {
                 linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },
                 stops: [
-                  [0, '#FFF'],
+                  [0, '#fff'],
                   [1, '#333'],
                 ],
               },
@@ -92,17 +92,17 @@ const Gauge = ({ chamberId, tTarget }: GaugeProps) => {
                 linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },
                 stops: [
                   [0, '#333'],
-                  [1, '#FFF'],
+                  [1, '#fff'],
                 ],
               },
               borderWidth: 1,
               outerRadius: '107%',
             },
             {
-              backgroundColor: '#fff',
+              backgroundColor: tTarget ? '#fff' : '#e8e8e8',
             },
             {
-              backgroundColor: '#DDD',
+              backgroundColor: '#ddd',
               borderWidth: 0,
               outerRadius: '105%',
               innerRadius: '103%',
@@ -151,7 +151,7 @@ const Gauge = ({ chamberId, tTarget }: GaugeProps) => {
         const point = chart.series[0].points[0];
         function getReadings() {
           axios
-            .get(`/chamber/${chamberId}/summary-status`)
+            .get(`/guest/chamber/${chamberId}/summary-status`)
             .then(function(response) {
               const status: ISummaryStatus = response.data;
               const tBeer = (status.tBeer || 0) / 10;
@@ -177,7 +177,7 @@ const Gauge = ({ chamberId, tTarget }: GaugeProps) => {
     };
   }, [chamberId, containerId, tTarget]);
 
-  return <div id={containerId}></div>;
+  return <div className="gauge" id={containerId}></div>;
 };
 
 export default Gauge;

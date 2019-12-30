@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { StateProvider, Auth, useAppState } from './state';
+import { useHistory, withRouter, RouteComponentProps } from 'react-router-dom';
 //import logo from '../logo.svg';
 import './App.scss';
 import axios from 'axios';
 import { BrowserRouter as Router, Switch, Route, NavLink } from 'react-router-dom';
+import PropTypes from 'prop-types';
 import PrivateRoute from './PrivateRoute';
 // import { LinkContainer } from 'react-router-bootstrap';
 import { Nav, Navbar, NavDropdown } from 'react-bootstrap';
@@ -13,21 +16,44 @@ import Login from './Login';
 import Logout from './Logout';
 import IChamberSummary from '../api/IChamberSummary';
 
-const App: React.FC = () => {
+// Use a nested cmp just to work around this useHistory() issue: https://github.com/ReactTraining/react-router/issues/6939
+const Nested = () => {
   const [chamberSummaries, setChamberSummaries] = useState<IChamberSummary[]>([]);
   const [chamberSummariesError, setChamberSummariesError] = useState<string | null>(null);
 
+  const { state, dispatch } = useAppState();
+  const isAuth = state && state.isAuth;
+
+  const history = useHistory();
   useEffect(() => {
+    console.info(Auth[isAuth], '=================== App useEffect invoked ======================');
+
     const fetchData = async () => {
       try {
-        const response = await axios('/chamber-summaries');
+        const response = await axios('/guest/chamber-summaries');
         setChamberSummaries(response.data);
       } catch (error) {
-        setChamberSummariesError('' + error);
+        console.debug(error);
+        const status = error.response && error.response.status;
+        if (status === 403 || status === 401) {
+          console.debug(status, 'Redirecting to login');
+          dispatch({ type: 'LOGOUT' });
+          setChamberSummaries([]);
+          history.push('/login', { from: '/' });
+        } else {
+          setChamberSummariesError('' + error);
+        }
       }
     };
-    fetchData();
-  }, []);
+
+    // If we know the user is definitely not logged in, go straight to login form.
+    if (isAuth === Auth.NotLoggedIn) {
+      setChamberSummaries([]);
+      history.push('/login', { from: '/' });
+    } else {
+      fetchData();
+    }
+  }, [isAuth, history]);
 
   // Approximation of https://github.com/react-bootstrap/react-bootstrap/issues/1301#issuecomment-251281488
   // NOTE: Not at all good that we're currently relying on `onMouseDown` on `Nav.Link`.
@@ -40,62 +66,72 @@ const App: React.FC = () => {
   };
 
   return (
-    <Router>
-      <div>
-        <Navbar bg="light" expand="lg" onToggle={setNavExpandedWrap} expanded={navExpanded}>
-          <Navbar.Brand as={NavLink} to="/">
-            <img
-              src="/brew-pilot-logo.png"
-              className="d-inline-block align-top"
-              alt="BrewPilot logo"
-            />
-            Brew-Pilot
-          </Navbar.Brand>
-          <Navbar.Toggle aria-controls="basic-navbar-nav" />
-          <Navbar.Collapse id="basic-navbar-nav">
-            <Nav className="mr-auto" onSelect={closeNav}>
-              <Nav.Link as={NavLink} to="/" onMouseDown={closeNav}>
-                Home
-              </Nav.Link>
-              <NavDropdown title="Chambers" id="basic-nav-dropdown">
-                {chamberSummaries.map((cs, index) => {
-                  return (
-                    <div key={cs.id}>
-                      {index > 0 && <NavDropdown.Divider />}
-                      <NavDropdown.Item as={NavLink} to={`/chamber/${cs.id}`} onSelect={closeNav}>
-                        {cs.name}
-                      </NavDropdown.Item>
-                    </div>
-                  );
-                })}
-              </NavDropdown>
-              <Nav.Link as={NavLink} to="/profiles" onMouseDown={closeNav}>
-                Temperature profiles
-              </Nav.Link>
-              <Nav.Link as={NavLink} to="/status" onMouseDown={closeNav}>
-                Backend status
-              </Nav.Link>
-              <Nav.Link as={NavLink} to="/logout" onMouseDown={closeNav}>
-                Logout
-              </Nav.Link>
-            </Nav>
-          </Navbar.Collapse>
-        </Navbar>
+    <div>
+      <Navbar bg="light" expand="lg" onToggle={setNavExpandedWrap} expanded={navExpanded}>
+        <Navbar.Brand as={NavLink} to="/">
+          <img
+            src="/brew-pilot-logo.png"
+            className="d-inline-block align-top"
+            alt="BrewPilot logo"
+          />
+          Brew-Pilot
+        </Navbar.Brand>
+        <Navbar.Toggle aria-controls="basic-navbar-nav" />
+        <Navbar.Collapse id="basic-navbar-nav">
+          <Nav className="mr-auto" onSelect={closeNav}>
+            <Nav.Link as={NavLink} to="/" onMouseDown={closeNav}>
+              Home
+            </Nav.Link>
+            <NavDropdown title="Chambers" id="basic-nav-dropdown">
+              {chamberSummaries.map((cs, index) => {
+                return (
+                  <div key={cs.id}>
+                    {index > 0 && <NavDropdown.Divider />}
+                    <NavDropdown.Item
+                      as={NavLink}
+                      to={`/guest/chamber/${cs.id}`}
+                      onSelect={closeNav}
+                    >
+                      {cs.name}
+                    </NavDropdown.Item>
+                  </div>
+                );
+              })}
+            </NavDropdown>
+            <Nav.Link as={NavLink} to="/profiles" onMouseDown={closeNav}>
+              Temperature profiles
+            </Nav.Link>
+            <Nav.Link as={NavLink} to="/status" onMouseDown={closeNav}>
+              Backend status
+            </Nav.Link>
+            <Nav.Link as={NavLink} to="/logout" onMouseDown={closeNav}>
+              Logout
+            </Nav.Link>
+          </Nav>
+        </Navbar.Collapse>
+      </Navbar>
 
-        {/* A <Switch> looks through its child <Route>s and renders the first one that matches the current URL. */}
-        <Switch>
-          <Route path="/login" component={Login} />
-          <PrivateRoute path="/logout" component={Logout} />
-          <PrivateRoute path="/status" component={Status} />
-          <PrivateRoute path="/">
-            <Home
-              chamberSummaries={chamberSummaries}
-              chamberSummariesError={chamberSummariesError}
-            />
-          </PrivateRoute>
-        </Switch>
-      </div>
-    </Router>
+      {/* A <Switch> looks through its child <Route>s and renders the first one that matches the current URL. */}
+      <Switch>
+        <Route path="/login" component={Login} />
+        <Route path="/logout" component={Logout} />
+        <Route path="/status" component={Status} />
+        <Route path="/">
+          <Home chamberSummaries={chamberSummaries} chamberSummariesError={chamberSummariesError} />
+        </Route>
+      </Switch>
+    </div>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <StateProvider>
+      <Router>
+        {/* Use a nested cmp just to work around this useHistory() issue: https://github.com/ReactTraining/react-router/issues/6939 */}
+        <Nested />
+      </Router>
+    </StateProvider>
   );
 };
 

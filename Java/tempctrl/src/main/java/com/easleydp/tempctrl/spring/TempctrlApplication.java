@@ -6,9 +6,7 @@ import java.nio.file.Paths;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
-import org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.Environment;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -20,7 +18,10 @@ import com.easleydp.tempctrl.domain.ChamberRepository;
 import com.easleydp.tempctrl.domain.DummyChamberManager;
 import com.easleydp.tempctrl.domain.PropertyUtils;
 
-@SpringBootApplication(exclude = { SecurityAutoConfiguration.class, ManagementWebSecurityAutoConfiguration.class })
+@SpringBootApplication(
+     // Uncomment this line to temporarily disable Spring Security:
+//        exclude = { SecurityAutoConfiguration.class, ManagementWebSecurityAutoConfiguration.class }
+)
 @EnableScheduling
 public class TempctrlApplication {
     @Autowired
@@ -34,12 +35,6 @@ public class TempctrlApplication {
         Assert.state(Files.exists(path), "dataDir '" + strPath + "' does not exist.");
         return path;
     }
-
-//    @Bean
-//    public Collection<Chamber> chambers()
-//    {
-//        return new ConcurrentLinkedQueue<Chamber>();
-//    }
 
     @Bean
     public ChamberRepository chamberRepository(Path dataDir)

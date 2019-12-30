@@ -6,7 +6,7 @@
 
 import * as React from 'react';
 import { Route, Redirect, RouteProps } from 'react-router-dom';
-import { fakeAuth } from '../api/Auth';
+import { useAppState } from './state';
 
 interface PrivateRouteProps extends RouteProps {
   // tslint:disable-next-line:no-any
@@ -17,12 +17,13 @@ interface PrivateRouteProps extends RouteProps {
 
 const PrivateRoute = (props: PrivateRouteProps) => {
   const { component: Component, children, ...rest } = props;
+  const { dispatch, state } = useAppState();
 
   return (
     <Route
       {...rest}
       render={routeProps =>
-        fakeAuth.isAuthenticated ? (
+        state.isAuth ? (
           Component ? (
             <Component {...routeProps} />
           ) : (

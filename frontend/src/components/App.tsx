@@ -23,6 +23,7 @@ const Nested = () => {
 
   const { state, dispatch } = useAppState();
   const isAuth = state && state.isAuth;
+  const isAdmin = isAuth === Auth.LoggedIn && state.isAdmin;
 
   const history = useHistory();
   useEffect(() => {
@@ -105,12 +106,16 @@ const Nested = () => {
             <Nav.Link as={NavLink} to="/profiles" onMouseDown={closeNav}>
               Temperature profiles
             </Nav.Link>
-            <Nav.Link as={NavLink} to="/status" onMouseDown={closeNav}>
-              Backend status
-            </Nav.Link>
-            <Nav.Link as={NavLink} to="/logout" onMouseDown={closeNav}>
-              Logout
-            </Nav.Link>
+            {isAdmin && (
+              <Nav.Link as={NavLink} to="/status" onMouseDown={closeNav}>
+                Backend status
+              </Nav.Link>
+            )}
+            {isAuth === Auth.LoggedIn && (
+              <Nav.Link as={NavLink} to="/logout" onMouseDown={closeNav}>
+                Logout
+              </Nav.Link>
+            )}
           </Nav>
         </Navbar.Collapse>
       </Navbar>

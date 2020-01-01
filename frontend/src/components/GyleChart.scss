@@ -1,0 +1,12 @@
+.gyle-chart {
+  background-color: #fff;
+  > #gyle-chart-ct {
+    padding-top: 16px; // Avoid obscuring .navbar's box-shadow
+    width: 100%;
+    // 58px is the navbar height.
+    // TODO: Dynamically measure height of navbar rather than hard-coding.
+    height: -webkit-calc(100vh - 58px);
+    height: -moz-calc(100vh - 58px);
+    height: calc(100vh - 58px);
+  }
+}

@@ -4,6 +4,7 @@ import static com.easleydp.tempctrl.domain.Gyle.LogFileDescriptor.*;
 import static com.easleydp.tempctrl.domain.PropertyUtils.*;
 import static com.easleydp.tempctrl.domain.Utils.*;
 import static com.easleydp.tempctrl.domain.optimise.RedundantValues.*;
+import static java.util.Collections.*;
 
 import java.io.BufferedOutputStream;
 import java.io.FileInputStream;
@@ -60,6 +61,7 @@ public class Gyle extends GyleDto
 
     public final Chamber chamber;
     public final Path gyleDir;
+    public final int id;
     public final Path logsDir;
 
     private final Environment env;
@@ -69,6 +71,7 @@ public class Gyle extends GyleDto
     {
         this.chamber = chamber;
         this.gyleDir = gyleDir;
+        this.id = Integer.parseInt(gyleDir.getFileName().toString());
         this.logsDir = gyleDir.resolve("logs");
         this.env = env;
 
@@ -95,6 +98,11 @@ public class Gyle extends GyleDto
         {
             throw new RuntimeException(e);
         }
+    }
+
+    public int getId()
+    {
+        return id;
     }
 
     @Override
@@ -164,6 +172,24 @@ public class Gyle extends GyleDto
     public ChamberReadings getLatestReadings()
     {
         return latestChamberReadings;
+    }
+
+    /**
+     * Returns the recent (i.e. buffered) readings in chronological order.
+     */
+    public List<ChamberReadings> getRecentReadings()
+    {
+        return buffer != null ? unmodifiableList(buffer.readingsList) : emptyList();
+    }
+
+    /**
+     * Returns the readings log file paths in chronological order.
+     */
+    public List<Path> getReadingsLogFilePaths()
+    {
+        return logAnalysis.logFileDescriptors.stream()
+                .map(lfd -> lfd.logFile)
+                .collect(Collectors.toList());
     }
 
     private class LogAnalysis

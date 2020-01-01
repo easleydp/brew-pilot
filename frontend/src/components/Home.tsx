@@ -51,7 +51,7 @@ const Home = ({ chamberSummaries, chamberSummariesError }: HomeProps) => {
           return (
             <div key={cs.id} className="col-sm-6">
               {cs.tTarget ? (
-                <Link to={`/guest/chamber-chart/${cs.id}`}>{gaugeCard(cs)}</Link>
+                <Link to={`/gyle-chart/${cs.id}`}>{gaugeCard(cs)}</Link>
               ) : (
                 gaugeCard(cs)
               )}

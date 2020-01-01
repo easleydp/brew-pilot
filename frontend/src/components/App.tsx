@@ -11,6 +11,7 @@ import PrivateRoute from './PrivateRoute';
 import { Nav, Navbar, NavDropdown } from 'react-bootstrap';
 
 import Home from './Home';
+import GyleChart from './GyleChart';
 import Status from './Status';
 import Login from './Login';
 import Logout from './Logout';
@@ -23,7 +24,8 @@ const Nested = () => {
 
   const { state, dispatch } = useAppState();
   const isAuth = state && state.isAuth;
-  const isAdmin = isAuth === Auth.LoggedIn && state.isAdmin;
+  const isLoggedIn = isAuth === Auth.LoggedIn;
+  const isAdmin = isLoggedIn && state.isAdmin;
 
   const history = useHistory();
   useEffect(() => {
@@ -71,7 +73,7 @@ const Nested = () => {
   };
 
   return (
-    <div>
+    <div id="app-wrap">
       <Navbar bg="light" expand="lg" onToggle={setNavExpandedWrap} expanded={navExpanded}>
         <Navbar.Brand as={NavLink} to="/">
           <img
@@ -84,34 +86,40 @@ const Nested = () => {
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
         <Navbar.Collapse id="basic-navbar-nav">
           <Nav className="mr-auto" onSelect={closeNav}>
-            <Nav.Link as={NavLink} to="/" onMouseDown={closeNav}>
-              Home
-            </Nav.Link>
-            <NavDropdown title="Chambers" id="basic-nav-dropdown">
-              {chamberSummaries.map((cs, index) => {
-                return (
-                  <div key={cs.id}>
-                    {index > 0 && <NavDropdown.Divider />}
-                    <NavDropdown.Item
-                      as={NavLink}
-                      to={`/guest/chamber/${cs.id}`}
-                      onSelect={closeNav}
-                    >
-                      {cs.name}
-                    </NavDropdown.Item>
-                  </div>
-                );
-              })}
-            </NavDropdown>
-            <Nav.Link as={NavLink} to="/profiles" onMouseDown={closeNav}>
-              Temperature profiles
-            </Nav.Link>
+            {isLoggedIn && (
+              <Nav.Link as={NavLink} to="/" onMouseDown={closeNav}>
+                Home
+              </Nav.Link>
+            )}
+            {isLoggedIn && (
+              <NavDropdown title="Chambers" id="basic-nav-dropdown">
+                {chamberSummaries.map((cs, index) => {
+                  return (
+                    <div key={cs.id}>
+                      {index > 0 && <NavDropdown.Divider />}
+                      <NavDropdown.Item
+                        as={NavLink}
+                        to={`/guest/chamber/${cs.id}`}
+                        onSelect={closeNav}
+                      >
+                        {cs.name}
+                      </NavDropdown.Item>
+                    </div>
+                  );
+                })}
+              </NavDropdown>
+            )}
+            {isLoggedIn && (
+              <Nav.Link as={NavLink} to="/profiles" onMouseDown={closeNav}>
+                Temperature profiles
+              </Nav.Link>
+            )}
             {isAdmin && (
               <Nav.Link as={NavLink} to="/status" onMouseDown={closeNav}>
                 Backend status
               </Nav.Link>
             )}
-            {isAuth === Auth.LoggedIn && (
+            {isLoggedIn && (
               <Nav.Link as={NavLink} to="/logout" onMouseDown={closeNav}>
                 Logout
               </Nav.Link>
@@ -125,6 +133,7 @@ const Nested = () => {
         <Route path="/login" component={Login} />
         <Route path="/logout" component={Logout} />
         <Route path="/status" component={Status} />
+        <Route path="/gyle-chart/:chamberId" component={GyleChart} />
         <Route path="/">
           <Home chamberSummaries={chamberSummaries} chamberSummariesError={chamberSummariesError} />
         </Route>

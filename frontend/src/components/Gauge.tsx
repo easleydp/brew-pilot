@@ -171,9 +171,7 @@ const Gauge = ({ chamberId, tTarget }: GaugeProps) => {
     );
 
     return () => {
-      if (interval) {
-        clearInterval(interval);
-      }
+      interval && clearInterval(interval);
     };
   }, [chamberId, containerId, tTarget]);
 

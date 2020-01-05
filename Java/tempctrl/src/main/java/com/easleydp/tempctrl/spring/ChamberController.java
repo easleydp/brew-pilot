@@ -5,8 +5,6 @@ import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.Assert;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,12 +16,13 @@ import com.easleydp.tempctrl.domain.Chamber;
 import com.easleydp.tempctrl.domain.ChamberReadings;
 import com.easleydp.tempctrl.domain.ChamberRepository;
 import com.easleydp.tempctrl.domain.Gyle;
+import com.easleydp.tempctrl.domain.PropertyUtils;
 import com.easleydp.tempctrl.domain.TemperatureProfileDto;
 
 @RestController
 public class ChamberController
 {
-    private static final Logger logger = LoggerFactory.getLogger(ChamberController.class);
+    // private static final Logger logger = LoggerFactory.getLogger(ChamberController.class);
 
     @Autowired
     private ChamberRepository chamberRepository;
@@ -105,7 +104,10 @@ public class ChamberController
         Chamber chamber = chamberRepository.getChamberById(chamberId); // throws if not found
         Gyle activeGyle = chamber.getActiveGyle();
         Assert.state(activeGyle != null, "No active gyle for chamber " + chamberId);
-        return new ActiveGyleDetails(chamber.getName(),
+        return new ActiveGyleDetails(
+                PropertyUtils.getReadingsTimestampResolutionMillis(),
+                PropertyUtils.getReadingsPeriodMillis(),
+                chamber.getName(),
                 activeGyle.getId(), activeGyle.getName(), activeGyle.getTemperatureProfile(),
                 activeGyle.getRecentReadings(),
                 activeGyle.getReadingsLogFilePaths().stream()
@@ -114,16 +116,21 @@ public class ChamberController
     }
     private static final class ActiveGyleDetails
     {
+        @SuppressWarnings("unused") public final int readingsTimestampResolutionMillis;
+        @SuppressWarnings("unused") public final int readingsPeriodMillis;
         @SuppressWarnings("unused") public final String chamberName;
-        @SuppressWarnings("unused") public final Integer gyleId;
+        @SuppressWarnings("unused") public final int gyleId;
         @SuppressWarnings("unused") public final String gyleName;
         @SuppressWarnings("unused") public final TemperatureProfileDto temperatureProfile;
         @SuppressWarnings("unused") public final List<ChamberReadings> recentReadings;
         @SuppressWarnings("unused") public final List<String> readingsLogs;
-        public ActiveGyleDetails(String chamberName, Integer gyleId, String gyleName,
+        public ActiveGyleDetails(int readingsTimestampResolutionMillis, int readingsPeriodMillis,
+                String chamberName, int gyleId, String gyleName,
                 TemperatureProfileDto temperatureProfile, List<ChamberReadings> recentReadings,
                 List<String> readingsLogs)
         {
+            this.readingsTimestampResolutionMillis = readingsTimestampResolutionMillis;
+            this.readingsPeriodMillis = readingsPeriodMillis;
             this.chamberName = chamberName;
             this.gyleId = gyleId;
             this.gyleName = gyleName;

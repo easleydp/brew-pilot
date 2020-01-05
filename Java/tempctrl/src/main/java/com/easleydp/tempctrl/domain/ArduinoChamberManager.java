@@ -2,12 +2,10 @@ package com.easleydp.tempctrl.domain;
 
 import java.util.Date;
 
-import org.springframework.core.env.Environment;
-
 public class ArduinoChamberManager implements ChamberManager
 {
 
-    public ArduinoChamberManager(ChamberRepository chamberRepository, Environment env)
+    public ArduinoChamberManager(ChamberRepository chamberRepository)
     {
         // TODO Auto-generated constructor stub
     }

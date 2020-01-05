@@ -9,8 +9,6 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -42,7 +40,7 @@ import org.springframework.web.util.WebUtils;
 @EnableWebSecurity
 public class SecurityConfig
 {
-    private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
+    // private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
 
     @Bean
     public UserDetailsService userDetailsService() throws Exception

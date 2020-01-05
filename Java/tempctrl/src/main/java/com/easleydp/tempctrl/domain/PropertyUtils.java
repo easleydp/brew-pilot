@@ -6,28 +6,33 @@ import org.springframework.core.env.Environment;
 
 public class PropertyUtils
 {
+    // Not really the Spring way but we inject the Environment statically, to save clients having to supply it.
+    private static Environment env;
+    public static void setEnv(Environment env) {
+        PropertyUtils.env = env;
+    }
 
     // Get required
-    public static String getString(Environment env, String key)
+    public static String getString(String key)
     {
         return env.getRequiredProperty(key, String.class);
     }
     // Get default
-    public static String getString(Environment env, String key, String defaultValue)
+    public static String getString(String key, String defaultValue)
     {
         return env.getProperty(key, String.class, defaultValue);
     }
 
 
     // Get required
-    public static String[] getStringArray(Environment env, String key)
+    public static String[] getStringArray(String key)
     {
-        String[] array = getStringArray(env, key, null);
+        String[] array = getStringArray(key, null);
         checkRequired(key, array, true);
         return array;
     }
     // Get default
-    public static String[] getStringArray(Environment env, String key, String[] defaultValue)
+    public static String[] getStringArray(String key, String[] defaultValue)
     {
         String raw = env.getProperty(key);
         // https://stackoverflow.com/a/53135316/65555
@@ -37,38 +42,38 @@ public class PropertyUtils
 
 
     // Get required
-    public static boolean getBoolean(Environment env, String key)
+    public static boolean getBoolean(String key)
     {
         return env.getRequiredProperty(key, Boolean.class);
     }
     // Get default
-    public static Boolean getBoolean(Environment env, String key, Boolean defaultValue)
+    public static Boolean getBoolean(String key, Boolean defaultValue)
     {
         return env.getProperty(key, Boolean.class, defaultValue);
     }
 
 
     // Get required
-    public static int getInt(Environment env, String key)
+    public static int getInt(String key)
     {
         return env.getRequiredProperty(key, Integer.class);
     }
     // Get default
-    public static Integer getInteger(Environment env, String key, Integer defaultValue)
+    public static Integer getInteger(String key, Integer defaultValue)
     {
         return env.getProperty(key, Integer.class, defaultValue);
     }
 
 
     // Get required
-    public static int[] getIntArray(Environment env, String key)
+    public static int[] getIntArray(String key)
     {
-        int[] array = getIntArray(env, key, null);
+        int[] array = getIntArray(key, null);
         checkRequired(key, array, true);
         return array;
     }
     // Get default
-    public static int[] getIntArray(Environment env, String key, int[] defaultValue)
+    public static int[] getIntArray(String key, int[] defaultValue)
     {
         String raw = env.getProperty(key);
         if (raw == null)
@@ -83,6 +88,22 @@ public class PropertyUtils
     {
         if (value == null  &&  required)
             throw new IllegalStateException("Required property '" + key + "' is not defined.");
+    }
+
+
+    /*
+     * Some blessed properties are made accessible by name. Part of the convenience is we can
+     * encapsulate the default values.
+     */
+
+    public static int getReadingsTimestampResolutionMillis()
+    {
+        return getInteger("readings.timestamp.resolutionMillis", 30 * 1000);
+    }
+
+    public static int getReadingsPeriodMillis()
+    {
+        return getInteger("readings.periodMillis", 60 * 1000);
     }
 
 }

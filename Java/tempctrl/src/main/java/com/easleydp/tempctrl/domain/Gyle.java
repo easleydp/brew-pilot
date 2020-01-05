@@ -33,7 +33,6 @@ import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
-import org.springframework.core.env.Environment;
 import org.springframework.util.Assert;
 
 import com.easleydp.tempctrl.domain.optimise.Smoother;
@@ -64,27 +63,25 @@ public class Gyle extends GyleDto
     public final int id;
     public final Path logsDir;
 
-    private final Environment env;
     private LogAnalysis logAnalysis;
 
-    public Gyle(Chamber chamber, Path gyleDir, Environment env)
+    public Gyle(Chamber chamber, Path gyleDir)
     {
         this.chamber = chamber;
         this.gyleDir = gyleDir;
         this.id = Integer.parseInt(gyleDir.getFileName().toString());
         this.logsDir = gyleDir.resolve("logs");
-        this.env = env;
 
-        int thresholdHeight = getInteger(env, "readings.temp.smoothing.thresholdHeight", 2);
-        int[] thresholdWidths = getIntArray(env, "readings.temp.smoothing.thresholdWidths", null);
+        int thresholdHeight = getInteger("readings.temp.smoothing.thresholdHeight", 2);
+        int[] thresholdWidths = getIntArray("readings.temp.smoothing.thresholdWidths", null);
         smoother = thresholdWidths == null ?
                 new Smoother(thresholdHeight) : new Smoother(thresholdHeight, thresholdWidths);
 
         bufferConfig = new BufferConfig(
-                getInteger(env, "readings.gen1.readingsCount", 30),
-                getBoolean(env, "readings.optimise.smoothTemperatureReadings", true),
-                getBoolean(env, "readings.optimise.nullOutRedundantValues", true),
-                getBoolean(env, "readings.optimise.removeRedundantIntermediate", true));
+                getInteger("readings.gen1.readingsCount", 30),
+                getBoolean("readings.optimise.smoothTemperatureReadings", true),
+                getBoolean("readings.optimise.nullOutRedundantValues", true),
+                getBoolean("readings.optimise.removeRedundantIntermediate", true));
 
         Path jsonFile = gyleDir.resolve("gyle.json");
         Assert.state(Files.exists(jsonFile), "gyle.json should exist");
@@ -142,7 +139,7 @@ public class Gyle extends GyleDto
         // If the memory buffer is ready to be flushed, flush & release, and consolidate log files as necessary.
         if (buffer == null)
         {
-            if (!firstReadingsCollected && PropertyUtils.getBoolean(env, "readings.staggerFirstReadings", true))
+            if (!firstReadingsCollected && PropertyUtils.getBoolean("readings.staggerFirstReadings", true))
             {
                 // Stagger each active gyle storing its first buffer by inflating the initial reading count.
                 buffer = new Buffer(timeNow, bufferConfig.withInflatedReadingsCount(chamber.getId()), smoother);
@@ -197,13 +194,12 @@ public class Gyle extends GyleDto
         final int genMultiplier;
         final int maxGenerations;
         final List<LogFileDescriptor> logFileDescriptors;
-        private int nextDataBlockSeqNo;
         private List<LogFileDescriptor> awaitingCleanup = new ArrayList<>();
 
         LogAnalysis()
         {
-            genMultiplier = PropertyUtils.getInteger(env, "readings.gen.multiplier", 10);
-            maxGenerations = PropertyUtils.getInteger(env, "readings.gen.max", 4);
+            genMultiplier = PropertyUtils.getInteger("readings.gen.multiplier", 10);
+            maxGenerations = PropertyUtils.getInteger("readings.gen.max", 4);
             Assert.state(genMultiplier >= 2, "readings.gen.multiplier must be at least 2");
             Assert.state(maxGenerations >= 2, "readings.gen.max must be at least 2");
 
@@ -267,11 +263,6 @@ public class Gyle extends GyleDto
             {
                 throw new RuntimeException(e);
             }
-        }
-
-        int getNextDataBlockSeqNo()
-        {
-            return nextDataBlockSeqNo++;
         }
 
         /**

@@ -378,6 +378,9 @@ public class Smoother
          */
         public boolean isEffectivelyEqualTo(Tip other, int[] values)
         {
+            // Optimisation
+            if (index == other.index)
+                return true;
             if (value != other.value)
                 return false;
 
@@ -386,13 +389,12 @@ public class Smoother
                 if (values[i] != value)
                     return false;
 
-            // Having determined that it's effectively the same tip, it just remains to confirm that
-            // the other is equal in other respects too. (This is by way of an assertion since it would
-            // be a logic error if this ever failed.)
-            Assert.state(value == other.value, "value should be same");
-            Assert.state(width == other.width, "width should be same");
-            Assert.state(height == other.height, "height should be same");
             Assert.state(peak == other.peak, "peak should be same");
+            // Likewise the width and height should be the same. Careful, though - these vital
+            // stats might have changed due to smoothing that's happened to the immediate left.
+            Tip thisTipFresh = new Tip(index, peak, values);
+            Assert.state(thisTipFresh.width == other.width, "width should be same");
+            Assert.state(thisTipFresh.height == other.height, "height should be same");
 
             return true;
         }

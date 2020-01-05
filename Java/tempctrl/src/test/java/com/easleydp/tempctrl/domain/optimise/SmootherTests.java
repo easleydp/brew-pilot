@@ -11,7 +11,6 @@ import java.util.Random;
 import org.junit.jupiter.api.Test;
 import org.springframework.util.Assert;
 
-import com.easleydp.tempctrl.domain.optimise.Smoother;
 import com.easleydp.tempctrl.domain.optimise.Smoother.IntPropertyAccessor;
 import com.easleydp.tempctrl.domain.optimise.Smoother.Tip;
 
@@ -224,6 +223,21 @@ public class SmootherTests
     }
 
     @Test
+    /**
+     * Reproduce a bug where an assertion got caught out. Width and height of last
+     * tip are liable to change due to smoothing that's happened to the immediate left.
+     */
+    public void testSmoothingAltersHeightOfLastTip()
+    {
+        assertSmoothed(2,
+                new int[] {1, 0, 1, 0, 2, 0},  // lastTip height is 2
+                new int[] {1, 1, 1, 1, 2, 0}); // lastTip height is now 1
+
+        // Dubious whether that last tip (2) should have been smoothed (to 1) but the current
+        // rule is that the last tip is never smoothed (see test lastRippleNotSmoothed()).
+    }
+
+    @Test
     public void flattenTip()
     {
         assertTipFlattened(
@@ -316,6 +330,13 @@ public class SmootherTests
     }
 
     @Test
+    /**
+     * Proves the rule that the last ripple is not smoothed. Rationale: If the height
+     * happens to be dictated by the RHS then, if/when more points are appended, the
+     * height could increase. (Maybe likewise with width?) Therefore, could possibly
+     * improve this; if the height dictated by the LHS makes it insignificant then it
+     * could safely be smoothed.
+     */
     public void lastRippleNotSmoothed()
     {
         assertSmoothed(1,

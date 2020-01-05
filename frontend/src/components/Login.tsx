@@ -42,7 +42,7 @@ const Login: React.FC = () => {
           //multipart/form-data
         },
       })
-      .then(function(response) {
+      .then(response => {
         console.debug(response);
         setError(false);
         dispatch({
@@ -54,7 +54,7 @@ const Login: React.FC = () => {
         let { from } = location.state || { from: { pathname: '/' } };
         history.replace(from);
       })
-      .catch(function(error) {
+      .catch(error => {
         console.debug(error);
         setError(true);
         setHelperText('Incorrect username or password');

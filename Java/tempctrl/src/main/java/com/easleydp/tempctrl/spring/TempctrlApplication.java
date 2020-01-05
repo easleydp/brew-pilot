@@ -4,6 +4,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import javax.annotation.PostConstruct;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -20,15 +22,24 @@ import com.easleydp.tempctrl.domain.PropertyUtils;
 
 @SpringBootApplication(
      // Uncomment this line to temporarily disable Spring Security:
-//        exclude = { SecurityAutoConfiguration.class, ManagementWebSecurityAutoConfiguration.class }
+// exclude = { SecurityAutoConfiguration.class, ManagementWebSecurityAutoConfiguration.class }
 )
 @EnableScheduling
-public class TempctrlApplication {
+public class TempctrlApplication
+{
+    // private static final Logger logger = LoggerFactory.getLogger(TempctrlApplication.class);
+
     @Autowired
     private Environment env;
 
+    @PostConstruct
+    public void init()
+    {
+        PropertyUtils.setEnv(env);
+    }
+
     @Bean
-    public Path dataDir(Environment env)
+    public Path dataDir()
     {
         String strPath = env.getRequiredProperty("dataDir");
         Path path = Paths.get(strPath);
@@ -39,15 +50,15 @@ public class TempctrlApplication {
     @Bean
     public ChamberRepository chamberRepository(Path dataDir)
     {
-        return new ChamberRepository(dataDir, env);
+        return new ChamberRepository(dataDir);
     }
 
     @Bean
     public ChamberManager chamberManager(ChamberRepository chamberRepository)
     {
-        return PropertyUtils.getBoolean(env, "dummy.chambers", false) ?
-                    new DummyChamberManager(chamberRepository, env) :
-                    new ArduinoChamberManager(chamberRepository, env);
+        return PropertyUtils.getBoolean("dummy.chambers", false) ?
+                    new DummyChamberManager(chamberRepository) :
+                    new ArduinoChamberManager(chamberRepository);
     }
 //
 //    @Bean

@@ -61,7 +61,7 @@ public class TemperatureProfileDto
         @JsonIgnore
         public long getMillisSinceStart()
         {
-            return hoursSinceStart * 1000 * 60 * 60;
+            return ((long) hoursSinceStart) * 1000 * 60 * 60;
         }
     }
 }

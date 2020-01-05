@@ -4,8 +4,6 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.Random;
 
-import org.springframework.core.env.Environment;
-
 import com.easleydp.tempctrl.domain.ChamberReadings.Mode;
 
 public class DummyChamberManager implements ChamberManager
@@ -19,7 +17,7 @@ public class DummyChamberManager implements ChamberManager
     private Random random;
 
 
-    public DummyChamberManager(ChamberRepository chamberRepository, Environment env)
+    public DummyChamberManager(ChamberRepository chamberRepository)
     {
         this.chamberRepository = chamberRepository;
         this.startTime = new Date();

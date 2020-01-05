@@ -15,7 +15,6 @@ import java.util.stream.Stream;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
-import org.springframework.core.env.Environment;
 import org.springframework.util.Assert;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -27,13 +26,11 @@ public class Chamber extends ChamberDto
     private final List<Path> gyleDirs;  // In reverse order by ID
     private final Map<Integer, Path> gyleDirsById;  // In reverse order by ID
     private final Gyle activeGyle;
-    private final Environment env;
 
-    public Chamber(Path chamberDir, Environment env)
+    public Chamber(Path chamberDir)
     {
         this.chamberDir = chamberDir;
         this.id = Integer.parseInt(chamberDir.getFileName().toString());
-        this.env = env;
 
         Path jsonFile = chamberDir.resolve("chamber.json");
         Assert.state(Files.exists(jsonFile), "chamber.json should exist");
@@ -59,7 +56,7 @@ public class Chamber extends ChamberDto
     private Gyle determineActiveGyleIfAny()
     {
         return gyleDirs.stream()
-            .map(gDir -> new Gyle(this, gDir, env))
+            .map(gDir -> new Gyle(this, gDir))
             .filter(Gyle::isActive)
             .findFirst()
             .orElse(null);
@@ -101,13 +98,13 @@ public class Chamber extends ChamberDto
         Path gyleDir = gyleDirsById.get(id);
         if (gyleDir == null)
             throw new IllegalArgumentException("No gyle exists with ID " + id);
-        return new Gyle(this, gyleDir, env);
+        return new Gyle(this, gyleDir);
     }
 
     public List<Gyle> getGyles()
     {
         return gyleDirs.stream()
-                .map(gDir -> new Gyle(this, gDir, env))
+                .map(gDir -> new Gyle(this, gDir))
                 .collect(Collectors.toList());
     }
 

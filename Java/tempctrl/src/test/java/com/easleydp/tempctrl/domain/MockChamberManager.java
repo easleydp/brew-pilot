@@ -58,15 +58,48 @@ public class MockChamberManager implements ChamberManager
             tTarget = params.tTarget;
         }
 
-        int tBeer = tTarget + randomInt(-2, 2);
-        int tExternal = tBeer + randomInt(-4, 4);
-        int tChamber = tExternal + randomInt(4, 6);
-        int tPi = tExternal + randomInt(5, 7);
+        int tBeer = tTarget + randomInt(-20, 20);
+        int tExternal = lastTExternal = getExternalTempFromDate(timeNow, lastTExternal);
+        int tChamber = ((tBeer + tExternal) / 2) + randomInt(-20, 20);
+        int tPi = tExternal + randomInt(50, 70);
         int heaterOutput = getDayOfMonthFromDate(nowTime) % 2 == 0 ? randomInt(1, 100) : 0;
         boolean coolerOn = heaterOutput == 0;
         Mode mode = Mode.AUTO;
         return new ChamberReadings(timeNow,
                 tTarget, tBeer, tExternal, tChamber, tPi, heaterOutput, coolerOn, mode, params);
+    }
+    private Integer lastTExternal = null;
+
+    /** @returns degrees C x 10 */
+    private int getExternalTempFromDate(Date date, Integer prevTemp)
+    {
+        int tendTowards = _getExternalTempFromDate(date);
+        if (prevTemp == null)
+            return tendTowards;
+        int diff = tendTowards - prevTemp;
+        if (diff > 0)
+            return prevTemp + randomInt(1, 2);
+        else
+            return prevTemp - randomInt(1, 2);
+    }
+    private int _getExternalTempFromDate(Date date)
+    {
+        int nHours = date.getHours();
+        if (0 <= nHours && nHours < 3)
+            return 30;
+        if (3 <= nHours && nHours < 6)
+            return 10;
+        if (6 <= nHours && nHours < 9)
+            return 20;
+        if (9 <= nHours && nHours < 12)
+            return 100;
+        if (12 <= nHours && nHours < 15)
+            return 250;
+        if (15 <= nHours && nHours < 18)
+            return 200;
+        if (18 <= nHours && nHours < 21)
+            return 120;
+        return 50;
     }
 
     private static int getDayOfMonthFromDate(Date d)

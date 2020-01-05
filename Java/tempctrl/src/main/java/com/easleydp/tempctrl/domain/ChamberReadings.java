@@ -69,7 +69,7 @@ public class ChamberReadings
     private Integer tPi;
 
     /**
-     * Percentage of heater power x 100 (i.e. 0 < value <= 100), or 0 if the heater is off.
+     * Percentage of heater power x 100 (i.e. 0 <= value <= 100), 0 signifying heater off.
      *
      * `Integer` only because it may be nulled-out to signify same value as the previous
      * reading. In readings fresh from the chamber it will never be null.

@@ -2,6 +2,7 @@ package com.easleydp.tempctrl.domain;
 
 import static com.easleydp.tempctrl.domain.Utils.*;
 import static org.apache.commons.io.FileUtils.*;
+import static org.apache.commons.lang3.time.DateUtils.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
@@ -61,10 +62,11 @@ public class GyleTests
         env.setProperty("readings.optimise.nullOutRedundantValues", "" + false);
         env.setProperty("readings.optimise.removeRedundantIntermediate", "" + false);
         env.setProperty("readings.staggerFirstReadings", "" + false);
+        PropertyUtils.setEnv(env);
 
         Path dataDir = Paths.get(".", "src/test/resources/testData");
         Assert.state(Files.exists(dataDir), "data dir should exist.");
-        chambers = new ChamberRepository(dataDir, env);
+        chambers = new ChamberRepository(dataDir);
 
         // Remove any "logs" dirs left over from a previous test
         for (Chamber ch : chambers.getChambers())
@@ -72,7 +74,7 @@ public class GyleTests
                 FileSystemUtils.deleteRecursively(g.gyleDir.resolve("logs"));
 
         Calendar c = Calendar.getInstance();
-        c.set(2000, 0, 1, 0, 0);
+        c.set(2019, 0, 1, 0, 0);
         startTime = c.getTime();
 
         chamber = chambers.getChamberById(2);
@@ -282,11 +284,6 @@ public class GyleTests
             timeNow = addMinutes(timeNow, 1);
             collectReadings();
         }
-    }
-
-    private static Date addMinutes(Date d, int mins)
-    {
-        return new Date(d.getTime() + mins * 60 * 1000);
     }
 
 }

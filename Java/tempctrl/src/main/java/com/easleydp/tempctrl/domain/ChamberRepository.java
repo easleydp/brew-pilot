@@ -13,7 +13,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.core.env.Environment;
 import org.springframework.util.Assert;
 
 /**
@@ -25,14 +24,14 @@ public class ChamberRepository
 
     private final Queue<Chamber> chambers = new ConcurrentLinkedQueue<>();
 
-    public ChamberRepository(Path dataDir, Environment env)
+    public ChamberRepository(Path dataDir)
     {
         Assert.state(Files.exists(dataDir), "data dir should exist");
         chambersDir = dataDir.resolve("chambers");
         Assert.state(Files.exists(chambersDir), "chambers dir should exist");
 
         getChamberDirs().stream()
-            .map(cd -> new Chamber(cd, env))
+            .map(cd -> new Chamber(cd))
             .forEach(c -> {
                 chambers.add(c);
             });

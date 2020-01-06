@@ -319,148 +319,192 @@ const GyleChart = () => {
       return `Day&nbsp;${days}, hour&nbsp;${hours}`;
     };
 
-    return Highcharts.stockChart({
-      credits: {
-        enabled: false,
-      },
-
-      rangeSelector: {
-        allButtonsEnabled: true,
-        buttons: [
-          {
-            type: 'day',
-            text: 'day',
-          },
-          {
-            type: 'day',
-            text: '3 days',
-            count: 3,
-          },
-          {
-            type: 'week',
-            text: 'week',
-          },
-          {
-            type: 'week',
-            text: '2 weeks',
-            count: 2,
-          },
-          {
-            type: 'all',
-            text: 'max.',
-          },
-        ],
-        buttonTheme: {
-          width: 60,
+    return Highcharts.stockChart(
+      {
+        credits: {
+          enabled: false,
         },
-        selected: 1,
 
-        inputEnabled: false,
-      },
+        rangeSelector: {
+          allButtonsEnabled: true,
+          buttons: [
+            {
+              type: 'day',
+              text: 'day',
+            },
+            {
+              type: 'day',
+              text: '3 days',
+              count: 3,
+            },
+            {
+              type: 'week',
+              text: 'week',
+            },
+            {
+              type: 'week',
+              text: '2 weeks',
+              count: 2,
+            },
+            {
+              type: 'all',
+              text: 'max.',
+            },
+          ],
+          buttonTheme: {
+            width: 60,
+          },
+          selected: 1,
 
-      title: {
-        text: chamberName + ' temperature log',
-      },
-
-      tooltip: {
-        useHTML: true,
-        formatter: function() {
-          const friendlyTemp = `<strong>${this.y}&deg;C</strong>`;
-
-          // TODO - analyse how this used to work in the js version. In this ts version there
-          // are two issues (the first being easy to deal with): (1) this.points may be
-          // undefined; (2) Point has no `index` property.
-          //   const i = this.points[0].point.index;
-          //   if (i === 0) {
-          //     return `Started at ${friendlyTemp}`;
-          //   }
-
-          const friendlyTime = formatTimeAsHtml(this.x).toLowerCase();
-          //            return `${friendlyTemp} at<br/>${friendlyTime}`;
-          return `${friendlyTemp} at<br/>${this.x / 30000}`;
+          inputEnabled: false,
         },
-      },
 
-      series: [
-        {
-          name: 'Target beer temp.',
-          type: 'line',
-          dashStyle: 'ShortDot',
-          color: '#777',
-        } as Highcharts.SeriesLineOptions,
-        {
-          name: 'Beer temp.',
-          type: 'spline',
-          color: 'rgba(247, 163, 92, 1.0)',
-          showInNavigator: true,
-        } as Highcharts.SeriesSplineOptions,
-        {
-          name: 'Ambient temp.',
-          type: 'spline',
-          color: 'rgba(0, 150, 0, 0.5)',
-        } as Highcharts.SeriesSplineOptions,
-        {
-          name: 'Chamber temp.',
-          type: 'spline',
-          color: 'rgba(131, 50, 168, 0.5)',
-        } as Highcharts.SeriesSplineOptions,
-        {
-          name: 'Fridge',
-          type: 'area',
-          color: 'rgba(113, 166, 210, 1.0)',
-          fillOpacity: 0.3,
-          lineWidth: 1,
-          showInNavigator: true,
-        } as Highcharts.SeriesAreaOptions,
-        {
-          name: 'Heater',
-          type: 'areaspline',
-          color: 'rgba(255, 90, 150, 0.75)',
-          fillOpacity: 0.3,
-          lineWidth: 1,
-          showInNavigator: true, // Misbehaves
-        } as Highcharts.SeriesAreasplineOptions,
-      ],
-
-      legend: {
-        enabled: true,
-        align: 'right',
-        backgroundColor: '#FFFFE7',
-        borderColor: '#999',
-        borderWidth: 1,
-        layout: 'vertical',
-        verticalAlign: 'top',
-        y: 100,
-        shadow: true,
-      },
-
-      xAxis: {
-        ordinal: false,
-        // labels: {
-        //   formatter: function() {
-        //     return formatTimeAsHtml(this.value);
-        //   },
-        //   useHTML: true,
-        // },
-      },
-      yAxis: {
         title: {
+          text: chamberName + ' temperature log',
+        },
+
+        tooltip: {
           useHTML: true,
-          text: 'Temperature (&deg;C)',
+          formatter: function() {
+            const friendlyTemp = `<strong>${this.y}&deg;C</strong>`;
+
+            // TODO - analyse how this used to work in the js version. In this ts version there
+            // are two issues (the first being easy to deal with): (1) this.points may be
+            // undefined; (2) Point has no `index` property.
+            //   const i = this.points[0].point.index;
+            //   if (i === 0) {
+            //     return `Started at ${friendlyTemp}`;
+            //   }
+
+            const friendlyTime = formatTimeAsHtml(this.x).toLowerCase();
+            return `${friendlyTemp} at<br/>${friendlyTime}`;
+            // return `${friendlyTemp} at<br/>${this.x / 30000}`;
+          },
+        },
+
+        plotOptions: {
+          series: {
+            // Not obvious to users that legend labels are clickable so also show checkboxes
+            showCheckbox: true,
+            selected: true, // Default. Can be overridden per series.
+            events: {
+              checkboxClick: function(event) {
+                const series = event.item;
+                if (event.checked) {
+                  series.show();
+                } else {
+                  series.hide();
+                }
+                return false;
+              },
+              // User may click on legend labels or the checkbox. Amazingly we have to take care of keeping things in sync.
+              hide: function(event) {
+                const series = event.target as Series | null;
+                if (series !== null) {
+                  series.select(false);
+                  return false;
+                }
+              },
+              show: function(event) {
+                const series = event.target as Series | null;
+                if (series !== null) {
+                  series.select(true);
+                  return false;
+                }
+              },
+            },
+          },
+        },
+
+        series: [
+          {
+            name: 'Target beer temp.',
+            type: 'line',
+            dashStyle: 'ShortDot',
+            color: '#777',
+          } as Highcharts.SeriesLineOptions,
+          {
+            name: 'Beer temp.',
+            type: 'spline',
+            color: 'rgba(247, 163, 92, 1.0)',
+            showInNavigator: true,
+          } as Highcharts.SeriesSplineOptions,
+          {
+            name: 'Ambient temp.',
+            selected: false,
+            type: 'spline',
+            color: 'rgba(0, 150, 0, 0.5)',
+          } as Highcharts.SeriesSplineOptions,
+          {
+            name: 'Chamber temp.',
+            selected: false,
+            type: 'spline',
+            color: 'rgba(131, 50, 168, 0.5)',
+          } as Highcharts.SeriesSplineOptions,
+          {
+            name: 'Fridge',
+            selected: false,
+            type: 'area',
+            color: 'rgba(113, 166, 210, 1.0)',
+            fillOpacity: 0.3,
+            lineWidth: 1,
+            showInNavigator: true,
+          } as Highcharts.SeriesAreaOptions,
+          {
+            name: 'Heater',
+            selected: false,
+            type: 'areaspline',
+            color: 'rgba(255, 90, 150, 0.75)',
+            fillOpacity: 0.3,
+            lineWidth: 1,
+            showInNavigator: true, // Misbehaves
+          } as Highcharts.SeriesAreasplineOptions,
+        ],
+
+        legend: {
+          enabled: true,
+          align: 'right',
+          backgroundColor: '#FFFFE7',
+          borderColor: '#999',
+          borderWidth: 1,
+          layout: 'vertical',
+          verticalAlign: 'top',
+          y: 100,
+          shadow: true,
+        },
+
+        xAxis: {
+          ordinal: false,
+          // labels: {
+          //   formatter: function() {
+          //     return formatTimeAsHtml(this.value);
+          //   },
+          //   useHTML: true,
+          // },
+        },
+        yAxis: {
+          title: {
+            useHTML: true,
+            text: 'Temperature (&deg;C)',
+          },
+        },
+
+        chart: {
+          // type: 'spline',
+          renderTo: 'gyle-chart-ct',
+        },
+
+        navigator: {
+          series: {
+            type: 'spline',
+          },
         },
       },
-
-      chart: {
-        // type: 'spline',
-        renderTo: 'gyle-chart-ct',
-      },
-
-      navigator: {
-        series: {
-          type: 'spline',
-        },
-      },
-    });
+      chart => {
+        // It seems we have to take care of initially hiding any series with `selected: false`
+        chart.series.filter(s => !s.selected).forEach(s => s.hide());
+      }
+    );
   };
 
   // Returns promise for the readings from the specified log file.
@@ -541,82 +585,12 @@ const GyleChart = () => {
             fridgeSeries,
             heaterSeries,
           ] = chart.series as SeriesPlus[];
+          chart.showLoading();
           return getAggregatedReadings(gyleDetails);
         })
         .then(aggregatedReadings => {
-          const useDummySeriesData = false;
-          if (useDummySeriesData) {
-            type DataPoint = [number, number];
-            const dataTTarget: DataPoint[] = [
-              [utcMsFromDaysAndHours(0, 0), 15],
-              [utcMsFromDaysAndHours(0, 1), 15],
-              [utcMsFromDaysAndHours(0, 2), 20],
-              [utcMsFromDaysAndHours(0, 6), 20],
-              [utcMsFromDaysAndHours(0, 7), 20],
-            ];
-            dataTTarget.forEach(dp => tTargetSeries.addPoint(dp, false));
-            const dataTExternal: DataPoint[] = [
-              [utcMsFromDaysAndHours(0, 0), 18.7],
-              [utcMsFromDaysAndHours(0, 1), 18.9],
-              [utcMsFromDaysAndHours(0, 2), 18.8],
-              [utcMsFromDaysAndHours(0, 3), 15.7],
-              [utcMsFromDaysAndHours(0, 4), 10.5],
-              [utcMsFromDaysAndHours(0, 5), 8.2],
-              [utcMsFromDaysAndHours(0, 6), 6.0],
-            ];
-            dataTExternal.forEach(dp => tExternalSeries.addPoint(dp, false));
-            const dataTChamber: DataPoint[] = [
-              [utcMsFromDaysAndHours(0, 0), 20.1],
-              [utcMsFromDaysAndHours(0, 1), 15.9],
-              [utcMsFromDaysAndHours(0, 2), 16.2],
-              [utcMsFromDaysAndHours(0, 3), 25.1],
-              [utcMsFromDaysAndHours(0, 4), 23.8],
-              [utcMsFromDaysAndHours(0, 5), 22.9],
-              [utcMsFromDaysAndHours(0, 6), 21.0],
-            ];
-            dataTChamber.forEach(dp => tChamberSeries.addPoint(dp, false));
-            const dataTBeer: DataPoint[] = [
-              [utcMsFromDaysAndHours(0, 0), 15.1],
-              [utcMsFromDaysAndHours(0, 1), 15.2],
-              [utcMsFromDaysAndHours(0, 2), 20.9],
-              [utcMsFromDaysAndHours(0, 3), 20.1],
-              [utcMsFromDaysAndHours(0, 4), 19.8],
-              [utcMsFromDaysAndHours(0, 5), 19.9],
-              [utcMsFromDaysAndHours(0, 6), 21.5],
-            ];
-            dataTBeer.forEach(dp => tBeerSeries.addPoint(dp, false));
-            const dataFridge: any[] = [
-              // [utcMsFromDaysAndHours(0, 0), 0],
-              [utcMsFromDaysAndHours(0, 1), 0],
-              [utcMsFromDaysAndHours(0, 1), 10],
-              [utcMsFromDaysAndHours(0, 2), 10],
-              [utcMsFromDaysAndHours(0, 2), 0],
-              [utcMsFromDaysAndHours(0, 2), null],
-              [utcMsFromDaysAndHours(0, 4), null],
-              [utcMsFromDaysAndHours(0, 4), 0],
-              [utcMsFromDaysAndHours(0, 4), 10],
-              [utcMsFromDaysAndHours(0, 5), 10],
-              [utcMsFromDaysAndHours(0, 5), 0],
-              null,
-            ];
-            dataFridge.forEach(dp => fridgeSeries.addPoint(dp, false));
-            const dataHeater: any[] = [
-              // [utcMsFromDaysAndHours(0, 0), 0],
-              // [utcMsFromDaysAndHours(0, 1), 0],
-              [utcMsFromDaysAndHours(0, 2), 0],
-              [utcMsFromDaysAndHours(0, 3), 1],
-              [utcMsFromDaysAndHours(0, 3), 0],
-              [utcMsFromDaysAndHours(0, 3), null],
-              [utcMsFromDaysAndHours(0, 4), null],
-              [utcMsFromDaysAndHours(0, 4), 0],
-              [utcMsFromDaysAndHours(0, 4), 2],
-              [utcMsFromDaysAndHours(0, 5), 9],
-              [utcMsFromDaysAndHours(0, 6), 10],
-            ];
-            dataHeater.forEach(dp => heaterSeries.addPoint(dp, false));
-          } else {
-            addBunchOfReadings(aggregatedReadings);
-          }
+          addBunchOfReadings(aggregatedReadings);
+          chart.hideLoading();
 
           interval = setInterval(() => {
             addLatestReadings();

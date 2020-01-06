@@ -299,7 +299,7 @@ const GyleChart = () => {
 
   // BE generally returns ms since epoch / readingsTimestampResolutionMillis
   const restoreUtcMillisPrecision = (timestamp: number): number => {
-    return timestamp * gyleDetails.readingsTimestampResolutionMillis;
+    return timestamp * readingsTimestampResolutionMillis;
   };
 
   const utcMsFromDaysAndHours = function(days: number, hours: number) {
@@ -416,6 +416,8 @@ const GyleChart = () => {
           },
         },
 
+        // Order dictates the order they appear in the legend. NOTE: If the order is changed, search
+        // for `NOTE: These must be kept in same order as the series definitions` and change in sympathy.
         series: [
           {
             name: 'Target beer temp.',
@@ -430,34 +432,34 @@ const GyleChart = () => {
             showInNavigator: true,
           } as Highcharts.SeriesSplineOptions,
           {
-            name: 'Ambient temp.',
-            selected: false,
-            type: 'spline',
-            color: 'rgba(0, 150, 0, 0.5)',
-          } as Highcharts.SeriesSplineOptions,
-          {
             name: 'Chamber temp.',
             selected: false,
             type: 'spline',
             color: 'rgba(131, 50, 168, 0.5)',
           } as Highcharts.SeriesSplineOptions,
           {
-            name: 'Fridge',
+            name: 'Outside temp.',
+            selected: false,
+            type: 'spline',
+            color: 'rgba(0, 150, 0, 0.5)',
+          } as Highcharts.SeriesSplineOptions,
+          {
+            name: 'Fridge on',
             selected: false,
             type: 'area',
             color: 'rgba(113, 166, 210, 1.0)',
             fillOpacity: 0.3,
             lineWidth: 1,
-            showInNavigator: true,
+            //showInNavigator: true,
           } as Highcharts.SeriesAreaOptions,
           {
-            name: 'Heater',
+            name: 'Heater output',
             selected: false,
             type: 'areaspline',
             color: 'rgba(255, 90, 150, 0.75)',
             fillOpacity: 0.3,
             lineWidth: 1,
-            showInNavigator: true, // Misbehaves
+            //showInNavigator: true,
           } as Highcharts.SeriesAreasplineOptions,
         ],
 
@@ -578,10 +580,11 @@ const GyleChart = () => {
             : null;
           chart = buildChart(gyleDetails.chamberName);
           [
+            // NOTE: These must be kept in same order as the series definitions
             tTargetSeries,
             tBeerSeries,
-            tExternalSeries,
             tChamberSeries,
+            tExternalSeries,
             fridgeSeries,
             heaterSeries,
           ] = chart.series as SeriesPlus[];

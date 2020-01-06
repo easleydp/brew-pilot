@@ -94,23 +94,23 @@ public class GyleTests
     @Test
     public void shouldCollectReadings() throws Exception
     {
-        // Simulate taking a reading every minute for <gen1ReadingsCount - 1> minutes.
+        // Simulate taking a reading every minute for <gen1ReadingsCount> minutes.
         // Confirm no data file created up to this point.
         timeNow = startTime;
-        for (int i = 0; i < gen1ReadingsCount - 1; i++)
+        for (int i = 0; i < gen1ReadingsCount; i++)
         {
             timeNow = addMinutes(timeNow, 1);
             collectReadings();
         }
-        // Confirm no data file created up to this point.
+        // Confirm no data file created up to this point (even though the buffer is full).
         assertEquals(0, listLogFiles().size());
 
-        // Take one more reading. Confirm all the readings are now flushed to a file.
-        timeNow = addMinutes(timeNow, 1);
-        collectReadings();
+        // Take one more reading. Confirm the first gen1ReadingsCount readings are now flushed to a file.
         String expectedLogFileName =
                 // "<generation>-<dtStart>-<dtEnd>.ndjson"
                 "1-" + reduceUtcMillisPrecision(addMinutes(startTime, 1)) + "-" + reduceUtcMillisPrecision(timeNow) + ".ndjson";
+        timeNow = addMinutes(timeNow, 1);
+        collectReadings();
         List<LogFileDescriptor> logFileDescs = listLogFiles();
         assertEquals(1, logFileDescs.size());
         assertEquals(expectedLogFileName, logFileDescs.get(0).getFilename());
@@ -128,11 +128,11 @@ public class GyleTests
         assertEquals(1, listLogFiles().size());
 
         // Take one more reading. Confirm all the readings are now flushed to a file.
-        timeNow = addMinutes(timeNow, 1);
-        collectReadings();
         expectedLogFileName =
                 // "<generation>-<dtStart>-<dtEnd>.ndjson"
                 "1-" + reduceUtcMillisPrecision(addMinutes(startTime, 1)) + "-" + reduceUtcMillisPrecision(timeNow) + ".ndjson";
+        timeNow = addMinutes(timeNow, 1);
+        collectReadings();
         logFileDescs = listLogFiles();
         assertEquals(2, logFileDescs.size());
         assertEquals(expectedLogFileName, logFileDescs.get(1).getFilename());
@@ -225,16 +225,16 @@ public class GyleTests
     {
         timeNow = startTime;
         for (int i = 0; i < genMultiplier - 1; i++)
-            collectEnoughReadingsForOneGen1File();
+            collectEnoughReadingsForOneGen1File(i == 0);
         assertEquals(genMultiplier - 1, listLogFiles().size());
 
         // On creation of the last file of gen1, not only should the new gen1 file appear
         // but also the first gen2 file.
-        collectEnoughReadingsForOneGen1File();
+        collectEnoughReadingsForOneGen1File(false);
         assertEquals(genMultiplier + 1, listLogFiles().size());
 
         // On collecting the next set of readings, the original gen1 files should be tidied away.
-        collectEnoughReadingsForOneGen1File();
+        collectEnoughReadingsForOneGen1File(false);
         assertEquals(2, listLogFiles().size());
     }
 
@@ -244,11 +244,11 @@ public class GyleTests
         timeNow = startTime;
         for (int i = 0; i < genMultiplier; i++)
             for (int j = 0; j < genMultiplier; j++)
-                collectEnoughReadingsForOneGen1File();
+                collectEnoughReadingsForOneGen1File(i == 0 && j == 0);
         assertEquals(genMultiplier * 2 + 1, listLogFiles().size());
 
         // On collecting the next set of readings, the original gen1 files should be tidied away.
-        collectEnoughReadingsForOneGen1File();
+        collectEnoughReadingsForOneGen1File(false);
         List<LogFileDescriptor> logFileDescs = listLogFiles();
         assertEquals(2, logFileDescs.size());
 
@@ -263,12 +263,12 @@ public class GyleTests
         for (int i = 0; i < genMultiplier; i++)
             for (int j = 0; j < genMultiplier; j++)
                 for (int k = 0; k < genMultiplier; k++)
-                    collectEnoughReadingsForOneGen1File();
+                    collectEnoughReadingsForOneGen1File(i == 0 && j == 0 && k == 0);
         // Since maxGenerations is 3, shouldn't have consolidated the gen3 files a a gen4.
         assertEquals(genMultiplier * maxGenerations, listLogFiles().size());
 
         // On collecting the next set of readings, the original gen1 files should be tidied away.
-        collectEnoughReadingsForOneGen1File();
+        collectEnoughReadingsForOneGen1File(false);
         List<LogFileDescriptor> logFileDescs = listLogFiles();
         assertEquals(genMultiplier + 1, logFileDescs.size());
 
@@ -277,9 +277,20 @@ public class GyleTests
         assertReadingsLookOk(gen1ReadingsCount, logFileDescs.get(logFileDescs.size() - 1).logFile);
     }
 
-    private void collectEnoughReadingsForOneGen1File()
+    private void collectEnoughReadingsForOneGen1File(boolean firstBuffer)
     {
         for (int i = 0; i < gen1ReadingsCount; i++)
+        {
+            timeNow = addMinutes(timeNow, 1);
+            collectReadings();
+        }
+        // If it's the first buffer we need to take one more reading to trip flushing the
+        // buffer. (Gyle.collectReadings() doesn't flush the buffer as soon as it becomes
+        // full because then a client keeping up-to-date by just consuming 'recent' records
+        // would likely miss a record. Instead, it leaves the buffer full then, on the next
+        // call to the routine, checks whether to flush before adding the first record of a
+        // new buffer.
+        if (firstBuffer)
         {
             timeNow = addMinutes(timeNow, 1);
             collectReadings();

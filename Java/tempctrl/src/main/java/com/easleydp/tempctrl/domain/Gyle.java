@@ -135,8 +135,29 @@ public class Gyle extends GyleDto
         if (logAnalysis == null)
             logAnalysis = new LogAnalysis();  // Fail fast rather than leave this until first flush
 
-        // Ensure we have a buffer and write the readings to it.
+        // NOTE: We don't flush the buffer as soon as it becomes full because then a client
+        // keeping up-to-date by just consuming 'recent' records would likely miss a record.
+        // Instead, we leave the buffer full then, on the next call to this routine, check
+        // whether to flush before adding the first record of a new buffer.
+
         // If the memory buffer is ready to be flushed, flush & release, and consolidate log files as necessary.
+        if (buffer != null)
+        {
+            if (buffer.isReadyToBeFlushed())
+            {
+                buffer.flush(logsDir, logAnalysis);
+                buffer = null;
+                logAnalysis.maybeConsolidateLogFiles();
+            }
+            else
+            {
+                // Now that a little time has passed since the last consolidation, the redundant gen1
+                // files can be removed.
+                logAnalysis.performAnyPostConsolidationCleanup();
+            }
+        }
+
+        // Ensure we have a buffer and write the readings to it.
         if (buffer == null)
         {
             if (!firstReadingsCollected && PropertyUtils.getBoolean("readings.staggerFirstReadings", true))
@@ -150,18 +171,6 @@ public class Gyle extends GyleDto
             }
         }
         buffer.add(chamberReadings, timeNow);
-        if (buffer.isReadyToBeFlushed())
-        {
-            buffer.flush(logsDir, logAnalysis);
-            buffer = null;
-            logAnalysis.maybeConsolidateLogFiles();
-        }
-        else
-        {
-            // Now that a little time has passed since the last consolidation, the redundant gen1
-            // files can be removed.
-            logAnalysis.performAnyPostConsolidationCleanup();
-        }
 
         firstReadingsCollected = true;
     }

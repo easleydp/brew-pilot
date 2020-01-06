@@ -15,13 +15,17 @@ public class RedundantValues
     /**
      * For each bean property:
      * If some contiguous beans have a property P with same (non-null) value V
-     * then null-out all the intermediate values.
+     * then null-out all the subsequent values.
+     *
+     * Note, we used to just null out the intermediate values (i.e. avoiding the last record in the
+     * contiguous list). But, assuming the consumer (FE) knows the sampling period, there's no need
+     * to preserve the last record in full.
      */
     public static void nullOutRedundantValues(List<?> beans, String propertyName)
     {
         int len = beans.size();
 
-        // Scan forward looking for 3 or more beans with same (non-null) property value.
+        // Scan forward looking for 2 or more beans with same (non-null) property value.
         // i will be the index of the first record, j the last.
         int i = 0;
         int j = -1;
@@ -41,9 +45,9 @@ public class RedundantValues
 
                 if (valueHasChanged || currIndex + 1 == len)
                 {
-                    while (j - i > 1)
+                    while (j - i > 0)
                     {
-                        wrapper = new BeanWrapperImpl(beans.get(--j));
+                        wrapper = new BeanWrapperImpl(beans.get(j--));
                         wrapper.setPropertyValue(propertyName, null);
                     }
                     i = currIndex;

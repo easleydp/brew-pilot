@@ -47,7 +47,7 @@ public class RedundantValuesTests
             RedundantValues.nullOutRedundantValues(dtos, propertyName);
 
         assertEquals(new Dto(1, true, AUTO), dtos.get(0));
-        assertEquals(new Dto(1, true, AUTO), dtos.get(1));
+        assertEquals(new Dto(null, null, null), dtos.get(1));
     }
 
     @Test
@@ -64,14 +64,14 @@ public class RedundantValuesTests
 
         assertEquals(new Dto(1, true, AUTO), dtos.get(0));
         assertEquals(new Dto(null, null, null), dtos.get(1));
-        assertEquals(new Dto(1, true, AUTO), dtos.get(2));
+        assertEquals(new Dto(null, null, null), dtos.get(2));
 
 
         removeRedundantIntermediateBeans(dtos, Dto.getNullablePropertyNames());
 
         assertEquals(2, dtos.size());
         assertEquals(new Dto(1, true, AUTO), dtos.get(0));
-        assertEquals(new Dto(1, true, AUTO), dtos.get(1));
+        assertEquals(new Dto(null, null, null), dtos.get(1));
     }
 
     @Test
@@ -90,14 +90,14 @@ public class RedundantValuesTests
         assertEquals(new Dto(1, true, AUTO), dtos.get(0));
         assertEquals(new Dto(null, null, null), dtos.get(1));
         assertEquals(new Dto(null, null, null), dtos.get(2));
-        assertEquals(new Dto(1, true, AUTO), dtos.get(3));
+        assertEquals(new Dto(null, null, null), dtos.get(3));
 
 
         removeRedundantIntermediateBeans(dtos, Dto.getNullablePropertyNames());
 
         assertEquals(2, dtos.size());
         assertEquals(new Dto(1, true, AUTO), dtos.get(0));
-        assertEquals(new Dto(1, true, AUTO), dtos.get(1));
+        assertEquals(new Dto(null, null, null), dtos.get(1));
     }
 
     enum Mode { AUTO, HOLD }

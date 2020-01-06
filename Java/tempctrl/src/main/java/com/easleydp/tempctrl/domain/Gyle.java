@@ -466,15 +466,17 @@ public class Gyle extends GyleDto
 
             // For each ChamberReadings property:
             // If some contiguous readings have a property P with same value V then null-out
-            // all the intermediate values (so they won't be serialised).
+            // all the subsequent values (so they won't be serialised).
             if (config.nullOutRedundantValues)
+            {
                 for (String propertyName : ChamberReadings.getNullablePropertyNames())
                     nullOutRedundantValues(readingsList, propertyName);
 
-            // Given that the records have been fed through `nullOutRedundantReadings()`, any intermediate
-            // records where all the nullable properties have been set to null are redundant.
-            if (config.removeRedundantIntermediateReadings)
-                removeRedundantIntermediateBeans(readingsList, ChamberReadings.getNullablePropertyNames());
+                // Given that the records have been fed through `nullOutRedundantValues()`, any intermediate
+                // records where all the nullable properties have been set to null are redundant.
+                if (config.removeRedundantIntermediateReadings)
+                    removeRedundantIntermediateBeans(readingsList, ChamberReadings.getNullablePropertyNames());
+            }
         }
     }
 

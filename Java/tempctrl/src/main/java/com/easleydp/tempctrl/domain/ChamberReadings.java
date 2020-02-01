@@ -91,14 +91,6 @@ public class ChamberReadings
      * reading. In readings fresh from the chamber it will never be null.
      */
     private Mode mode;
-    public enum Mode
-    {
-        AUTO,  // Aim for the target temp specified in the ChamberParameters, if any. Otherwise, operate as per `HOLD`.
-        HOLD,  // Aim to maintain tBeer as it was when this mode was engaged (reflected in tTarget).
-        COOL,  // Force cool (while < tMin). No heating.
-        HEAT,  // Force heat (while < tMax). No cooling.
-        NONE,  // No heating, no cooling, just monitoring.
-    }
 
 
     private static final String[] nullablePropertyNames = new String[] {
@@ -108,6 +100,16 @@ public class ChamberReadings
     public static String[] getNullablePropertyNames()
     {
         return nullablePropertyNames;
+    }
+
+
+    @Override
+    public String toString()
+    {
+        return "ChamberReadings [dt=" + dt + ", tTarget=" + tTarget + ", tBeer=" + tBeer
+                + ", tExternal=" + tExternal + ", tChamber=" + tChamber + ", tPi=" + tPi
+                + ", heaterOutput=" + heaterOutput + ", coolerOn=" + coolerOn + ", mode=" + mode
+                + ", chamberParameters=" + chamberParameters + "]";
     }
 
 

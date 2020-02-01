@@ -28,11 +28,18 @@ public class CollectReadingsScheduler
     private ChamberManager chamberManager;
 
     private long longestDuration = 100;
+    private boolean first = true;
 
     @Scheduled(fixedRateString="${readings.periodMillis}")
     public void takeReadings()
     {
         logger.debug("takeReadings called");
+
+        if (first)
+        {
+            //sleep(5000);
+            first = false;
+        }
 
         Date date = new Date();
         // For each chamber, if it has an active gyle, collect a set of readings.
@@ -40,6 +47,7 @@ public class CollectReadingsScheduler
             .map(Chamber::getActiveGyle)
             .filter(ag -> ag != null)
             .forEach(ag -> {
+                sleep(1000);
                 logger.debug("taking readings for chamber " + ag.chamber.getId() + " gyle " + ag.gyleDir.getFileName());
                 ag.collectReadings(chamberManager, date);
             });
@@ -53,6 +61,18 @@ public class CollectReadingsScheduler
         else if (logger.isDebugEnabled())
         {
             logger.debug("takeReadings took " + duration + "ms");
+        }
+    }
+
+    private static void sleep(int millis)
+    {
+        try
+        {
+            Thread.sleep(millis);
+        }
+        catch (InterruptedException e)
+        {
+            throw new RuntimeException("Sleep interrupted");
         }
     }
 }

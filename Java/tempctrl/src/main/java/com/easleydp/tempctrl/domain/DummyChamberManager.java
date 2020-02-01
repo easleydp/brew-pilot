@@ -4,8 +4,6 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.Random;
 
-import com.easleydp.tempctrl.domain.ChamberReadings.Mode;
-
 public class DummyChamberManager implements ChamberManager
 {
     private ChamberRepository chamberRepository;

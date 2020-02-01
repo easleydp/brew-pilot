@@ -9,8 +9,6 @@ import java.util.Random;
 import org.springframework.core.env.Environment;
 import org.springframework.util.Assert;
 
-import com.easleydp.tempctrl.domain.ChamberReadings.Mode;
-
 public class MockChamberManager implements ChamberManager
 {
     private Map<Integer, ChamberParameters> chamberParametersById = new HashMap<>();

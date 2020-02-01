@@ -114,6 +114,13 @@ public class Gyle extends GyleDto
         return getDtStarted() != null  &&  getDtEnded() == null;
     }
 
+    public ChamberParameters getChamberParameters(Date timeNow)
+    {
+        long timeNowMs = timeNow.getTime();
+        TemperatureProfile tp = getTemperatureProfile();
+        return new ChamberParameters(tp.getTargetTempAt(timeNowMs), tp.getTargetTempAt(timeNowMs + 1000 * 60 * 60), -1 * 10, 40 * 10); // TODO: Get tMin & tMax properly
+    }
+
     /**
      * Get readings from the chamber manager and store (in memory buffer if not persistently).
      *
@@ -130,6 +137,12 @@ public class Gyle extends GyleDto
         logger.debug("collectReadings()");
 
         ChamberReadings chamberReadings = chamberManager.getReadings(chamber.getId(), timeNow);
+        if (chamberReadings == null)
+        {
+            logger.error("chamberManager.getReadings() for chamber ID " + chamber.getId() + " returned null");
+            return;
+        }
+logger.error(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n" + chamberReadings.toString());
         latestChamberReadings = chamberReadings;
 
         if (logAnalysis == null)

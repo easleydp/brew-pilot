@@ -7,7 +7,8 @@ import java.util.List;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 /**
- * Marries-up with the the contents of profile.json
+ * Marries-up with the the contents of profile.json.
+ * See also TemperatureProfile, which extends this class.
  */
 public class TemperatureProfileDto
 {

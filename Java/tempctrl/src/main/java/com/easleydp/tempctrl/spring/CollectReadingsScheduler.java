@@ -41,6 +41,9 @@ public class CollectReadingsScheduler
             first = false;
         }
 
+        logger.debug("Slurping log messages before collecting readings");
+        chamberManager.slurpLogMessages();
+
         Date date = new Date();
         // For each chamber, if it has an active gyle, collect a set of readings.
         chamberRepository.getChambers().stream()
@@ -50,6 +53,9 @@ public class CollectReadingsScheduler
                 sleep(1000);
                 logger.debug("taking readings for chamber " + ag.chamber.getId() + " gyle " + ag.gyleDir.getFileName());
                 ag.collectReadings(chamberManager, date);
+
+                logger.debug("Slurping log messages after collecting readings for chamber " + ag.chamber.getId());
+                chamberManager.slurpLogMessages();
             });
 
         long duration = System.currentTimeMillis() - date.getTime();

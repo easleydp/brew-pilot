@@ -45,13 +45,20 @@ int freeRam() {
   int v;
   return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval);
 }
-int minFreeRam = 10000;
+int minFreeRam = 32767;
+uint8_t minFreeRamLocation = 0;
 // Call this to record lowest minFreeRam from whereever you suspect stack may be deep.
 // The minFreeRam is then available for reporting.
-void logMinFreeRam() {
+void memoMinFreeRam(uint8_t location) {
   int fr = freeRam();
-  if (minFreeRam > fr)
+  if (minFreeRam > fr) {
     minFreeRam = fr;
+    location = 0;
+  }
+}
+
+void printComma() {
+  Serial.print(',');
 }
 
 // End

@@ -16,7 +16,7 @@ void forceFridge(ChamberData& cd, byte setting) {
       cd.fridgeOn = false;
     }
   }
-  logMinFreeRam();
+  memoMinFreeRam(1);
 }
 
 /** Activates/deactivates the fridge as requested IF this won't unduly stress the compressor. */
@@ -45,11 +45,12 @@ void fridge(ChamberData& cd, byte setting) {
 }
 void heater(ChamberData& cd, byte level) {
   // TODO
-  logMinFreeRam();
+  memoMinFreeRam(2);
 }
 
 void controlChamber(ChamberData& cd) {
   ChamberParams& params = cd.params;
+  uint8_t chamberId = params.chamberId;
 
   // Defaults, in case we should fall through the following logic without making
   // a deliberate decision.
@@ -119,21 +120,28 @@ void controlChamber(ChamberData& cd) {
 
   // Note: we maintain the PID state variables - integral & priorError - even when
   // not PID heating in case we commence PID heating next time round.
+  static const char* logPrefix = "PID";
   cd.integral += tError;
+  logMsg(LOG_DEBUG, logPrefix, '~', chamberId, tError, cd.integral, cd.priorError);
   if (heatPidWise) {
-    float output = params.Kp*tError + params.Ki*cd.integral + params.Kd*(tError - cd.priorError);
-    // Range check
-    if (output < 0.0) // we've screwed-up somehow
+    float pidOutput = params.Kp*tError + params.Ki*cd.integral + params.Kd*(tError - cd.priorError);
+    // PID output range check
+    if (pidOutput < 0.0) { // we've screwed-up somehow
+      logMsg(LOG_ERROR, logPrefix, '-', chamberId, pidOutput);
       hSetting = 0;
-    else if (output >= 100.0)
+    } else if (pidOutput >= 100.0) {
+      logMsg(LOG_WARN, logPrefix, '+', chamberId, pidOutput);
       hSetting = 100;
-    else
-      hSetting = output;
+    } else {
+      logMsg(LOG_DEBUG, logPrefix, '-', chamberId, pidOutput);
+      hSetting = pidOutput;
+    }
   }
   if (cd.priorError - tError != 0) {
     cd.tBeerLastDelta = (cd.priorError - tError) * 10; // *10 is so we don't decay to zero too soon
   } else {
     // Decay
+    logMsg(LOG_DEBUG, logPrefix, 'd', chamberId, cd.tBeerLastDelta);
     if (cd.tBeerLastDelta > 0)
       cd.tBeerLastDelta -= 1;
     else if (cd.tBeerLastDelta < 0)
@@ -163,7 +171,7 @@ void chambersMinuteTick() {
     if (cd.fridgeStateChangeMins < 255)
       cd.fridgeStateChangeMins += 1;
   }
-  logMinFreeRam();
+  memoMinFreeRam(3);
 }
 
 uint32_t millisSinceLastChamberControl = 0;

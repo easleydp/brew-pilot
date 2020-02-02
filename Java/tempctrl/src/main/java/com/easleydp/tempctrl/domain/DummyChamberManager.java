@@ -48,7 +48,7 @@ public class DummyChamberManager implements ChamberManager
             tTargetNext = temperatureProfile.getTargetTempAt(millisSinceStart + 1000L * 60 * 60);
             tMin = -1 * 10;
             tMax = 41 * 10;
-            params = new ChamberParameters(tTarget, tTargetNext, tMin, tMax);
+            params = new ChamberParameters(tTarget, tTargetNext, tMin, tMax, true, 1.2, 2.3, 3.4);
         }
         else
         {
@@ -63,10 +63,10 @@ public class DummyChamberManager implements ChamberManager
         int tChamber = tExternal + randomInt(4, 6);
         int tPi = tExternal + randomInt(5, 7);
         int heaterOutput = getDayOfMonthFromDate(nowTime) % 2 == 0 ? randomInt(1, 100) : 0;
-        boolean coolerOn = heaterOutput == 0;
+        boolean fridgeOn = heaterOutput == 0;
         Mode mode = Mode.AUTO;
         return new ChamberReadings(timeNow,
-                tTarget, tBeer, tExternal, tChamber, tPi, heaterOutput, coolerOn, mode, params);
+                tTarget, tBeer, tExternal, tChamber, tPi, heaterOutput, fridgeOn, mode, params);
     }
 
     private static int getDayOfMonthFromDate(Date d)
@@ -79,5 +79,12 @@ public class DummyChamberManager implements ChamberManager
     private int randomInt(int from, int to)
     {
         return from + random.nextInt(to - from + 1);
+    }
+
+    @Override
+    public void slurpLogMessages()
+    {
+        // TODO Auto-generated method stub
+
     }
 }

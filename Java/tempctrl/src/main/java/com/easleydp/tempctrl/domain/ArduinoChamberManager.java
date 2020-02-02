@@ -3,8 +3,11 @@ package com.easleydp.tempctrl.domain;
 import static java.lang.Double.*;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.slf4j.Logger;
@@ -15,6 +18,7 @@ import com.google.common.base.Joiner;
 public class ArduinoChamberManager implements ChamberManager
 {
     private static final Logger logger = LoggerFactory.getLogger(ArduinoChamberManager.class);
+    private static final Logger arduinoLogger = LoggerFactory.getLogger("arduino");
 
     private static final char DELIM_CHAR = ',';
     private static final String DELIM = "" + DELIM_CHAR;
@@ -43,9 +47,11 @@ public class ArduinoChamberManager implements ChamberManager
             //  ^setParams:2,100,100,-10,150,0,1.9,0.015,19.5$
             getMessenger().expectResponse("ack");
         }
-        catch (IOException e)
+        catch (Throwable t)
         {
-            handleIOException(e);
+            logger.error(t.getMessage());
+            if (t instanceof IOException)
+                handleIOException((IOException) t);
         }
     }
 
@@ -64,9 +70,10 @@ public class ArduinoChamberManager implements ChamberManager
         {
             getMessenger().sendRequest("getChmbrRds:" + chamberId);
             String response = getMessenger().getResponse("chmbrRds:");
+            logger.debug("chmbrRds:" + response);
             String[] values = response.split(",");
             // Expecting:
-            // tTarget,tTargetNext,tMin,tMax,tBeer,tExternal,tChamber,tPi,heaterOutput,coolerOn(0|1),mode
+            // tTarget,tTargetNext,tMin,tMax,hasHeater,Kp,Ki,Kd,tBeer,tExternal,tChamber,tPi,heaterOutput,fridgeOn,mode
             if (values.length != 15)
             {
                 throw new IOException("Unexpected 'chmbrRds' response: " + response);
@@ -89,7 +96,7 @@ public class ArduinoChamberManager implements ChamberManager
             int tChamber = parseInt(values[i++]);
             int tPi = parseInt(values[i++]);
             int heaterOutput = parseInt(values[i++]);
-            boolean coolerOn = parseBool(values[i++]);
+            boolean fridgeOn = parseBool(values[i++]);
             Mode mode = Mode.get(values[i++]);
 
             // Check consistency of params
@@ -106,12 +113,90 @@ public class ArduinoChamberManager implements ChamberManager
             // Deliberately not consistency checking the floating point values due to likelihood of rounding errors.
 
             return new ChamberReadings(timeNow, tTarget, tBeer, tExternal, tChamber, tPi,
-                    heaterOutput, coolerOn, mode, new ChamberParameters(tTarget, tTargetNext, tMin, tMax, hasHeater, Kp, Ki, Kd));
+                    heaterOutput, fridgeOn, mode, new ChamberParameters(tTarget, tTargetNext, tMin, tMax, hasHeater, Kp, Ki, Kd));
         }
-        catch (IOException e)
+        catch (Throwable t)
         {
-            handleIOException(e);
+            logger.error(t.getMessage());
+            if (t instanceof IOException)
+                handleIOException((IOException) t);
             return null;
+        }
+    }
+
+    @Override
+    public void slurpLogMessages()
+    {
+        try
+        {
+            getMessenger().sendRequest("getLogMsgs");
+            List<String> logMessages = new ArrayList<>();
+            while (true)
+            {
+                String logMessage = getMessenger().getResponse("logMsg:", "ack");
+                if (logMessage == null)
+                    break;
+                logMessages.add(logMessage);
+            }
+            for (String logMessage : logMessages)
+            {
+                String[] values = logMessage.split(",");
+                // Expecting:
+                // sequenceNum,logLevel,prefix,id,chamberId,buffLen,b64Buffer
+                // though buffLen and b64Buffer will be absent if no binary data.
+                if (values.length != 5  &&  values.length != 7)
+                {
+                    throw new IOException("Unexpected 'logMsg' response: " + logMessage);
+                }
+                int i = 0;
+                int sequenceNum = parseInt(values[i++]);
+                int logLevel = parseInt(values[i++]);
+                String prefix = values[i++];
+                char id = values[i++].charAt(0);
+                int chamberId = parseInt(values[i++]);
+
+                StringBuffer sb = new StringBuffer();
+                sb.append("sequenceNum:" + sequenceNum + "; ");
+                sb.append(prefix + ":" + id + "; ");
+                sb.append("chamberId:" + chamberId);
+
+                if (values.length == 7)
+                {
+                    int buffLen = parseInt(values[i++]);
+                    String b64Buffer = values[i++];
+                    byte[] buffer = Base64.getDecoder().decode(b64Buffer);
+                    if (buffer.length != buffLen)
+                    {
+                        throw new IOException("Bad 'logMsg' response: " + logMessage +
+                                ". Actual buffer length was " + buffer.length + " rather than " + buffLen + ".");
+                    }
+                    sb.append("; buffer:[");
+                    for (int j = 0; j < buffer.length; j++)
+                    {
+                        if (j > 0)
+                            sb.append(", ");
+                        sb.append(String.format("%02X", buffer[j]));
+                    }
+                    sb.append("]");
+                }
+                switch (logLevel)
+                {
+                    case 0: arduinoLogger.debug(sb.toString()); break;
+                    case 1: arduinoLogger.info(sb.toString()); break;
+                    case 2: arduinoLogger.warn(sb.toString()); break;
+                    case 3: arduinoLogger.error(sb.toString()); break;
+                    default:
+                        arduinoLogger.error("Unrecognise log level: " + logLevel);
+                        arduinoLogger.error(sb.toString());
+                        break;
+                }
+            }
+        }
+        catch (Throwable t)
+        {
+            logger.error(t.getMessage());
+            if (t instanceof IOException)
+                handleIOException((IOException) t);
         }
     }
 
@@ -134,7 +219,6 @@ public class ArduinoChamberManager implements ChamberManager
             messenger.close();
             messenger = null;
         }
-        logger.error(e.getMessage());
     }
 
 

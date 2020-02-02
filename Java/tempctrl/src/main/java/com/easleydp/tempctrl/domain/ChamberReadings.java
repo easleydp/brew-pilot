@@ -19,7 +19,7 @@ public class ChamberReadings
 
     public ChamberReadings(
             Date timeNow, int tTarget, int tBeer, int tExternal, int tChamber, int tPi,
-            int heaterOutput, boolean coolerOn, Mode mode,
+            int heaterOutput, boolean fridgeOn, Mode mode,
             ChamberParameters chamberParameters)
     {
         Assert.isTrue(timeNow != null, "timeNow is required");
@@ -34,7 +34,7 @@ public class ChamberReadings
         this.tPi = tPi;
 
         this.heaterOutput = heaterOutput;
-        this.coolerOn = coolerOn;
+        this.fridgeOn = fridgeOn;
         this.mode = mode;
         this.chamberParameters = chamberParameters;
     }
@@ -82,7 +82,7 @@ public class ChamberReadings
      * `Boolean` only because it may be nulled-out to signify same value as the previous
      * reading. In readings fresh from the chamber it will never be null.
      */
-    private Boolean coolerOn;
+    private Boolean fridgeOn;
 
     /**
      * The state of the chamber manager hardware's "mode" switch.
@@ -95,7 +95,7 @@ public class ChamberReadings
 
     private static final String[] nullablePropertyNames = new String[] {
             "tTarget", "tBeer", "tExternal", "tChamber", "tPi",
-            "heaterOutput", "coolerOn", "mode"
+            "heaterOutput", "fridgeOn", "mode"
     };
     public static String[] getNullablePropertyNames()
     {
@@ -108,7 +108,7 @@ public class ChamberReadings
     {
         return "ChamberReadings [dt=" + dt + ", tTarget=" + tTarget + ", tBeer=" + tBeer
                 + ", tExternal=" + tExternal + ", tChamber=" + tChamber + ", tPi=" + tPi
-                + ", heaterOutput=" + heaterOutput + ", coolerOn=" + coolerOn + ", mode=" + mode
+                + ", heaterOutput=" + heaterOutput + ", fridgeOn=" + fridgeOn + ", mode=" + mode
                 + ", chamberParameters=" + chamberParameters + "]";
     }
 
@@ -180,13 +180,13 @@ public class ChamberReadings
         this.heaterOutput = heaterOutput;
     }
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public Boolean getCoolerOn()
+    public Boolean getFridgeOn()
     {
-        return coolerOn;
+        return fridgeOn;
     }
-    public void setCoolerOn(Boolean coolerOn)
+    public void setFridge(Boolean fridgeOn)
     {
-        this.coolerOn = coolerOn;
+        this.fridgeOn = fridgeOn;
     }
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public Mode getMode()

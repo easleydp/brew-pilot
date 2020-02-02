@@ -1,11 +1,13 @@
 #include <limits.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <Base64.h> // https://github.com/agdl/Base64
 #include <EEPROM.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
 #include "Common.h"
+#include "Logging.h"
 #include "Temperature.h"
 #include "ChamberData.h"
 #include "ChamberControl.h"
@@ -13,6 +15,8 @@
 #include "MessageHandlingGen.h"
 #include "MessageHandlingDomain.h"
 #include "TimeKeeping.h"
+
+static const char* mainLogPrefix = "MN";
 
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
@@ -29,13 +33,16 @@ void setup() {
 //  Serial.print(F("TD count:"));
 //  Serial.println(tempDeviceCount);
 
+  initLoggingData();
   initChamberData();
+
+  logMsg(LOG_WARN, mainLogPrefix, '0');
 }
 
 void loop() {
   keepTrackOfTime();
   handleMessages();
-  controlChambers();
+//  controlChambers();
 }
 
 // End

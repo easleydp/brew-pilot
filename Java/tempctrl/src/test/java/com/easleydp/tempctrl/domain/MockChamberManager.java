@@ -49,7 +49,7 @@ public class MockChamberManager implements ChamberManager
             tTargetNext = temperatureProfile.getTargetTempAt(millisSinceStart + 1000L * 60 * 60);
             tMin = -5 * 10;
             tMax = 40 * 10;
-            params = new ChamberParameters(tTarget, tTargetNext, tMin, tMax);
+            params = new ChamberParameters(tTarget, tTargetNext, tMin, tMax, true, 1.2, 2.3, 3.4);
         }
         else
         {
@@ -61,10 +61,10 @@ public class MockChamberManager implements ChamberManager
         int tChamber = ((tBeer + tExternal) / 2) + randomInt(-20, 20);
         int tPi = tExternal + randomInt(50, 70);
         int heaterOutput = getDayOfMonthFromDate(nowTime) % 2 == 0 ? randomInt(1, 100) : 0;
-        boolean coolerOn = heaterOutput == 0;
+        boolean fridgeOn = heaterOutput == 0;
         Mode mode = Mode.AUTO;
         return new ChamberReadings(timeNow,
-                tTarget, tBeer, tExternal, tChamber, tPi, heaterOutput, coolerOn, mode, params);
+                tTarget, tBeer, tExternal, tChamber, tPi, heaterOutput, fridgeOn, mode, params);
     }
     private Integer lastTExternal = null;
 
@@ -133,6 +133,13 @@ public class MockChamberManager implements ChamberManager
     public void setNowTime(Date now)
     {
         this.nowTime = now;
+    }
+
+    @Override
+    public void slurpLogMessages()
+    {
+        // TODO Auto-generated method stub
+
     }
 
 }

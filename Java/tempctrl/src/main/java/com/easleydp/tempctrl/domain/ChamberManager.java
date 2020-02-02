@@ -14,4 +14,6 @@ public interface ChamberManager
     public void setParameters(int chamberId, ChamberParameters params);
 
     public ChamberReadings getReadings(int chamberId, Date timeNow);
+
+    public void slurpLogMessages();
 }

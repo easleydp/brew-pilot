@@ -1,6 +1,4 @@
 
-static const char COMMA = ',';
-
 static const char RESP_ERROR[] PROGMEM = "error:";
 
 bool prefix(const char *pre, const char *str) {
@@ -12,9 +10,6 @@ void sendToMasterStart() {
 }
 void sendToMasterEnd() {
   Serial.println('$'); // Line ending merely for readability in console. Ignored by recipient.
-}
-void sendComma() {
-  Serial.print(COMMA);
 }
 //void sendToMaster(String response) {
 //  sendToMaster(response.c_str());

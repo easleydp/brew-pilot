@@ -2,5 +2,11 @@
   "name": "Fermentation chamber",
   "fridgeMinOnTimeMins": 5,
   "fridgeMinOffTimeMins": 10,
-  "heaterPowerWatts": 20
+  "heaterPowerWatts": 20,
+  "tMin": -10,
+  "tMax": 40,
+  "hasHeater": true,
+  "kp": 2.0,
+  "ki": 0.01,
+  "kd": 20.0
 }

@@ -1,6 +1,8 @@
 static const char CMD_STATUS[] PROGMEM = "status";
 static const char CMD_SET_CHAMBER_PARAMS[] PROGMEM = "setParams:";
 static const char CMD_GET_CHAMBER_READINGS[] PROGMEM = "getChmbrRds:";
+static const char CMD_TEST_LOG_MESSAGE[] PROGMEM = "testLogMsg:";
+static const char CMD_GET_LOG_MESSAGES[] PROGMEM = "getLogMsgs";
 static const char CMD_FLIP_LED[] PROGMEM = "flipLed";
 
 void handleSetChamberParams(char* cmd) {
@@ -41,8 +43,6 @@ void handleSetChamberParams(char* cmd) {
   float Kd = atof(&cmd[i]);
 
   ChamberData* cd = findChamber(chamberId);
-Serial.println(chamberId);
-Serial.println((int) cd);
   if (cd == NULL) {
     return respondWithError("chamberId,", itoa(chamberId));
   }
@@ -51,6 +51,8 @@ Serial.println((int) cd);
 }
 
 void handleGetChamberReadings(const char* cmd) {
+  logMsg(LOG_DEBUG, "handleGetChamberReadings called", '0', 1.2, 3.4, 5.6, 7.8);
+
   int i = strlen(strFromProgMem(CMD_GET_CHAMBER_READINGS));
   // The remainder of the request is the chamber ID
   byte chamberId = atoi(&cmd[i]);
@@ -61,40 +63,83 @@ void handleGetChamberReadings(const char* cmd) {
   sendToMasterStart();
   Serial.print("chmbrRds:");
   Serial.print(cd->tTarget);
-  sendComma();
+  printComma();
   Serial.print(cd->tTargetNext);
-  sendComma();
+  printComma();
   Serial.print(cd->params.tMin);
-  sendComma();
+  printComma();
   Serial.print(cd->params.tMax);
-  sendComma();
+  printComma();
   Serial.print(cd->params.hasHeater);
-  sendComma();
+  printComma();
+  Serial.print(cd->params.Kp);
+  printComma();
+  Serial.print(cd->params.Ki);
+  printComma();
+  Serial.print(cd->params.Kd);
+  printComma();
   Serial.print(cd->tBeer);
-  sendComma();
+  printComma();
   Serial.print(cd->tExternal);
-  sendComma();
+  printComma();
   Serial.print(cd->tChamber);
-  sendComma();
+  printComma();
   Serial.print(cd->tPi);
-  sendComma();
+  printComma();
   Serial.print(cd->heaterOutput);
-  sendComma();
+  printComma();
   Serial.print(cd->fridgeOn);
-  sendComma();
+  printComma();
   Serial.print(cd->mode);
   sendToMasterEnd();
 }
 
+void handleTestLogMessage(char* cmd) {
+  int i = strlen(strFromProgMem(CMD_TEST_LOG_MESSAGE));
+  int j = nullNextComma(cmd, i);
+  uint8_t logLevel = atoi(&cmd[i]);
+
+  i = j;
+  j = nullNextComma(cmd, i);
+  char id = cmd[i];
+
+  i = j;
+  j = nullNextComma(cmd, i);
+  uint8_t chamberId = atoi(&cmd[i]);
+
+  i = j;
+  j = nullNextComma(cmd, i);
+  float _float = atof(&cmd[i]);
+
+  logMsg(logLevel, "TST", id, chamberId, _float + 1.0, logLevel, sizeof(float));
+
+  sendAck();
+}
+
+void handleGetLogMessages() {
+  while (LogRecord* lrPtr = findOldestLogMessage()) {
+    sendToMasterStart();
+    Serial.print("logMsg:");
+    serialiseLogMessage(lrPtr);
+    deallocateLogRecord(lrPtr);
+    sendToMasterEnd();
+  }
+  sendAck();
+}
+
 void dispatchCmd(char* cmd) {
   if (strcmp_P(cmd, CMD_STATUS) == 0) {
-    sendToMasterStart(); Serial.print("status:"); Serial.print(uptimeMins); sendComma(); Serial.print(minFreeRam); sendToMasterEnd();
+    sendToMasterStart(); Serial.print("status:"); Serial.print(uptimeMins); printComma(); Serial.print(minFreeRam); printComma(); Serial.print(logDataEjected); sendToMasterEnd();
   } else if (prefix(strFromProgMem(CMD_SET_CHAMBER_PARAMS), cmd)) {
     handleSetChamberParams(cmd);
   } else if (prefix(strFromProgMem(CMD_GET_CHAMBER_READINGS), cmd)) {
     handleGetChamberReadings(cmd);
+  } else if (prefix(strFromProgMem(CMD_TEST_LOG_MESSAGE), cmd)) {
+    handleTestLogMessage(cmd);
+  } else if (strcmp_P(cmd, CMD_GET_LOG_MESSAGES) == 0) {
+    handleGetLogMessages();
   } else if (strcmp_P(cmd, CMD_FLIP_LED) == 0) {
-    flipLed();
+    //flipLed();
     sendToMasterStart(); Serial.print("ledState:"); Serial.print(ledState); sendToMasterEnd();
   } else {
     sendToMaster("UnrecCmd:", cmd);

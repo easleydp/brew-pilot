@@ -41,7 +41,8 @@ public class ArduinoMessenger implements AutoCloseable
         logger.info("Found USB serial port " + comPort.getSystemPortName());
         comPort.openPort();
         comPort.setBaudRate(57600);
-        comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 0, 0);
+        // https://github.com/Fazecast/jSerialComm/wiki/Blocking-and-Semiblocking-Reading-Usage-Example
+        comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 100, 0);
     }
 
     /** Returns the most likely looking USB serial port or null if none. */
@@ -171,6 +172,25 @@ public class ArduinoMessenger implements AutoCloseable
     public String getResponse(String expectedPrefix) throws IOException
     {
         String response = getResponse();
+        int i = response.indexOf(expectedPrefix);
+        if (i != 0)
+        {
+            throw new IllegalStateException("Expected [" + expectedPrefix + "...] but received [" + response + "]");
+        }
+        return response.substring(expectedPrefix.length());
+    }
+
+    /**
+     * As `String getResponse(String expectedPrefix)` but expects EITHER a message beginning with `expectedPrefix`
+     * OR a message equal to `endResponse`.
+     * @return the response minus the prefix or null if the endResponse was received.
+     * @throws IllegalStateException, IOException
+     */
+    public String getResponse(String expectedPrefix, String endResponse) throws IOException
+    {
+        String response = getResponse();
+        if (endResponse.equals(response))
+            return null;
         int i = response.indexOf(expectedPrefix);
         if (i != 0)
         {

@@ -118,7 +118,8 @@ public class Gyle extends GyleDto
     {
         long timeNowMs = timeNow.getTime();
         TemperatureProfile tp = getTemperatureProfile();
-        return new ChamberParameters(tp.getTargetTempAt(timeNowMs), tp.getTargetTempAt(timeNowMs + 1000 * 60 * 60), -1 * 10, 40 * 10); // TODO: Get tMin & tMax properly
+        return new ChamberParameters(tp.getTargetTempAt(timeNowMs), tp.getTargetTempAt(timeNowMs + 1000 * 60 * 60),
+                chamber.gettMin(), chamber.gettMax(), chamber.isHasHeater(), chamber.getKp(), chamber.getKi(), chamber.getKd());
     }
 
     /**
@@ -142,7 +143,6 @@ public class Gyle extends GyleDto
             logger.error("chamberManager.getReadings() for chamber ID " + chamber.getId() + " returned null");
             return;
         }
-logger.error(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n" + chamberReadings.toString());
         latestChamberReadings = chamberReadings;
 
         if (logAnalysis == null)

@@ -29,7 +29,7 @@
  * Persisted in EEPROM in case of restart with no Pi.
  */
 typedef struct {
-  byte chamberId;
+  uint8_t chamberId;
 
   int16_t tMin;
   int16_t tMax;
@@ -79,10 +79,12 @@ typedef struct {
   int8_t tBeerLastDelta; // The last registered change in tBeer ((priorError-error)*10), with decay each time no change. Used to detect trend (+ve signifies rising / -ve falling).
 } ChamberData;
 
+static const char* chamberDataLogPrefix = "CD";
+
 ChamberData chamberDataArray[CHAMBER_COUNT];
 
 /** Assumes that, whatever structure is supplied, the last two bytes is a checksum to be ignored. */
-template< typename T > uint16_t generateChecksum(const T &t) {
+template<typename T> uint16_t generateChecksum(const T &t) {
   uint16_t crc = 7;
   const uint8_t *ptr = (const uint8_t*) &t;
   for (int i = 0; i < sizeof(T) - sizeof(uint16_t) /* don't include the checksum */; i++) {
@@ -127,6 +129,8 @@ unsigned long saveTTargetInterval = 1000L * 60 * 60; // save tTarget every hour
 unsigned long prevTTargetSaved[CHAMBER_COUNT];  // initialised in initChamberData()
 boolean tTargetPersisted[CHAMBER_COUNT];  // initialised in initChamberData()
 void updateChamberParams(ChamberData* cd, int tTarget, int tTargetNext, int tMin, int tMax, boolean hasHeater, float Kp, float Ki, float Kd) {
+  logMsg(LOG_DEBUG, "updateChamberParams called", '0');
+
   byte chamberId = cd->params.chamberId;
 
   cd->tTarget = tTarget;
@@ -160,6 +164,7 @@ void initChamberData() {
     ChamberData& cd = chamberDataArray[i];
     memset(&cd, 0, sizeof(ChamberData));
     cd.fridgeStateChangeMins = 255;
+    cd.mode = MODE_HOLD;
     ChamberParams& params = cd.params;
     params.chamberId = i + 1;
 

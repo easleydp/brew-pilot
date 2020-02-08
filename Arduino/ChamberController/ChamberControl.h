@@ -189,7 +189,7 @@ void controlChambers() {
       millisSinceLastChamberControl = 0;
       prevMillisChamberControl = uptimeMillis;
   
-      sensors.requestTemperatures();
+      dallas.requestTemperatures();
       for (byte i = 0; i < CHAMBER_COUNT; i++) {
         controlChamber(chamberDataArray[i]);
       }

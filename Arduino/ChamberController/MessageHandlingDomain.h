@@ -61,7 +61,7 @@ void handleGetChamberReadings(const char* cmd) {
     return respondWithError("chamberId,", itoa(chamberId));
   }
   sendToMasterStart();
-  Serial.print("chmbrRds:");
+  Serial.print(F("chmbrRds:"));
   Serial.print(cd->tTarget);
   printComma();
   Serial.print(cd->tTargetNext);
@@ -119,7 +119,7 @@ void handleTestLogMessage(char* cmd) {
 void handleGetLogMessages() {
   while (LogRecord* lrPtr = findOldestLogMessage()) {
     sendToMasterStart();
-    Serial.print("logMsg:");
+    Serial.print(F("logMsg:"));
     serialiseLogMessage(lrPtr);
     deallocateLogRecord(lrPtr);
     sendToMasterEnd();
@@ -129,7 +129,7 @@ void handleGetLogMessages() {
 
 void dispatchCmd(char* cmd) {
   if (strcmp_P(cmd, CMD_STATUS) == 0) {
-    sendToMasterStart(); Serial.print("status:"); Serial.print(uptimeMins); printComma(); Serial.print(minFreeRam); printComma(); Serial.print(logDataEjected); sendToMasterEnd();
+    sendToMasterStart(); Serial.print(F("status:")); Serial.print(uptimeMins); printComma(); Serial.print(minFreeRam); printComma(); Serial.print(temperatureSensorsOk); printComma(); Serial.print(logDataEjected); sendToMasterEnd();
   } else if (prefix(strFromProgMem(CMD_SET_CHAMBER_PARAMS), cmd)) {
     handleSetChamberParams(cmd);
   } else if (prefix(strFromProgMem(CMD_GET_CHAMBER_READINGS), cmd)) {
@@ -140,7 +140,7 @@ void dispatchCmd(char* cmd) {
     handleGetLogMessages();
   } else if (strcmp_P(cmd, CMD_FLIP_LED) == 0) {
     //flipLed();
-    sendToMasterStart(); Serial.print("ledState:"); Serial.print(ledState); sendToMasterEnd();
+    sendToMasterStart(); Serial.print(F("ledState:")); Serial.print(ledState); sendToMasterEnd();
   } else {
     sendToMaster("UnrecCmd:", cmd);
   }

@@ -27,12 +27,7 @@ void setup() {
     ; // wait for serial port to connect. Needed for ATmega32u4-based boards and Arduino 101
   }
 
-  // Start the temperature sensor library
-  sensors.begin();
-//  tempDeviceCount = sensors.getDeviceCount();
-//  Serial.print(F("TD count:"));
-//  Serial.println(tempDeviceCount);
-
+  initTemperatureSensors();
   initLoggingData();
   initChamberData();
 
@@ -42,7 +37,9 @@ void setup() {
 void loop() {
   keepTrackOfTime();
   handleMessages();
-//  controlChambers();
+  if (temperatureSensorsOk) {
+    controlChambers();
+  }
 }
 
 // End

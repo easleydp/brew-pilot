@@ -80,12 +80,12 @@ void initTemperatureSensors() {
   }
 
   // Edit this in sympathy with SENSOR_COUNT, having established the device errors using calibrateTemperatureSensors()
-  initSensorData(CH1_T_BEER,    0x3A11, 16);
-  initSensorData(CH1_T_CHAMBER, 0x3606, 4);
+  initSensorData(CH1_T_BEER,    0x3A11, 19);
+  initSensorData(CH1_T_CHAMBER, 0x3606, 7);
   initSensorData(CH2_T_BEER,    0x3EE1, 6);
-  initSensorData(CH2_T_CHAMBER, 0x79BA, -9);
+  initSensorData(CH2_T_CHAMBER, 0x79BA, -6);
   initSensorData(T_EXTERNAL,    0xBD96, -9);
-  initSensorData(T_PI,          0x3B79, -9);
+  initSensorData(T_PI,          0x3B79, -13);
 
   DeviceAddress address;
   for (uint8_t i = 0; i < SENSOR_COUNT; i++) {
@@ -111,37 +111,51 @@ int16_t getTemperatureX10(uint8_t sensorIndex) {
   float reading = dallas.getTempCByIndex(sensor.dallasIndex) + ((float) sensor.error) / 100.0f;
   return (reading + 0.05f) * 10;
 }
+/* Convenience accessors */
+int16_t getTBeerX10(uint8_t chamberId) {
+  return getTemperatureX10(chamberId == 1 ? CH1_T_BEER : CH2_T_BEER);
+}
+int16_t getTChamberX10(uint8_t chamberId) {
+  return getTemperatureX10(chamberId == 1 ? CH1_T_CHAMBER : CH2_T_CHAMBER);
+}
+int16_t getTExternalX10() {
+  return getTemperatureX10(T_EXTERNAL);
+}
+int16_t getTPiX10() {
+  return getTemperatureX10(T_PI);
+}
 
-//unsigned long prevMillisReadTemperatures = 0;
-//void testTemperatureSensors() {
-//  if (!temperatureSensorsOk)
-//    return;
-//  if (uptimeMillis - prevMillisReadTemperatures >= TEMP_READINGS_MILLIS) {
-//    prevMillisReadTemperatures = uptimeMillis;
-//
-//    dallas.requestTemperatures();
-//    float total = 0;
-//    for (uint8_t i = 0; i < SENSOR_COUNT; i++) {
-//
-//      Sensor sensor = sensorData[i];
-//      Serial.print(F("Sensor "));
-//      Serial.print(i);
-//      Serial.print(F(": "));
-//      Serial.print(sensor.dallasIndex);
-//      Serial.print(F(", "));
-//      float reading = dallas.getTempCByIndex(sensor.dallasIndex);
-//      total += reading;
-//      Serial.print(reading);
-//      Serial.print(F(", "));
-//      Serial.print(reading + ((float) sensor.error) / 100.0f);
-//      Serial.print(F(", "));
-//      Serial.println(getTemperatureX10(i));
-//    }
-//    Serial.print(F("------ Avg: "));
-//    Serial.print(total / SENSOR_COUNT);
-//    Serial.println(" ------");
-//  }
-//}
+unsigned long prevMillisReadTemperatures = 0;
+void testTemperatureSensors() {
+  if (!temperatureSensorsOk)
+    return;
+  if (uptimeMillis - prevMillisReadTemperatures >= TEMP_READINGS_MILLIS) {
+    prevMillisReadTemperatures = uptimeMillis;
+
+    dallas.requestTemperatures();
+    float total = 0;
+    for (uint8_t i = 0; i < SENSOR_COUNT; i++) {
+
+      Sensor sensor = sensorData[i];
+      Serial.print(F("Sensor "));
+      Serial.print(i);
+      Serial.print(F(": "));
+      Serial.print(sensor.dallasIndex);
+      Serial.print(F(", raw: "));
+      float reading = dallas.getTempCByIndex(sensor.dallasIndex);
+      total += reading;
+      Serial.print(reading);
+      Serial.print(F(", adjusted: "));
+      Serial.print(reading + ((float) sensor.error) / 100.0f);
+      Serial.print(F(" (intX10: "));
+      Serial.print(getTemperatureX10(i));
+      Serial.println(F(")"));
+    }
+    Serial.print(F("------ Avg: "));
+    Serial.print(total / SENSOR_COUNT);
+    Serial.println(" ------");
+  }
+}
 //
 //#define AVG_READING_COUNT 10
 //float averageReadingAcrossAllSensors(float readings[]) {

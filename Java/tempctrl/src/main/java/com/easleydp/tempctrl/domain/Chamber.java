@@ -122,4 +122,13 @@ public class Chamber extends ChamberDto
         return activeGyle;
     }
 
+    /**
+     * Returns ChamberParameters sans tTarget, tTargetNext and mode
+     */
+    public ChamberParameters getPartialChamberParameters()
+    {
+        return new ChamberParameters(0, 0,
+                this.gettMin(), this.gettMax(), this.isHasHeater(), this.getKp(), this.getKi(), this.getKd(), Mode.NONE);
+    }
+
 }

@@ -18,18 +18,20 @@
 #define MODE_HEAT 'H'
 // No heating, no cooling, just monitoring.
 #define MODE_NONE 'N'
+// Unset. Only applicable to ChamberData.mode (ChamberParams,mode should always be set).
+#define MODE_UNSET '-'
 
 #define FRIDGE_MIN_OFF_TIME_MINS 10 // TODO: swap for configurable ChamberParams.fridgeMinOffTimeMins
 #define FRIDGE_MIN_ON_TIME_MINS 5   // TODO: swap for configurable ChamberParams.fridgeMinOnTimeMins
 
 /**
- * Parameters that seldom change. 
- * We have defaults for these in the program code but aim to override from 
+ * Parameters that seldom change.
+ * We have defaults for these in the program code but aim to override from
  * manager AND then save/restore the manager supplied values to/from EEPROM.
- * Persisted in EEPROM in case of restart with no Pi.
+ * Saved in EEPROM in case of restart with no Pi.
  */
 typedef struct {
-  uint8_t chamberId;
+  uint8_t chamberId;  // 1, 2, etc.
 
   int16_t tMin;
   int16_t tMax;
@@ -39,6 +41,7 @@ typedef struct {
   float Kp;
   float Ki;
   float Kd;
+  char mode;  // This is the mode set by the RPi. May be overridden locally (by the panel switch).
 
   uint16_t checksum;
 } ChamberParams; // 20 bytes
@@ -48,6 +51,10 @@ typedef struct {
   int16_t tTarget;
   uint16_t checksum;
 } TTargetWithChecksum;
+
+// Latest common readings
+int16_t tExternal;
+int16_t tPi;
 
 typedef struct {
   // Parameters that seldom change
@@ -64,12 +71,10 @@ typedef struct {
 
   // Latest readings
   int16_t tBeer;
-  int16_t tExternal;
   int16_t tChamber;
-  int16_t tPi;
   uint8_t heaterOutput; // 0..100
   boolean fridgeOn;
-  char mode;
+  char mode;  // `UNSET` unless locally overridden (by the panel switch)
 
   // PID state
   float priorError; // tTarget - tBeer, so -ve for cooling, +ve for heating
@@ -79,7 +84,7 @@ typedef struct {
   int8_t tBeerLastDelta; // The last registered change in tBeer ((priorError-error)*10), with decay each time no change. Used to detect trend (+ve signifies rising / -ve falling).
 } ChamberData;
 
-static const char* chamberDataLogPrefix = "CD";
+static const char* logPrefixChamberData = "CD";
 
 ChamberData chamberDataArray[CHAMBER_COUNT];
 
@@ -87,7 +92,7 @@ ChamberData chamberDataArray[CHAMBER_COUNT];
 template<typename T> uint16_t generateChecksum(const T &t) {
   uint16_t crc = 7;
   const uint8_t *ptr = (const uint8_t*) &t;
-  for (int i = 0; i < sizeof(T) - sizeof(uint16_t) /* don't include the checksum */; i++) {
+  for (uint8_t i = 0; i < sizeof(T) - sizeof(uint16_t) /* don't include the checksum */; i++) {
     crc= _crc16_update(crc, ptr[i]);
   }
   return crc;
@@ -97,7 +102,7 @@ template<typename T> uint16_t generateChecksum(const T &t) {
  * EEPROM helpers.
  * Memory map: One TTargetWithChecksum per chamber, follwed by one ChamberParams per chamber.
  */
-void getEepromTTargetWithChecksum(int chamberId, TTargetWithChecksum &ttwc) {
+void getEepromTTargetWithChecksum(uint8_t chamberId, TTargetWithChecksum &ttwc) {
   int addr = (chamberId - 1) * sizeof(TTargetWithChecksum);
   EEPROM.get(addr, ttwc);
 }
@@ -105,7 +110,7 @@ void putEepromTTargetWithChecksum(TTargetWithChecksum &ttwc) {
   int addr = (ttwc.chamberId - 1) * sizeof(TTargetWithChecksum);
   EEPROM.put(addr, ttwc);
 }
-void getEepromChamberParams(int chamberId, ChamberParams &params) {
+void getEepromChamberParams(uint8_t chamberId, ChamberParams &params) {
   int base = CHAMBER_COUNT * sizeof(TTargetWithChecksum);
   int addr = base + (chamberId - 1) * sizeof(ChamberParams);
   EEPROM.get(addr, params);
@@ -125,46 +130,74 @@ ChamberData* findChamber(byte chamberId) {
   return NULL;
 }
 
-unsigned long saveTTargetInterval = 1000L * 60 * 60; // save tTarget every hour
-unsigned long prevTTargetSaved[CHAMBER_COUNT];  // initialised in initChamberData()
-boolean tTargetPersisted[CHAMBER_COUNT];  // initialised in initChamberData()
-void updateChamberParams(ChamberData* cd, int tTarget, int tTargetNext, int tMin, int tMax, boolean hasHeater, float Kp, float Ki, float Kd) {
-  logMsg(LOG_DEBUG, "updateChamberParams called", '0');
+void saveTTarget(uint8_t chamberId, int16_t tTarget) {
+  TTargetWithChecksum tTargetWithChecksum = { chamberId, tTarget, 0 };
+  tTargetWithChecksum.checksum = generateChecksum(tTargetWithChecksum);
+  putEepromTTargetWithChecksum(tTargetWithChecksum);
+  memoMinFreeRam(20);
+}
 
-  byte chamberId = cd->params.chamberId;
+const unsigned long saveTTargetInterval = 1000L * 60 * 60; // save tTarget every hour
+uint32_t millisSinceLastTTargetSave[CHAMBER_COUNT] = {0, 0};
+uint32_t prevMillisTTargetSave[CHAMBER_COUNT] = {0, 0};
+void saveTTargetOnceInAWhile(uint8_t chamberId, int16_t tTarget) {
+  if (prevMillisTTargetSave[chamberId - 1] != uptimeMillis) {
+    if (uptimeMillis < prevMillisTTargetSave[chamberId - 1]) {
+      // uptimeMillis has wrapped
+      millisSinceLastTTargetSave[chamberId - 1] += uptimeMillis + (ULONG_MAX - prevMillisTTargetSave[chamberId - 1]);
+    } else {
+      millisSinceLastTTargetSave[chamberId - 1] += uptimeMillis - prevMillisTTargetSave[chamberId - 1];
+    }
 
-  cd->tTarget = tTarget;
-  cd->tTargetNext = tTargetNext;
+    if (millisSinceLastTTargetSave[chamberId - 1] >= saveTTargetInterval) {
+      millisSinceLastTTargetSave[chamberId - 1] = 0;
+      saveTTarget(chamberId, tTarget);
+      logMsg(LOG_DEBUG, logPrefixChamberData, '2', chamberId, tTarget/* int16_t */);
+    }
 
-  cd->params.tMin = tMin;
-  cd->params.tMax = tMax;
-  cd->params.hasHeater = hasHeater;
-  cd->params.Kp = Kp;
-  cd->params.Ki = Ki;
-  cd->params.Kd = Kd;
-  cd->params.checksum = generateChecksum(cd->params);
+    prevMillisTTargetSave[chamberId - 1] = uptimeMillis;
+    memoMinFreeRam(21);
+  }
+}
 
-  putEepromChamberParams(cd->params);
+boolean tTargetSaved[CHAMBER_COUNT] = {false, false};
+void updateChamberParamsAndTarget(
+  ChamberData& cd, int16_t tTarget, int16_t tTargetNext, int16_t tMin, int16_t tMax, 
+  boolean hasHeater, float Kp, float Ki, float Kd, char mode) {
 
-  if (!tTargetPersisted[chamberId - 1]  ||  (uptimeMillis - prevTTargetSaved[chamberId - 1] >= saveTTargetInterval)) {
-    prevTTargetSaved[chamberId - 1] = uptimeMillis;
-    TTargetWithChecksum tTargetWithChecksum = { chamberId, tTarget, 0 };
-    tTargetWithChecksum.checksum = generateChecksum(tTargetWithChecksum);
-    putEepromTTargetWithChecksum(tTargetWithChecksum);
-    tTargetPersisted[chamberId - 1] = true;
+  uint8_t chamberId = cd.params.chamberId;
+
+  logMsg(LOG_DEBUG, logPrefixChamberData, '0', chamberId, tTarget/* int16_t */, mode/* char */);
+
+  cd.tTarget = tTarget;
+  cd.tTargetNext = tTargetNext;
+
+  cd.params.tMin = tMin;
+  cd.params.tMax = tMax;
+  cd.params.hasHeater = hasHeater;
+  cd.params.Kp = Kp;
+  cd.params.Ki = Ki;
+  cd.params.Kd = Kd;
+  cd.params.mode = mode;
+  cd.params.checksum = generateChecksum(cd.params);
+  putEepromChamberParams(cd.params);
+
+  if (!tTargetSaved[chamberId - 1]) {
+    saveTTarget(chamberId, tTarget);
+    tTargetSaved[chamberId - 1] = true;
+    logMsg(LOG_DEBUG, logPrefixChamberData, '1', chamberId, tTarget/* int16_t */);
+  } else {
+    saveTTargetOnceInAWhile(chamberId, tTarget);
   }
 }
 
 /** Called from setup() */
 void initChamberData() {
   for (byte i = 0; i < CHAMBER_COUNT; i++) {
-    prevTTargetSaved[i] = 0;
-    tTargetPersisted[i] = false;
-
     ChamberData& cd = chamberDataArray[i];
     memset(&cd, 0, sizeof(ChamberData));
     cd.fridgeStateChangeMins = 255;
-    cd.mode = MODE_HOLD;
+    cd.mode = MODE_UNSET;  // If this becomes set it will override params.mode
     ChamberParams& params = cd.params;
     params.chamberId = i + 1;
 
@@ -175,6 +208,7 @@ void initChamberData() {
     params.Kp = 2.0f;
     params.Ki = 0.01f;
     params.Kd = 20.0f;
+    params.mode = MODE_HOLD;
     params.checksum = generateChecksum(params);
     cd.tTarget = cd.tTargetNext = 160;
 
@@ -183,7 +217,12 @@ void initChamberData() {
     if (eepromParams.chamberId == params.chamberId) {
       if (eepromParams.checksum == generateChecksum(eepromParams)) {
         memcpy(&params, &eepromParams, sizeof(ChamberParams));
+        logMsg(LOG_DEBUG, logPrefixChamberData, 'p', params.chamberId);
+      } else {
+        logMsg(LOG_ERROR, logPrefixChamberData, 'P', params.chamberId);
       }
+    } else {
+      logMsg(LOG_ERROR, logPrefixChamberData, 'Q', params.chamberId, eepromParams.chamberId/* uint8_t */);
     }
 
     TTargetWithChecksum tTargetWithChecksum = {};
@@ -191,7 +230,12 @@ void initChamberData() {
     if (tTargetWithChecksum.chamberId == params.chamberId) {
       if (tTargetWithChecksum.checksum == generateChecksum(tTargetWithChecksum)) {
         cd.tTarget = cd.tTargetNext = tTargetWithChecksum.tTarget;
+        logMsg(LOG_DEBUG, logPrefixChamberData, 't', params.chamberId, tTargetWithChecksum.tTarget/* int16_t */);
+      } else {
+        logMsg(LOG_ERROR, logPrefixChamberData, 'T', params.chamberId, tTargetWithChecksum.tTarget/* int16_t */);
       }
+    } else {
+      logMsg(LOG_ERROR, logPrefixChamberData, 'U', params.chamberId, tTargetWithChecksum.chamberId/* uint8_t */);
     }
   }
 }

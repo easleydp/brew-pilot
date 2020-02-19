@@ -31,4 +31,25 @@ void flipLed() {
 //  }
 //}
 
+uint32_t millisSinceLastFlipLed = 0;
+uint32_t prevMillisFlipLed = 0;
+void setFlipLedPeriod(uint16_t ledFlashPeriodMillis) {
+  if (prevMillisFlipLed != uptimeMillis) {
+    if (uptimeMillis < prevMillisFlipLed) {
+      // uptimeMillis has wrapped
+      millisSinceLastFlipLed += uptimeMillis + (ULONG_MAX - prevMillisFlipLed);
+    } else {
+      millisSinceLastFlipLed += uptimeMillis - prevMillisFlipLed;
+    }
+
+    if (millisSinceLastFlipLed >= ledFlashPeriodMillis) {
+      millisSinceLastFlipLed = 0;
+      flipLed();
+    }
+
+    prevMillisFlipLed = uptimeMillis;
+  }
+}
+
+
 // End

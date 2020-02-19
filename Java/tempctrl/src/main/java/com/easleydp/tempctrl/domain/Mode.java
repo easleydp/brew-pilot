@@ -41,10 +41,12 @@ public enum Mode
             throw new IllegalArgumentException("Illegal Mode code: " + code);
         return mode;
     }
-    // Convenience overload, with error checking for string length
+    // Convenience overload, with error checking for string length.
+    // Also handles the special value "-", which (when from the Arduino) signifies none.
     public static Mode get(String code)
     {
-        Assert.state(code.length() == 1, "Mode code should be a single character");
-        return get(code.charAt(0));
+        Assert.state(code.length() == 1, "Mode code should be a single character: [" + code + "]");
+        char ch = code.charAt(0);
+        return ch == '-' ? null : get(ch);
     }
 }

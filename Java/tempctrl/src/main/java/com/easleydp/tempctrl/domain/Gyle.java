@@ -119,7 +119,8 @@ public class Gyle extends GyleDto
         long timeNowMs = timeNow.getTime();
         TemperatureProfile tp = getTemperatureProfile();
         return new ChamberParameters(tp.getTargetTempAt(timeNowMs), tp.getTargetTempAt(timeNowMs + 1000 * 60 * 60),
-                chamber.gettMin(), chamber.gettMax(), chamber.isHasHeater(), chamber.getKp(), chamber.getKi(), chamber.getKd());
+                chamber.gettMin(), chamber.gettMax(), chamber.isHasHeater(), chamber.getKp(), chamber.getKi(), chamber.getKd(),
+                isActive() ? Mode.AUTO : Mode.NONE);
     }
 
     /**
@@ -135,13 +136,18 @@ public class Gyle extends GyleDto
      */
     public void collectReadings(ChamberManager chamberManager, Date timeNow)
     {
-        logger.debug("collectReadings()");
+        final int chamberId = chamber.getId();
+        logger.debug("collectReadings() for chamber " + chamberId);
 
-        ChamberReadings chamberReadings = chamberManager.getReadings(chamber.getId(), timeNow);
+        ChamberReadings chamberReadings = chamberManager.getReadings(chamberId, timeNow);
         if (chamberReadings == null)
         {
-            logger.error("chamberManager.getReadings() for chamber ID " + chamber.getId() + " returned null");
+            logger.error("chamberManager.getReadings() for chamber " + chamberId + " returned null");
             return;
+        }
+        else if (logger.isDebugEnabled())
+        {
+            logger.debug("Chamber " + chamberId + " readings: " + chamberReadings.toString());
         }
         latestChamberReadings = chamberReadings;
 
@@ -176,7 +182,7 @@ public class Gyle extends GyleDto
             if (!firstReadingsCollected && PropertyUtils.getBoolean("readings.staggerFirstReadings", true))
             {
                 // Stagger each active gyle storing its first buffer by inflating the initial reading count.
-                buffer = new Buffer(timeNow, bufferConfig.withInflatedReadingsCount(chamber.getId()), smoother);
+                buffer = new Buffer(timeNow, bufferConfig.withInflatedReadingsCount(chamberId), smoother);
             }
             else
             {
@@ -243,7 +249,7 @@ public class Gyle extends GyleDto
 
                 if (!logFileDescriptors.isEmpty())
                 {
-                    logger.warn(logFileDescriptors.size() + " gyle log file(s) found on start-up in " + logsDir);
+                    logger.info(logFileDescriptors.size() + " gyle log file(s) found on start-up in " + logsDir);
 
                     // Sort chronologically by dtStart. In the case of a tie (which should only
                     // happen when consolidated files didn't get purged), put the latest

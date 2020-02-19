@@ -1,17 +1,23 @@
 #define CHAMBER_ITERATION_TIME_MILLIS 60000
 
+static const char* logPrefixChamberControl = "CC";
+static const char* logPrefixPid = "PID";
+
+
 #define F_ON 1
 #define F_OFF 0
 void forceFridge(ChamberData& cd, byte setting) {
   if (setting == F_ON) {
     //TODO: FRIDGE PIN ON
     if (!cd.fridgeOn) {
+      logMsg(LOG_INFO, logPrefixChamberControl, 'F', cd.params.chamberId, cd.fridgeStateChangeMins/* uint8_t */);
       cd.fridgeStateChangeMins = 0;
       cd.fridgeOn = true;
     }
   } else {
     //TODO: FRIDGE PIN OFF
     if (cd.fridgeOn) {
+      logMsg(LOG_INFO, logPrefixChamberControl, 'f', cd.params.chamberId, cd.fridgeStateChangeMins/* uint8_t */);
       cd.fridgeStateChangeMins = 0;
       cd.fridgeOn = false;
     }
@@ -43,8 +49,14 @@ void fridge(ChamberData& cd, byte setting) {
     }
   }
 }
-void heater(ChamberData& cd, byte level) {
-  // TODO
+uint8_t prevLevel = 255;
+void heater(ChamberData& cd, uint8_t level) {
+  // TODO - always set the heat level (just in case) but only log if (i) level appears to have changed and (ii) hit an extreme
+  if (prevLevel != level) {
+    if (level == 0  ||  level == 100)
+      logMsg(LOG_INFO, logPrefixChamberControl, 'H', cd.params.chamberId, level/* uint8_t */);
+    prevLevel = level;
+  }
   memoMinFreeRam(2);
 }
 
@@ -58,30 +70,32 @@ void controlChamber(ChamberData& cd) {
   byte fSetting = F_OFF;
   byte hSetting = 0;
   boolean heatPidWise = false;
+  // See if a local mode has been set (via the panel switch), fall-back to the value set by the RPi
+  const char mode = cd.mode != MODE_UNSET ? cd.mode : params.mode;
 
   int16_t tError = cd.tTarget - cd.tBeer; // +ve - beer too cool; -ve beer too warm
 
-  if (cd.mode == MODE_NONE) {
+  if (mode == MODE_NONE) {
     // Just monitoring
-  } else if (cd.mode == MODE_HEAT) {
+  } else if (mode == MODE_HEAT) {
     fSetting = F_OFF;
     hSetting = cd.tBeer < params.tMax ? 75/* 75% rather than full on */ : 0;
-  } else if (cd.mode == MODE_COOL) {
+  } else if (mode == MODE_COOL) {
     hSetting = 0;
     fSetting = cd.tBeer > params.tMin ? F_ON : F_OFF;
-  } else if (cd.mode == MODE_AUTO  ||  cd.mode == MODE_HOLD) {
+  } else if (mode == MODE_AUTO  ||  mode == MODE_HOLD) {
     if (tError == 0) {  // Zero error (rare!)
       hSetting = 0;
       if (cd.fridgeOn) {
         // Fridge is on. Keep it on only if hot outside and beer temp is rising.
-        if (cd.tExternal > cd.tTarget  &&  cd.tBeerLastDelta > 0) {
+        if (tExternal > cd.tTarget  &&  cd.tBeerLastDelta > 0) {
           // ... but NOT if temp profile is about to turn upwards in next hour
           if (cd.tTargetNext <= cd.tTarget)
             fSetting = F_ON;
         }
       }
     } else if (tError > 0) {  // beer too cool, needs heating
-      int16_t tExternalBoost = cd.tExternal - cd.tBeer; // +ve - in our favour
+      int16_t tExternalBoost = tExternal - cd.tBeer; // +ve - in our favour
       if (cd.exothermic) {
         // Assuming our tBeer sensor is near the outside of the fermentation vessel, exothermic means the 
         // beer will actually be warmer internally than our tBeer reading suggests. Compensate for this
@@ -97,7 +111,7 @@ void controlChamber(ChamberData& cd) {
         heatPidWise = true;
       }
     } else { // (tError < 0)  beer too warm
-      if (cd.tExternal < cd.tBeer) {  // Outside temp is in our favour
+      if (tExternal < cd.tBeer) {  // Outside temp is in our favour
         hSetting = 0;
         // Beer needs cooling but we can leave it to tExternal
         // UNLESS exothermic, in which case we'll need to actively cool.
@@ -120,20 +134,19 @@ void controlChamber(ChamberData& cd) {
 
   // Note: we maintain the PID state variables - integral & priorError - even when
   // not PID heating in case we commence PID heating next time round.
-  static const char* logPrefix = "PID";
   cd.integral += tError;
-  logMsg(LOG_DEBUG, logPrefix, '~', chamberId, tError, cd.integral, cd.priorError);
+  logMsg(LOG_DEBUG, logPrefixPid, '~', chamberId, tError/* int16 */, cd.integral/* float */, cd.priorError/* float */);
   if (heatPidWise) {
     float pidOutput = params.Kp*tError + params.Ki*cd.integral + params.Kd*(tError - cd.priorError);
     // PID output range check
     if (pidOutput < 0.0) { // we've screwed-up somehow
-      logMsg(LOG_ERROR, logPrefix, '-', chamberId, pidOutput);
+      logMsg(LOG_ERROR, logPrefixPid, '!', chamberId, pidOutput/* float */);
       hSetting = 0;
     } else if (pidOutput >= 100.0) {
-      logMsg(LOG_WARN, logPrefix, '+', chamberId, pidOutput);
+      logMsg(LOG_WARN, logPrefixPid, '+', chamberId, pidOutput/* float */);
       hSetting = 100;
     } else {
-      logMsg(LOG_DEBUG, logPrefix, '-', chamberId, pidOutput);
+      logMsg(LOG_DEBUG, logPrefixPid, '-', chamberId, pidOutput/* float */);
       hSetting = pidOutput;
     }
   }
@@ -141,7 +154,7 @@ void controlChamber(ChamberData& cd) {
     cd.tBeerLastDelta = (cd.priorError - tError) * 10; // *10 is so we don't decay to zero too soon
   } else {
     // Decay
-    logMsg(LOG_DEBUG, logPrefix, 'd', chamberId, cd.tBeerLastDelta);
+    logMsg(LOG_DEBUG, logPrefixPid, 'd', chamberId, cd.tBeerLastDelta/* int8 */);
     if (cd.tBeerLastDelta > 0)
       cd.tBeerLastDelta -= 1;
     else if (cd.tBeerLastDelta < 0)
@@ -174,7 +187,7 @@ void chambersMinuteTick() {
   memoMinFreeRam(3);
 }
 
-uint32_t millisSinceLastChamberControl = 0;
+uint32_t millisSinceLastChamberControl = CHAMBER_ITERATION_TIME_MILLIS; // rather than 0, so we do an initial control interation immediately after startup.
 uint32_t prevMillisChamberControl = 0;
 void controlChambers() {
   if (prevMillisChamberControl != uptimeMillis) {
@@ -187,11 +200,16 @@ void controlChambers() {
 
     if (millisSinceLastChamberControl >= CHAMBER_ITERATION_TIME_MILLIS) {
       millisSinceLastChamberControl = 0;
-      prevMillisChamberControl = uptimeMillis;
-  
-      dallas.requestTemperatures();
+
+      readTemperatures();
+      tExternal = getTExternalX10();
+      tPi = getTPiX10();
       for (byte i = 0; i < CHAMBER_COUNT; i++) {
-        controlChamber(chamberDataArray[i]);
+        ChamberData& cd = chamberDataArray[i];
+        const uint8_t chamberId = cd.params.chamberId;
+        cd.tBeer = getTBeerX10(chamberId);
+        cd.tChamber = getTChamberX10(chamberId);
+        controlChamber(cd);
       }
     }
 

@@ -5,7 +5,7 @@ import { useAppState, Auth } from './state';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 
-import Highcharts, { Chart, Series } from 'highcharts/highstock';
+import Highcharts, { Chart, Series, SeriesOptions } from 'highcharts/highstock';
 
 const GyleChart = () => {
   const history = useHistory();
@@ -43,6 +43,7 @@ const GyleChart = () => {
     readingsTimestampResolutionMillis: number;
     readingsPeriodMillis: number;
     chamberName: string;
+    hasHeater: boolean;
     gyleId: number;
     gyleName: string;
     temperatureProfile: ITemperatureProfile;
@@ -148,6 +149,7 @@ const GyleChart = () => {
         // reading's dt > P.
 
         // Sanity check: confirm the supplied dt is later than anything we already have.
+        if (!chart.series) debugger;
         const oldestDt = (chart.series as SeriesPlus[]).reduce<number>((dt, series) => {
           const len = series.xData.length;
           if (len) {
@@ -170,7 +172,7 @@ const GyleChart = () => {
         maybeAddTemperaturePoint(dt, tExternal, tExternalSeries);
         maybeAddTemperaturePoint(dt, tChamber, tChamberSeries);
         maybeAddFridgePoint(dt, coolerOn, fridgeSeries);
-        maybeAddHeaterPoint(dt, heaterOutput, heaterSeries);
+        heaterSeries && maybeAddHeaterPoint(dt, heaterOutput, heaterSeries);
       });
 
       const dt = restoreUtcMillisPrecision(readingsList[readingsList.length - 1].dt);
@@ -179,7 +181,7 @@ const GyleChart = () => {
       maybeBackfillAFinalPoint(dt, tExternalSeries);
       maybeBackfillAFinalPoint(dt, tChamberSeries);
       maybeBackfillAFinalPoint(dt, fridgeSeries);
-      maybeBackfillAFinalPoint(dt, heaterSeries);
+      heaterSeries && maybeBackfillAFinalPoint(dt, heaterSeries);
 
       chart.redraw();
     };
@@ -320,7 +322,7 @@ const GyleChart = () => {
     //   return Date.UTC(1970, 0, days + 1, hours);
     // };
 
-    const buildChart = (chamberName: string): Chart => {
+    const buildChart = (chamberName: string, hasHeater: boolean): Chart => {
       const hourMs = 1000 * 60 * 60;
 
       const formatTimeAsHtml = function(ms: number) {
@@ -332,6 +334,54 @@ const GyleChart = () => {
         }
         return `Day&nbsp;${days}, hour&nbsp;${hours}`;
       };
+
+      const series = [
+        {
+          name: 'Target beer temp.',
+          type: 'line',
+          dashStyle: 'ShortDot',
+          color: '#777',
+        } as Highcharts.SeriesLineOptions,
+        {
+          name: 'Beer temp.',
+          type: 'spline',
+          color: 'rgba(247, 163, 92, 1.0)',
+          showInNavigator: true,
+        } as Highcharts.SeriesSplineOptions,
+        {
+          name: 'Chamber temp.',
+          selected: false,
+          type: 'spline',
+          color: 'rgba(131, 50, 168, 0.5)',
+        } as Highcharts.SeriesSplineOptions,
+        {
+          name: 'Outside temp.',
+          selected: false,
+          type: 'spline',
+          color: 'rgba(0, 150, 0, 0.5)',
+        } as Highcharts.SeriesSplineOptions,
+        {
+          name: 'Fridge on',
+          selected: false,
+          type: 'area',
+          color: 'rgba(113, 166, 210, 1.0)',
+          fillOpacity: 0.3,
+          lineWidth: 1,
+          //showInNavigator: true,
+        } as Highcharts.SeriesAreaOptions,
+      ] as Array<Highcharts.SeriesOptionsType>;
+
+      if (hasHeater) {
+        series.push({
+          name: 'Heater output',
+          selected: false,
+          type: 'areaspline',
+          color: 'rgba(255, 90, 150, 0.75)',
+          fillOpacity: 0.3,
+          lineWidth: 1,
+          //showInNavigator: true,
+        } as Highcharts.SeriesAreasplineOptions);
+      }
 
       return Highcharts.stockChart(
         {
@@ -432,50 +482,7 @@ const GyleChart = () => {
 
           // Order dictates the order they appear in the legend. NOTE: If the order is changed, search
           // for `NOTE: These must be kept in same order as the series definitions` and change in sympathy.
-          series: [
-            {
-              name: 'Target beer temp.',
-              type: 'line',
-              dashStyle: 'ShortDot',
-              color: '#777',
-            } as Highcharts.SeriesLineOptions,
-            {
-              name: 'Beer temp.',
-              type: 'spline',
-              color: 'rgba(247, 163, 92, 1.0)',
-              showInNavigator: true,
-            } as Highcharts.SeriesSplineOptions,
-            {
-              name: 'Chamber temp.',
-              selected: false,
-              type: 'spline',
-              color: 'rgba(131, 50, 168, 0.5)',
-            } as Highcharts.SeriesSplineOptions,
-            {
-              name: 'Outside temp.',
-              selected: false,
-              type: 'spline',
-              color: 'rgba(0, 150, 0, 0.5)',
-            } as Highcharts.SeriesSplineOptions,
-            {
-              name: 'Fridge on',
-              selected: false,
-              type: 'area',
-              color: 'rgba(113, 166, 210, 1.0)',
-              fillOpacity: 0.3,
-              lineWidth: 1,
-              //showInNavigator: true,
-            } as Highcharts.SeriesAreaOptions,
-            {
-              name: 'Heater output',
-              selected: false,
-              type: 'areaspline',
-              color: 'rgba(255, 90, 150, 0.75)',
-              fillOpacity: 0.3,
-              lineWidth: 1,
-              //showInNavigator: true,
-            } as Highcharts.SeriesAreasplineOptions,
-          ],
+          series: series,
 
           legend: {
             enabled: true,
@@ -573,6 +580,8 @@ const GyleChart = () => {
       fridgeSeries: SeriesPlus,
       heaterSeries: SeriesPlus;
 
+    let anotherChartVar: Chart;
+
     // If we know the user is definitely not logged in, go straight to login form.
     if (isAuth === Auth.NotLoggedIn) {
       history.push('/login', { from: '/gyle-chart/' + chamberId });
@@ -585,7 +594,7 @@ const GyleChart = () => {
           lastDt = gyleDetails.recentReadings.length
             ? gyleDetails.recentReadings[gyleDetails.recentReadings.length - 1].dt
             : null;
-          chart = buildChart(gyleDetails.chamberName);
+          chart = buildChart(gyleDetails.chamberName, gyleDetails.hasHeater);
           [
             // NOTE: These must be kept in same order as the series definitions
             tTargetSeries,
@@ -599,6 +608,14 @@ const GyleChart = () => {
           return getAggregatedReadings(gyleDetails);
         })
         .then(aggregatedReadings => {
+          // Unclear what's going on but sometimes (most times) on refreshing this page (as opposed to navigating to this
+          // page) we arrive here and chart.series (and a bunch of its other properties) have gone! TODO: Investigate.
+          if (!chart.series) {
+            console.error('chart corrupted');
+            history.push('/home');
+            return;
+          }
+
           addBunchOfReadings(aggregatedReadings);
           chart.hideLoading();
 

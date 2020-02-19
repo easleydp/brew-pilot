@@ -108,6 +108,7 @@ public class ChamberController
                 PropertyUtils.getReadingsTimestampResolutionMillis(),
                 PropertyUtils.getReadingsPeriodMillis(),
                 chamber.getName(),
+                chamber.isHasHeater(),
                 activeGyle.getId(), activeGyle.getName(), activeGyle.getTemperatureProfile(),
                 activeGyle.getRecentReadings(),
                 activeGyle.getReadingsLogFilePaths().stream()
@@ -119,19 +120,21 @@ public class ChamberController
         @SuppressWarnings("unused") public final int readingsTimestampResolutionMillis;
         @SuppressWarnings("unused") public final int readingsPeriodMillis;
         @SuppressWarnings("unused") public final String chamberName;
+        @SuppressWarnings("unused") public final boolean hasHeater;
         @SuppressWarnings("unused") public final int gyleId;
         @SuppressWarnings("unused") public final String gyleName;
         @SuppressWarnings("unused") public final TemperatureProfileDto temperatureProfile;
         @SuppressWarnings("unused") public final List<ChamberReadings> recentReadings;
         @SuppressWarnings("unused") public final List<String> readingsLogs;
         public ActiveGyleDetails(int readingsTimestampResolutionMillis, int readingsPeriodMillis,
-                String chamberName, int gyleId, String gyleName,
+                String chamberName, boolean hasHeater, int gyleId, String gyleName,
                 TemperatureProfileDto temperatureProfile, List<ChamberReadings> recentReadings,
                 List<String> readingsLogs)
         {
             this.readingsTimestampResolutionMillis = readingsTimestampResolutionMillis;
             this.readingsPeriodMillis = readingsPeriodMillis;
             this.chamberName = chamberName;
+            this.hasHeater = hasHeater;
             this.gyleId = gyleId;
             this.gyleName = gyleName;
             this.temperatureProfile = temperatureProfile;

@@ -8,9 +8,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import com.easleydp.tempctrl.domain.Chamber;
 import com.easleydp.tempctrl.domain.ChamberManager;
+import com.easleydp.tempctrl.domain.ChamberParameters;
 import com.easleydp.tempctrl.domain.ChamberRepository;
+import com.easleydp.tempctrl.domain.Gyle;
 
 /**
  * Note: Scheduling of taking readings is separated from the actual collecting of readings for the sake of testability
@@ -41,27 +42,33 @@ public class CollectReadingsScheduler
             first = false;
         }
 
-        logger.debug("Slurping log messages before collecting readings");
-        chamberManager.slurpLogMessages();
-
         Date date = new Date();
-        // For each chamber, if it has an active gyle, collect a set of readings.
+        // For each chamber: send chamber params and, if it has an active gyle, collect a set of readings.
         chamberRepository.getChambers().stream()
-            .map(Chamber::getActiveGyle)
-            .filter(ag -> ag != null)
-            .forEach(ag -> {
-                sleep(1000);
-                logger.debug("taking readings for chamber " + ag.chamber.getId() + " gyle " + ag.gyleDir.getFileName());
-                ag.collectReadings(chamberManager, date);
+            .forEach(ch -> {
+                final int chamberId = ch.getId();
+                Gyle ag = ch.getActiveGyle();
 
-                logger.debug("Slurping log messages after collecting readings for chamber " + ag.chamber.getId());
+                logger.debug("Slurping log messages before sending parameters to chamber " + chamberId);
                 chamberManager.slurpLogMessages();
+                ChamberParameters cp = ag != null ? ag.getChamberParameters(date) : ch.getPartialChamberParameters();
+                chamberManager.setParameters(chamberId, cp);
+                logger.debug("Slurping log messages after sending parameters to chamber " + chamberId);
+                chamberManager.slurpLogMessages();
+
+                if (ag != null)
+                {
+                    logger.debug("taking readings for chamber " + ag.chamber.getId() + " gyle " + ag.gyleDir.getFileName());
+                    ag.collectReadings(chamberManager, date);
+                    logger.debug("Slurping log messages after collecting readings for chamber " + chamberId);
+                    chamberManager.slurpLogMessages();
+                }
             });
 
         long duration = System.currentTimeMillis() - date.getTime();
         if (duration > longestDuration)
         {
-            logger.warn("takeReadings took " + duration + "ms");
+            logger.warn("takeReadings took " + duration + "ms (longest yet)");
             longestDuration = duration;
         }
         else if (logger.isDebugEnabled())

@@ -23,7 +23,6 @@ public class ChamberReadings
             ChamberParameters chamberParameters)
     {
         Assert.isTrue(timeNow != null, "timeNow is required");
-        Assert.isTrue(mode != null, "mode is required");
 
         this.dt = Utils.reduceUtcMillisPrecision(timeNow);
 
@@ -87,8 +86,8 @@ public class ChamberReadings
     /**
      * The state of the chamber manager hardware's "mode" switch.
      *
-     * Not `@NonNull` only because it may be nulled-out to signify same value as the previous
-     * reading. In readings fresh from the chamber it will never be null.
+     * `null` signifies that the mode hasn't been overridden by the chamber manager
+     * hardware's "mode" switch.
      */
     private Mode mode;
 
@@ -106,10 +105,10 @@ public class ChamberReadings
     @Override
     public String toString()
     {
-        return "ChamberReadings [dt=" + dt + ", tTarget=" + tTarget + ", tBeer=" + tBeer
+        return "[dt=" + dt + ", tTarget=" + tTarget + ", tBeer=" + tBeer
                 + ", tExternal=" + tExternal + ", tChamber=" + tChamber + ", tPi=" + tPi
                 + ", heaterOutput=" + heaterOutput + ", fridgeOn=" + fridgeOn + ", mode=" + mode
-                + ", chamberParameters=" + chamberParameters + "]";
+                + ", chamberParameters=" + chamberParameters.toString() + "]";
     }
 
 
@@ -184,7 +183,7 @@ public class ChamberReadings
     {
         return fridgeOn;
     }
-    public void setFridge(Boolean fridgeOn)
+    public void setFridgeOn(Boolean fridgeOn)
     {
         this.fridgeOn = fridgeOn;
     }

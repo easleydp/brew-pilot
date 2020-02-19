@@ -154,7 +154,7 @@ void logMsgBuffer(uint8_t logLevel, const char* prefix, char id, uint8_t chamber
   memoMinFreeRam(10);
 }
 
-byte _dummyLogParam = 0xFF;
+byte _dummyLogParam;
 template <typename A, typename B, typename C> void logMsg(uint8_t logLevel, const char* prefix, char id, uint8_t chamberId, const A &a, const B &b, const C &c) {
   uint8_t len = 0;
   uint8_t partLen;
@@ -187,6 +187,9 @@ template <typename A, typename B> void logMsg(uint8_t logLevel, const char* pref
 }
 template <typename A> void logMsg(uint8_t logLevel, const char* prefix, char id, uint8_t chamberId, const A &a) {
   logMsg(logLevel, prefix, id, chamberId, a, _dummyLogParam, _dummyLogParam);
+}
+void logMsg(uint8_t logLevel, const char* prefix, char id, uint8_t chamberId) {
+  logMsg(logLevel, prefix, id, chamberId, _dummyLogParam, _dummyLogParam, _dummyLogParam);
 }
 void logMsg(uint8_t logLevel, const char* prefix, char id) {
   logMsg(logLevel, prefix, id, 1, _dummyLogParam, _dummyLogParam, _dummyLogParam);

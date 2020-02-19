@@ -34,11 +34,19 @@ void setup() {
   logMsg(LOG_WARN, mainLogPrefix, '0');
 }
 
+//TODO:
+// investigate why two readings with zeros
+// Check LedFlip still works since enhancing to handle wrapping
+
 void loop() {
   keepTrackOfTime();
   handleMessages();
   if (temperatureSensorsOk) {
+    //testTemperatureSensors();
     controlChambers();
+    setFlipLedPeriod(1000);
+  } else {
+    setFlipLedPeriod(200);
   }
 }
 

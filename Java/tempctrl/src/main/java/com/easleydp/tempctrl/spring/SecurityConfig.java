@@ -74,6 +74,21 @@ public class SecurityConfig
         }
     }
 
+// Uncomment this to disable authentication for actuator
+//    @Configuration
+//    @Order(3)
+//    public static class ActuatorConfigurationAdapter extends MyWebSecurityConfigurerAdapter
+//    {
+//        @Override
+//        protected void configure(HttpSecurity http) throws Exception {
+//            http.authorizeRequests()
+//                    .antMatchers("/actuator/**")
+//                    .permitAll()
+//                .anyRequest()
+//                    .authenticated();
+//        }
+//    }
+
     @Configuration
     public static class FormLoginWebSecurityConfigurerAdapter extends MyWebSecurityConfigurerAdapter {
 

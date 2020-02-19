@@ -41,8 +41,6 @@ public class ArduinoMessenger implements AutoCloseable
         logger.info("Found USB serial port " + comPort.getSystemPortName());
         comPort.openPort();
         comPort.setBaudRate(57600);
-        // https://github.com/Fazecast/jSerialComm/wiki/Blocking-and-Semiblocking-Reading-Usage-Example
-        comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 100, 0);
     }
 
     /** Returns the most likely looking USB serial port or null if none. */
@@ -84,8 +82,61 @@ public class ArduinoMessenger implements AutoCloseable
      */
     public void sendRequest(String request) throws IOException
     {
+        // Before sending the request ensure there is no stray data waiting to be read, since
+        // this will just confuse things when we come to read the response to this request.
+        purgeReadBuffer();
+
         byte[] bytes = (CHAR_START + request + CHAR_END).getBytes(US_ASCII);
         comPort.writeBytes(bytes, bytes.length);
+    }
+
+    private void purgeReadBuffer() throws IOException
+    {
+        comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 100, 0);
+        List<Byte> stringBytesList = null;
+        byte[] byteBuffer = new byte[1];
+        int consecutiveZeroCount = 0;
+        while (true)
+        {
+            int numRead = comPort.readBytes(byteBuffer, 1L, 0);
+            if (numRead == 0)
+                break;
+            if (stringBytesList == null)
+                stringBytesList = new ArrayList<Byte>();
+            byte b = byteBuffer[0];
+            if (b != 10  &&  b != 13)  // Anything other than CR and LF is interesting...
+            {
+                // Receiving a ton of zeros is symptomatic of the USB port being already in
+                // use. Worth detecting this and bailing.
+                if (b == 0)
+                {
+                    if (++consecutiveZeroCount >= 1000)
+                        throw new IOException("USB port appears to be already in use.");
+                }
+                else
+                {
+                    consecutiveZeroCount = 0;
+                    if (isPrintable(b))
+                        stringBytesList.add(b);
+                    else
+                        logger.warn("Non-printable character received while purging: " + b);
+                }
+            }
+        }
+
+        if (stringBytesList != null && !stringBytesList.isEmpty())
+        {
+            byte[] stringBytesArray = new byte[stringBytesList.size()];
+            int i = 0;
+            for (Byte b : stringBytesList)
+                stringBytesArray[i++] = b;
+            String purged = new String(stringBytesArray, US_ASCII);
+            logger.warn("Found unread data before sending request: " + purged);
+        }
+
+        // Restore the usual blocking mode and timeouts.
+        // <https://github.com/Fazecast/jSerialComm/wiki/Blocking-and-Semiblocking-Reading-Usage-Example>
+        comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 10 * 1000, 0);
     }
 
     /**

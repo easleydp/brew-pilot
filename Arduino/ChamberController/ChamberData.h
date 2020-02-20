@@ -141,19 +141,10 @@ const unsigned long saveTTargetInterval = 1000L * 60 * 60; // save tTarget every
 uint32_t millisSinceLastTTargetSave[CHAMBER_COUNT] = {0, 0};
 uint32_t prevMillisTTargetSave[CHAMBER_COUNT] = {0, 0};
 void saveTTargetOnceInAWhile(uint8_t chamberId, int16_t tTarget) {
-  if (prevMillisTTargetSave[chamberId - 1] != uptimeMillis) {
-    if (uptimeMillis < prevMillisTTargetSave[chamberId - 1]) {
-      // uptimeMillis has wrapped
-      millisSinceLastTTargetSave[chamberId - 1] += uptimeMillis + (ULONG_MAX - prevMillisTTargetSave[chamberId - 1]);
-    } else {
-      millisSinceLastTTargetSave[chamberId - 1] += uptimeMillis - prevMillisTTargetSave[chamberId - 1];
-    }
-
-    if (millisSinceLastTTargetSave[chamberId - 1] >= saveTTargetInterval) {
-      millisSinceLastTTargetSave[chamberId - 1] = 0;
-      saveTTarget(chamberId, tTarget);
-      logMsg(LOG_DEBUG, logPrefixChamberData, '2', chamberId, tTarget/* int16_t */);
-    }
+  if (TIME_UP(prevMillisTTargetSave[chamberId - 1], uptimeMillis, saveTTargetInterval)) {
+    millisSinceLastTTargetSave[chamberId - 1] = 0;
+    saveTTarget(chamberId, tTarget);
+    logMsg(LOG_DEBUG, logPrefixChamberData, '2', chamberId, tTarget/* int16_t */);
 
     prevMillisTTargetSave[chamberId - 1] = uptimeMillis;
     memoMinFreeRam(21);

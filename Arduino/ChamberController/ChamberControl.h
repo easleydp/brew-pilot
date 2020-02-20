@@ -187,32 +187,20 @@ void chambersMinuteTick() {
   memoMinFreeRam(3);
 }
 
-uint32_t millisSinceLastChamberControl = CHAMBER_ITERATION_TIME_MILLIS; // rather than 0, so we do an initial control interation immediately after startup.
-uint32_t prevMillisChamberControl = 0;
+uint32_t prevMillisChamberControl = CHAMBER_ITERATION_TIME_MILLIS; // rather than 0, so we do an initial control interation immediately after startup.
 void controlChambers() {
-  if (prevMillisChamberControl != uptimeMillis) {
-    if (uptimeMillis < prevMillisChamberControl) {
-      // uptimeMillis has wrapped
-      millisSinceLastChamberControl += uptimeMillis + (ULONG_MAX - prevMillisChamberControl);
-    } else {
-      millisSinceLastChamberControl += uptimeMillis - prevMillisChamberControl;
-    }
-
-    if (millisSinceLastChamberControl >= CHAMBER_ITERATION_TIME_MILLIS) {
-      millisSinceLastChamberControl = 0;
-
-      readTemperatures();
-      tExternal = getTExternalX10();
-      tPi = getTPiX10();
-      for (byte i = 0; i < CHAMBER_COUNT; i++) {
-        ChamberData& cd = chamberDataArray[i];
-        const uint8_t chamberId = cd.params.chamberId;
-        cd.tBeer = getTBeerX10(chamberId);
-        cd.tChamber = getTChamberX10(chamberId);
-        controlChamber(cd);
-      }
-    }
-
+  if (TIME_UP(prevMillisChamberControl, uptimeMillis, CHAMBER_ITERATION_TIME_MILLIS)) {
     prevMillisChamberControl = uptimeMillis;
+
+    readTemperatures();
+    tExternal = getTExternalX10();
+    tPi = getTPiX10();
+    for (byte i = 0; i < CHAMBER_COUNT; i++) {
+      ChamberData& cd = chamberDataArray[i];
+      const uint8_t chamberId = cd.params.chamberId;
+      cd.tBeer = getTBeerX10(chamberId);
+      cd.tChamber = getTChamberX10(chamberId);
+      controlChamber(cd);
+    }
   }
 }

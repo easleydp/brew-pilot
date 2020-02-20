@@ -38,6 +38,21 @@ void setup() {
 // investigate why two readings with zeros
 // Check LedFlip still works since enhancing to handle wrapping
 
+/*
+ * https://forum.arduino.cc/index.php?topic=122413.0
+ * 
+ * if all your time calculations are done as:
+if  ((later_time - earlier_time ) >=duration ) {action}
+then the rollover does generally not come into play.
+ * 
+ * millis() returns an unsigned long.
+ *
+ * Whenever you subtract an older time from a newer one, you get the correct unsigned result. No matter if there was an overflow.
+ * 
+ * >>>> if ((unsigned long)(currentMillis - previousMillis) >= interval) {
+ * #define TIME_UP(curr, prev, interval)  ((unsigned long)(curr - prev) >= interval)
+ */
+
 void loop() {
   keepTrackOfTime();
   handleMessages();

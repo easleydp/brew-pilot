@@ -1,3 +1,5 @@
+#define TIME_UP(prev, curr, interval)  ((uint32_t)(curr - prev) >= interval)
+
 uint32_t uptimeMillis = 0;
 uint32_t uptimeMins = 0;
 

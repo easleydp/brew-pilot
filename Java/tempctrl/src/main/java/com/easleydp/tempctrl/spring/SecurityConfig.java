@@ -9,9 +9,11 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -33,6 +35,7 @@ import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.security.web.csrf.CsrfTokenRepository;
 import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
+import org.springframework.util.Assert;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.util.WebUtils;
 
@@ -42,14 +45,25 @@ public class SecurityConfig
 {
     // private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
 
+    @Autowired
+    private Environment env;
+
     @Bean
     public UserDetailsService userDetailsService() throws Exception
     {
         InMemoryUserDetailsManager manager = new InMemoryUserDetailsManager();
-        manager.createUser(User.withUsername("guest").password(encoder().encode("pwd"))
+
+        // For debug: String pwdHash = encoder().encode("?????");
+        String pwdHash = env.getProperty("pwdhash.guest");
+        Assert.state(pwdHash != null, "Guest password not specified");
+        manager.createUser(User.withUsername("guest").password(pwdHash)
                 .roles("USER").build());
-        manager.createUser(User.withUsername("admin").password(encoder().encode("pwd"))
+
+        pwdHash = env.getProperty("pwdhash.admin");
+        Assert.state(pwdHash != null, "Admin password not specified");
+        manager.createUser(User.withUsername("admin").password(pwdHash)
                 .roles("USER", "ADMIN").build());
+
         return manager;
     }
 

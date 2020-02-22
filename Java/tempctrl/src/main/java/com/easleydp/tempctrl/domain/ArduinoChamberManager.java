@@ -275,11 +275,11 @@ public class ArduinoChamberManager implements ChamberManager
 
                         return String.format("{fridgeStateChangeMins: %d}", buffer[0]);
                     case 'H':
-                        // level/* uint8_t */
+                        // outputLevel/* uint8_t */
                         if (buffer.length != 1)
                             return "{error: \"Expected 1 byte\"}";
 
-                        return String.format("{levellogPrefixChamberControl: %d}", buffer[0]);
+                        return String.format("{heater output: %d}", buffer[0]);
                     case 'j': case 'k':
                         // time/* uint32_t */
                         if (buffer.length != 4)

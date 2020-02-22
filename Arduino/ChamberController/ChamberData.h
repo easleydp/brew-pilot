@@ -73,6 +73,7 @@ typedef struct {
   int16_t tBeer;
   int16_t tChamber;
   uint8_t heaterOutput; // 0..100
+  boolean heaterElementOn; // Although heaterOutput is supposedly 0..100, in reality the heater element is either ON or OFF at any given point in time.
   boolean fridgeOn;
   char mode;  // `UNSET` unless locally overridden (by the panel switch)
 
@@ -81,6 +82,7 @@ typedef struct {
   float integral;
 
   uint8_t fridgeStateChangeMins;  // Tops out at 255 (code avoids wrapping). initChamberData() sets to 255
+  uint8_t heaterElementStateChangeSecs;  // Tops out at 255 (code avoids wrapping). initChamberData() sets to 255
   int8_t tBeerLastDelta; // The last registered change in tBeer ((priorError-error)*10), with decay each time no change. Used to detect trend (+ve signifies rising / -ve falling).
 } ChamberData;
 
@@ -188,6 +190,7 @@ void initChamberData() {
     ChamberData& cd = chamberDataArray[i];
     memset(&cd, 0, sizeof(ChamberData));
     cd.fridgeStateChangeMins = 255;
+    cd.heaterElementStateChangeSecs = 255;
     cd.mode = MODE_UNSET;  // If this becomes set it will override params.mode
     ChamberParams& params = cd.params;
     params.chamberId = i + 1;

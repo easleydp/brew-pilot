@@ -1,4 +1,5 @@
 #define MINUTE_MILLIS 60000
+#define SECOND_MILLIS 1000
 
 // This depends on certain globals defined in Common.h:
 //uint32_t uptimeMillis = 0;
@@ -13,13 +14,23 @@ void _minuteTick() {
   // Notify listeners
   chambersMinuteTick();
 }
+// Ditto seconds
+void _secondTick() {
+  // Notify listeners
+  chambersSecondTick();
+}
 
 uint32_t prevMillisMinuteTick = 0;
+uint32_t prevMillisSecondTick = 0;
 void keepTrackOfTime() {
   uptimeMillis = millis();
   while (TIME_UP(prevMillisMinuteTick, uptimeMillis, MINUTE_MILLIS)) {
     _minuteTick();
     prevMillisMinuteTick += MINUTE_MILLIS;
+  }
+  while (TIME_UP(prevMillisSecondTick, uptimeMillis, SECOND_MILLIS)) {
+    _secondTick();
+    prevMillisSecondTick += SECOND_MILLIS;
   }
 }
 

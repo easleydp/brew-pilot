@@ -1,13 +1,13 @@
 #define CHAMBER_ITERATION_TIME_MILLIS 60000
 
+#define ON 1
+#define OFF 0
+
 static const char* logPrefixChamberControl = "CC";
 static const char* logPrefixPid = "PID";
 
-
-#define F_ON 1
-#define F_OFF 0
 void forceFridge(ChamberData& cd, byte setting) {
-  if (setting == F_ON) {
+  if (setting == ON) {
     //TODO: FRIDGE PIN ON
     if (!cd.fridgeOn) {
       logMsg(LOG_INFO, logPrefixChamberControl, 'F', cd.params.chamberId, cd.fridgeStateChangeMins/* uint8_t */);
@@ -25,39 +25,81 @@ void forceFridge(ChamberData& cd, byte setting) {
   memoMinFreeRam(1);
 }
 
+void setHeaterElement(ChamberData& cd, byte setting) {
+  if (setting == ON) {
+    //TODO: HEATER PIN ON
+    if (!cd.heaterElementOn) {
+      cd.heaterElementStateChangeSecs = 0;
+      cd.heaterElementOn = true;
+    }
+  } else {
+    //TODO: HEATER PIN OFF
+    if (cd.heaterElementOn) {
+      cd.heaterElementStateChangeSecs = 0;
+      cd.heaterElementOn = false;
+    }
+  }
+  memoMinFreeRam(6);
+}
+
 /** Activates/deactivates the fridge as requested IF this won't unduly stress the compressor. */
 void fridge(ChamberData& cd, byte setting) {
-  if (setting == F_ON) {
+  if (setting == ON) {
     // If we think it's already on, set it on again just to be sure.
     // Otherwise (we think it's off), check it's been off for long enough.
     if (cd.fridgeOn) {
-      forceFridge(cd, F_ON);
+      forceFridge(cd, ON);
     } else { // We think fridge is off. Check it's been off for long enough.
       if (cd.fridgeStateChangeMins >= FRIDGE_MIN_OFF_TIME_MINS) {
-        forceFridge(cd, F_ON);
+        forceFridge(cd, ON);
       }
     }
   } else {  // Request is to turn OFF
     // If we think it's already off, set it off again just to be sure.
     // Otherwise (we think it's on), check it's been on for long enough.
     if (!cd.fridgeOn) {
-      forceFridge(cd, F_OFF);
+      forceFridge(cd, OFF);
     } else { // We think fridge is on. Check it's been on for long enough.
       if (cd.fridgeStateChangeMins >= FRIDGE_MIN_ON_TIME_MINS) {
-        forceFridge(cd, F_OFF);
+        forceFridge(cd, OFF);
       }
     }
   }
 }
-uint8_t prevLevel = 255;
-void heater(ChamberData& cd, uint8_t level) {
-  // TODO - always set the heat level (just in case) but only log if (i) level appears to have changed and (ii) hit an extreme
-  if (prevLevel != level) {
-    if (level == 0  ||  level == 100)
-      logMsg(LOG_INFO, logPrefixChamberControl, 'H', cd.params.chamberId, level/* uint8_t */);
-    prevLevel = level;
-  }
+void heater(ChamberData& cd, uint8_t outputLevel) {
+  // We always set the heat level (just in case) but only log if (i) level appears to have changed and (ii) hit an extreme.
+  if (outputLevel == 0  ||  outputLevel == 100)
+    if (cd.heaterOutput != outputLevel)
+      logMsg(LOG_INFO, logPrefixChamberControl, 'H', cd.params.chamberId, outputLevel/* uint8_t */);
+
+  cd.heaterOutput = outputLevel; // The setting will take effect courtesy of maintainHeaters()
+
   memoMinFreeRam(2);
+}
+
+
+// Called as frequently as possible (but possibly as infrequently as once a second or so given how long controlChambers() can take).
+// Given the main loop sometimes takes a second or so to complete and given our heaterLevel has 100 steps, let's use a period of
+// 100 seconds. (If the main control loop occasionally takes longer than one second to call us again, no big deal.) So, 
+// heaterLevel of 1 will give 1 sec ON followed by 99 secs OFF; heaterLevel of 99 will give 99 secs ON followed by 1 sec OFF; etc.
+void maintainHeaters() {
+  for (byte i = 0; i < CHAMBER_COUNT; i++) {
+    ChamberData& cd = chamberDataArray[i];
+    if (cd.params.hasHeater) {
+      uint8_t heaterOutput = cd.heaterOutput;
+      if (heaterOutput == 0) {          // Ensure OFF
+        setHeaterElement(cd, OFF);
+      } else if (heaterOutput == 100) { // Ensure ON
+        setHeaterElement(cd, ON);
+      } else if (cd.heaterElementOn) {  // Currently ON. If it's been ON long enough now, turn OFF.
+        if (cd.heaterElementStateChangeSecs >= heaterOutput)
+          setHeaterElement(cd, OFF);
+      } else {                          // Currently OFF. If it's been OFF long enough now, turn ON.
+        if (cd.heaterElementStateChangeSecs >= (100 - heaterOutput))
+          setHeaterElement(cd, ON);
+      }
+    }
+  }
 }
 
 void controlChamber(ChamberData& cd) {
@@ -67,7 +109,7 @@ void controlChamber(ChamberData& cd) {
   // Defaults, in case we should fall through the following logic without making
   // a deliberate decision.
   boolean fForce = false;
-  byte fSetting = F_OFF;
+  byte fSetting = OFF;
   byte hSetting = 0;
   boolean heatPidWise = false;
   // See if a local mode has been set (via the panel switch), fall-back to the value set by the RPi
@@ -78,11 +120,11 @@ void controlChamber(ChamberData& cd) {
   if (mode == MODE_NONE) {
     // Just monitoring
   } else if (mode == MODE_HEAT) {
-    fSetting = F_OFF;
+    fSetting = OFF;
     hSetting = cd.tBeer < params.tMax ? 75/* 75% rather than full on */ : 0;
   } else if (mode == MODE_COOL) {
     hSetting = 0;
-    fSetting = cd.tBeer > params.tMin ? F_ON : F_OFF;
+    fSetting = cd.tBeer > params.tMin ? ON : OFF;
   } else if (mode == MODE_AUTO  ||  mode == MODE_HOLD) {
     if (tError == 0) {  // Zero error (rare!)
       hSetting = 0;
@@ -91,7 +133,7 @@ void controlChamber(ChamberData& cd) {
         if (tExternal > cd.tTarget  &&  cd.tBeerLastDelta > 0) {
           // ... but NOT if temp profile is about to turn upwards in next hour
           if (cd.tTargetNext <= cd.tTarget)
-            fSetting = F_ON;
+            fSetting = ON;
         }
       }
     } else if (tError > 0) {  // beer too cool, needs heating
@@ -105,9 +147,9 @@ void controlChamber(ChamberData& cd) {
       if (tExternalBoost > 0) {  // Outside temp is in our favour
         // Needs heating but we can leave it to tExternal
         hSetting = 0;
-        fSetting = F_OFF;  // Under the circumstances maybe this should be forced?
+        fSetting = OFF;  // Under the circumstances maybe this should be forced?
       } else {  // Outside temp is NOT in our favour
-        fSetting = F_OFF;
+        fSetting = OFF;
         heatPidWise = true;
       }
     } else { // (tError < 0)  beer too warm
@@ -116,17 +158,17 @@ void controlChamber(ChamberData& cd) {
         // Beer needs cooling but we can leave it to tExternal
         // UNLESS exothermic, in which case we'll need to actively cool.
         if (cd.exothermic) {
-          fSetting = F_ON;
+          fSetting = ON;
         } else {
-          fSetting = F_OFF;
+          fSetting = OFF;
         }
       } else {  // Outside temp is NOT in our favour
         if (!cd.fridgeOn) {
-          fSetting = F_ON;
+          fSetting = ON;
         } else {
           // Fridge is already on. Leave it on unless we're approaching the target temp (i.e. within 1 degree) in
           // which case switch off (min on time permitting, of course).
-          fSetting = tError > -10 ? F_OFF : F_ON;
+          fSetting = tError > -10 ? OFF : ON;
         }
       }
     }
@@ -167,7 +209,7 @@ void controlChamber(ChamberData& cd) {
   // fForce may have been set above but ensure it's set to true if we're about to turn the heater on.
   if (hSetting > 0) {
     fForce = true;
-    fSetting = F_OFF; // This should be in sympathy already, but just in case.
+    fSetting = OFF; // This should be in sympathy already, but just in case.
   }
 
   if (fForce)
@@ -185,6 +227,15 @@ void chambersMinuteTick() {
       cd.fridgeStateChangeMins += 1;
   }
   memoMinFreeRam(3);
+}
+
+void chambersSecondTick() {
+  for (byte i = 0; i < CHAMBER_COUNT; i++) {
+    ChamberData& cd = chamberDataArray[i];
+    if (cd.params.hasHeater && cd.heaterElementStateChangeSecs < 255)
+      cd.heaterElementStateChangeSecs += 1;
+  }
+  memoMinFreeRam(4);
 }
 
 uint32_t prevMillisChamberControl = CHAMBER_ITERATION_TIME_MILLIS; // rather than 0, so we do an initial control interation immediately after startup.
@@ -206,4 +257,5 @@ void controlChambers() {
     }
     logMsg(LOG_DEBUG, logPrefixChamberControl, 'k', 1, ((uint32_t) millis() - t)/* uint32_t */);  // ~1100ms for 6 sensors
   }
+  maintainHeaters();
 }

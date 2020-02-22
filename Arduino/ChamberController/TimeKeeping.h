@@ -16,6 +16,7 @@ void _minuteTick() {
 
 uint32_t prevMillisMinuteTick = 0;
 void keepTrackOfTime() {
+  uptimeMillis = millis();
   while (TIME_UP(prevMillisMinuteTick, uptimeMillis, MINUTE_MILLIS)) {
     _minuteTick();
     prevMillisMinuteTick += MINUTE_MILLIS;

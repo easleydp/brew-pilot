@@ -279,7 +279,13 @@ public class ArduinoChamberManager implements ChamberManager
                         if (buffer.length != 1)
                             return "{error: \"Expected 1 byte\"}";
 
-                        return String.format("{level: %d}", buffer[0]);
+                        return String.format("{levellogPrefixChamberControl: %d}", buffer[0]);
+                    case 'j': case 'k':
+                        // time/* uint32_t */
+                        if (buffer.length != 4)
+                            return "{error: \"Expected 4 bytes\"}";
+
+                        return String.format("{mS: %d}", bytesToUint32(buffer[0], buffer[1], buffer[2], buffer[3]));
                 }
         }
 
@@ -316,7 +322,14 @@ public class ArduinoChamberManager implements ChamberManager
 
     private static int bytesToInt16(byte a, byte b)
     {
-        return b << 8 |  a;
+        return (b & 0xff) << 8 |  (a & 0xff);
+    }
+
+    // Returning as long because Java has no `unsigned int`
+    private static long bytesToUint32(byte a, byte b, byte c, byte d)
+    {
+        // <https://stackoverflow.com/a/27610608/65555>
+        return ((long) bytesToInt16(c, d) & 0xffff) << 16 | ((long) bytesToInt16(a, b) & 0xffff);
     }
 
     private static void logChamberParamMismatchError(int chamberId, String paramName, Object expected, Object actual)

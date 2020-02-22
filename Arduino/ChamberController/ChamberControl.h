@@ -97,7 +97,7 @@ void controlChamber(ChamberData& cd) {
     } else if (tError > 0) {  // beer too cool, needs heating
       int16_t tExternalBoost = tExternal - cd.tBeer; // +ve - in our favour
       if (cd.exothermic) {
-        // Assuming our tBeer sensor is near the outside of the fermentation vessel, exothermic means the 
+        // Assuming our tBeer sensor is near the outside of the fermentation vessel, exothermic means the
         // beer will actually be warmer internally than our tBeer reading suggests. Compensate for this
         // by adding a couple of degrees to tExternalBoost, i.e. so we're less eager to apply heating.
         tExternalBoost += 20;
@@ -124,7 +124,7 @@ void controlChamber(ChamberData& cd) {
         if (!cd.fridgeOn) {
           fSetting = F_ON;
         } else {
-          // Fridge is already on. Leave it on unless we're approaching the target temp (i.e. within 1 degree) in 
+          // Fridge is already on. Leave it on unless we're approaching the target temp (i.e. within 1 degree) in
           // which case switch off (min on time permitting, of course).
           fSetting = tError > -10 ? F_OFF : F_ON;
         }
@@ -160,7 +160,7 @@ void controlChamber(ChamberData& cd) {
     else if (cd.tBeerLastDelta < 0)
       cd.tBeerLastDelta += 1;
   }
-  cd.priorError = tError;  
+  cd.priorError = tError;
 
   /* Do it! */
 
@@ -192,7 +192,9 @@ void controlChambers() {
   if (TIME_UP(prevMillisChamberControl, uptimeMillis, CHAMBER_ITERATION_TIME_MILLIS)) {
     prevMillisChamberControl = uptimeMillis;
 
-    readTemperatures();
+    uint32_t t = millis();
+    readTemperatures();  // Seems to take about 120ms per sensor
+    logMsg(LOG_DEBUG, logPrefixChamberControl, 'j', 1, ((uint32_t) millis() - t)/* uint32_t */);
     tExternal = getTExternalX10();
     tPi = getTPiX10();
     for (byte i = 0; i < CHAMBER_COUNT; i++) {
@@ -202,5 +204,6 @@ void controlChambers() {
       cd.tChamber = getTChamberX10(chamberId);
       controlChamber(cd);
     }
+    logMsg(LOG_DEBUG, logPrefixChamberControl, 'k', 1, ((uint32_t) millis() - t)/* uint32_t */);  // ~1100ms for 6 sensors
   }
 }

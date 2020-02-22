@@ -33,6 +33,8 @@ typedef struct {
 
   // Error * 100. After being divided by 100, this value will be ADDED to the reading from the device.
   int8_t error;  // int8_t accomodates error range -1.28..+1.27
+
+  int16_t prevReading;  // Used to apply a degree of averaging (noise smoothing)
 } Sensor;
 Sensor sensorData[SENSOR_COUNT];
 
@@ -47,6 +49,7 @@ Sensor sensorData[SENSOR_COUNT];
 void initSensorData(uint8_t ourIndex, uint16_t shortAddress, int8_t error) {
   sensorData[ourIndex].shortAddress = shortAddress;
   sensorData[ourIndex].error = error;
+  sensorData[ourIndex].prevReading = INT_MIN;
 }
 
 // Each sensor has an 64 bit address. For such a relatively small number of sensors as ours 16 bits is sufficient to discriminate.
@@ -106,10 +109,16 @@ void readTemperatures() {
   dallas.requestTemperatures();
 }
 
+// Retrieves latest reading for the specified sensor, converts to int x10, and applies a degree of averaging w.r.t. previous readings.
 int16_t getTemperatureX10(uint8_t sensorIndex) {
   Sensor sensor = sensorData[sensorIndex];
   float reading = dallas.getTempCByIndex(sensor.dallasIndex) + ((float) sensor.error) / 100.0f;
-  return (reading + 0.05f) * 10;
+  int16_t readingX10 = (reading + 0.05f) * 10;
+  int16_t prevReading = sensor.prevReading;
+  if (prevReading != INT_MIN)
+    prevReading = readingX10;
+  sensor.prevReading = readingX10;
+  return (prevReading + readingX10) / 2;
 }
 /* Convenience accessors */
 int16_t getTBeerX10(uint8_t chamberId) {

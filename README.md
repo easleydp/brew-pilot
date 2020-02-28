@@ -1,2 +1,2 @@
 # brew-pilot
-RaspberryPi and Arduino temperature controller
+RaspberryPi and Arduino temperature controller for fermentation chambers and beer fridges

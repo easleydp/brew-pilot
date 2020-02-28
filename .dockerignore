@@ -1,0 +1,9 @@
+.git*
+.vscode
+Highcharts
+Arduino
+vscodeWorkspace.code-workspace
+staticContent
+Java
+!Java/tempctrl/build/libs
+frontend

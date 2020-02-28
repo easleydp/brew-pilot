@@ -86,7 +86,7 @@ public class Smoother
      * The column property is assumed to be of type `int`. In this app it's typically a
      * temperature, where the values are degrees x 10.
      *
-     * E.g. for a noise threshold tT (e.g. 0.2°C), if a temperature column has a contiguous range
+     * E.g. for a noise threshold tT (e.g. 0.2â„ƒ), if a temperature column has a contiguous range
      * of values that return to (or cross) the starting value (tS) having not deviated by more
      * than tT then all the values up to but not including the crossover point are set to tS.
      * Note, however, local extreme values (peaks and troughs) that exceed the threshold are not

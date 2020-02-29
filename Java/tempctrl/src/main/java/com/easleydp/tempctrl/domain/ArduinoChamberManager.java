@@ -34,97 +34,79 @@ public class ArduinoChamberManager implements ChamberManager
     }
 
     @Override
-    public void setParameters(int chamberId, ChamberParameters params)
+    public void setParameters(int chamberId, ChamberParameters params) throws IOException
     {
         chamberParametersByChamberId.put(chamberId, params);
-        try
-        {
-            getMessenger().sendRequest("setParams:" + csv(chamberId, params.tTarget, params.tTargetNext, params.tMin, params.tMax,
-                    params.hasHeater ? 1 : 0, params.Kp, params.Ki, params.Kd, params.mode));
-            // Examples for console test:
-            //  ^setParams:1,171,172,-10,400,1,2.1,0.01,20.5,A$
-            //  ^setParams:2,100,100,-10,150,0,1.9,0.015,19.5,O$
-            getMessenger().expectResponse("ack");
-        }
-        catch (Throwable t)
-        {
-            logger.error(t.getMessage(), t);
-            if (t instanceof IOException)
-                handleIOException((IOException) t);
-        }
+
+        getMessenger().sendRequest("setParams:" + csv(chamberId, params.tTarget, params.tTargetNext, params.tMin, params.tMax,
+                params.hasHeater ? 1 : 0, params.Kp, params.Ki, params.Kd, params.mode));
+        // Examples for console test:
+        //  ^setParams:1,171,172,-10,400,1,2.1,0.01,20.5,A$
+        //  ^setParams:2,100,100,-10,150,0,1.9,0.015,19.5,O$
+        getMessenger().expectResponse("ack");
     }
 
     @Override
-    public ChamberReadings getReadings(int chamberId, Date timeNow)
+    public ChamberReadings getReadings(int chamberId, Date timeNow) throws IOException
     {
-        try
+        getMessenger().sendRequest("getChmbrRds:" + chamberId);
+        String response = getMessenger().getResponse("chmbrRds:");
+        logger.debug("Raw chmbrRds:" + response);
+        String[] values = response.split(",");
+        // Expecting:
+        // tTarget,tTargetNext,tMin,tMax,hasHeater,Kp,Ki,Kd,tBeer,tChamber,tExternal,tPi,heaterOutput,fridgeOn,mode
+        if (values.length != 16)
         {
-            getMessenger().sendRequest("getChmbrRds:" + chamberId);
-            String response = getMessenger().getResponse("chmbrRds:");
-            logger.debug("Raw chmbrRds:" + response);
-            String[] values = response.split(",");
-            // Expecting:
-            // tTarget,tTargetNext,tMin,tMax,hasHeater,Kp,Ki,Kd,tBeer,tChamber,tExternal,tPi,heaterOutput,fridgeOn,mode
-            if (values.length != 16)
-            {
-                throw new IOException("Unexpected 'chmbrRds' response: " + response);
-            }
-            int i = 0;
-
-            // Params (for consistency check)
-            int tTarget = parseInt(values[i++]);
-            int tTargetNext = parseInt(values[i++]);
-            int tMin = parseInt(values[i++]);
-            int tMax = parseInt(values[i++]);
-            boolean hasHeater = parseBool(values[i++]);
-            double Kp = parseDouble(values[i++]);
-            double Ki = parseDouble(values[i++]);
-            double Kd = parseDouble(values[i++]);
-            Mode modeParam = Mode.get(values[i++]);
-
-            // Readings
-            int tBeer = parseInt(values[i++]);
-            int tChamber = parseInt(values[i++]);
-            int tExternal = parseInt(values[i++]);
-            int tPi = parseInt(values[i++]);
-            int heaterOutput = parseInt(values[i++]);
-            boolean fridgeOn = parseBool(values[i++]);
-            Mode modeActual = Mode.get(values[i++]); // may be null
-
-            // Check consistency of params
-            {
-                Gyle activeGyle = chamberRepository.getChamberById(chamberId).getActiveGyle();
-                if (activeGyle == null)
-                    throw new IllegalStateException("No active gyle for chamberId " + chamberId);
-                ChamberParameters params = activeGyle.getChamberParameters(timeNow);
-
-                if (params.tTarget != tTarget)
-                    logChamberParamMismatchError(chamberId, "tTarget", params.tTarget, tTarget);
-                if (params.tTargetNext != tTargetNext)
-                    logChamberParamMismatchError(chamberId, "tTargetNext", params.tTargetNext, tTargetNext);
-                if (params.tMin != tMin)
-                    logChamberParamMismatchError(chamberId, "tMin", params.tMin, tMin);
-                if (params.tMax != tMax)
-                    logChamberParamMismatchError(chamberId, "tMax", params.tMax, tMax);
-                if (params.hasHeater != hasHeater)
-                    logChamberParamMismatchError(chamberId, "hasHeater", params.hasHeater, tMax);
-                // Deliberately not consistency checking the floating point values due to likelihood of rounding errors.
-            }
-
-            return new ChamberReadings(timeNow, tTarget, tBeer, tExternal, tChamber, tPi,
-                    heaterOutput, fridgeOn, modeActual, new ChamberParameters(tTarget, tTargetNext, tMin, tMax, hasHeater, Kp, Ki, Kd, modeParam));
+            throw new IOException("Unexpected 'chmbrRds' response: " + response);
         }
-        catch (Throwable t)
+        int i = 0;
+
+        // Params (for consistency check)
+        int tTarget = parseInt(values[i++]);
+        int tTargetNext = parseInt(values[i++]);
+        int tMin = parseInt(values[i++]);
+        int tMax = parseInt(values[i++]);
+        boolean hasHeater = parseBool(values[i++]);
+        double Kp = parseDouble(values[i++]);
+        double Ki = parseDouble(values[i++]);
+        double Kd = parseDouble(values[i++]);
+        Mode modeParam = Mode.get(values[i++]);
+
+        // Readings
+        int tBeer = parseInt(values[i++]);
+        int tChamber = parseInt(values[i++]);
+        int tExternal = parseInt(values[i++]);
+        int tPi = parseInt(values[i++]);
+        int heaterOutput = parseInt(values[i++]);
+        boolean fridgeOn = parseBool(values[i++]);
+        Mode modeActual = Mode.get(values[i++]); // may be null
+
+        // Check consistency of params
         {
-            logger.error(t.getMessage(), t);
-            if (t instanceof IOException)
-                handleIOException((IOException) t);
-            return null;
+            Gyle activeGyle = chamberRepository.getChamberById(chamberId).getActiveGyle();
+            if (activeGyle == null)
+                throw new IllegalStateException("No active gyle for chamberId " + chamberId);
+            ChamberParameters params = activeGyle.getChamberParameters(timeNow);
+
+            if (params.tTarget != tTarget)
+                logChamberParamMismatchError(chamberId, "tTarget", params.tTarget, tTarget);
+            if (params.tTargetNext != tTargetNext)
+                logChamberParamMismatchError(chamberId, "tTargetNext", params.tTargetNext, tTargetNext);
+            if (params.tMin != tMin)
+                logChamberParamMismatchError(chamberId, "tMin", params.tMin, tMin);
+            if (params.tMax != tMax)
+                logChamberParamMismatchError(chamberId, "tMax", params.tMax, tMax);
+            if (params.hasHeater != hasHeater)
+                logChamberParamMismatchError(chamberId, "hasHeater", params.hasHeater, tMax);
+            // Deliberately not consistency checking the floating point values due to likelihood of rounding errors.
         }
+
+        return new ChamberReadings(timeNow, tTarget, tBeer, tExternal, tChamber, tPi,
+                heaterOutput, fridgeOn, modeActual, new ChamberParameters(tTarget, tTargetNext, tMin, tMax, hasHeater, Kp, Ki, Kd, modeParam));
     }
 
     @Override
-    public void slurpLogMessages()
+    public void slurpLogMessages() throws IOException
     {
         try
         {
@@ -143,12 +125,7 @@ public class ArduinoChamberManager implements ChamberManager
             {
                 logger.debug("First read operation timed out in slurpLogMessages()");
             }
-            else
-            {
-                logger.error(t.getMessage(), t);
-                if (t instanceof IOException)
-                    handleIOException((IOException) t);
-            }
+            throw t;
         }
         finally
         {
@@ -156,6 +133,17 @@ public class ArduinoChamberManager implements ChamberManager
         }
     }
     private static boolean firstSlurp = true;
+
+    @Override
+    public void handleIOException(IOException e)
+    {
+        if (messenger != null)
+        {
+            logger.info("Closing ArduinoMessenger after IOException");
+            messenger.close();
+            messenger = null;
+        }
+    }
 
     private static void logLogMessage(String logMessage) throws IOException
     {
@@ -352,16 +340,6 @@ public class ArduinoChamberManager implements ChamberManager
         if (messenger == null)
             messenger = new ArduinoMessenger();  // can throw
         return messenger;
-    }
-
-    private void handleIOException(IOException e)
-    {
-        if (messenger != null)
-        {
-            logger.info("Closing ArduinoMessenger after IOException");
-            messenger.close();
-            messenger = null;
-        }
     }
 
 

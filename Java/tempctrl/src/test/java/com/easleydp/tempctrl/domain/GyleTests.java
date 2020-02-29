@@ -42,7 +42,7 @@ public class GyleTests
     private static final int genMultiplier = 4;
     private static final int maxGenerations = 3;
 
-    private void collectReadings()
+    private void collectReadings() throws IOException
     {
         chamberManagerSim.setNowTime(timeNow);
         gyle.collectReadings(chamberManagerSim, timeNow);
@@ -277,7 +277,7 @@ public class GyleTests
         assertReadingsLookOk(gen1ReadingsCount, logFileDescs.get(logFileDescs.size() - 1).logFile);
     }
 
-    private void collectEnoughReadingsForOneGen1File(boolean firstBuffer)
+    private void collectEnoughReadingsForOneGen1File(boolean firstBuffer) throws IOException
     {
         for (int i = 0; i < gen1ReadingsCount; i++)
         {

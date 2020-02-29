@@ -1,5 +1,6 @@
 package com.easleydp.tempctrl.spring;
 
+import java.io.IOException;
 import java.util.Date;
 
 import org.slf4j.Logger;
@@ -8,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import com.easleydp.tempctrl.domain.Chamber;
 import com.easleydp.tempctrl.domain.ChamberManager;
 import com.easleydp.tempctrl.domain.ChamberParameters;
 import com.easleydp.tempctrl.domain.ChamberRepository;
@@ -43,27 +45,8 @@ public class CollectReadingsScheduler
         }
 
         Date date = new Date();
-        // For each chamber: send chamber params and, if it has an active gyle, collect a set of readings.
         chamberRepository.getChambers().stream()
-            .forEach(ch -> {
-                final int chamberId = ch.getId();
-                Gyle ag = ch.getActiveGyle();
-
-                logger.debug("Slurping log messages before sending parameters to chamber " + chamberId);
-                chamberManager.slurpLogMessages();
-                ChamberParameters cp = ag != null ? ag.getChamberParameters(date) : ch.getPartialChamberParameters();
-                chamberManager.setParameters(chamberId, cp);
-                logger.debug("Slurping log messages after sending parameters to chamber " + chamberId);
-                chamberManager.slurpLogMessages();
-
-                if (ag != null)
-                {
-                    logger.debug("taking readings for chamber " + ag.chamber.getId() + " gyle " + ag.gyleDir.getFileName());
-                    ag.collectReadings(chamberManager, date);
-                    logger.debug("Slurping log messages after collecting readings for chamber " + chamberId);
-                    chamberManager.slurpLogMessages();
-                }
-            });
+            .forEach(ch -> takeReadingsForChamber(ch, date));
 
         long duration = System.currentTimeMillis() - date.getTime();
         if (duration > longestDuration)
@@ -74,6 +57,37 @@ public class CollectReadingsScheduler
         else if (logger.isDebugEnabled())
         {
             logger.debug("takeReadings took " + duration + "ms");
+        }
+    }
+
+    /** For the supplied chamber: send chamber params and, if it has an active gyle, collect a set of readings. */
+    private void takeReadingsForChamber(Chamber ch, Date date)
+    {
+        final int chamberId = ch.getId();
+        Gyle ag = ch.getActiveGyle();
+
+        try
+        {
+            logger.debug("Slurping log messages before sending parameters to chamber " + chamberId);
+            chamberManager.slurpLogMessages();
+            ChamberParameters cp = ag != null ? ag.getChamberParameters(date) : ch.getPartialChamberParameters();
+            chamberManager.setParameters(chamberId, cp);
+            logger.debug("Slurping log messages after sending parameters to chamber " + chamberId);
+            chamberManager.slurpLogMessages();
+
+            if (ag != null)
+            {
+                logger.debug("taking readings for chamber " + ag.chamber.getId() + " gyle " + ag.gyleDir.getFileName());
+                ag.collectReadings(chamberManager, date);
+                logger.debug("Slurping log messages after collecting readings for chamber " + chamberId);
+                chamberManager.slurpLogMessages();
+            }
+        }
+        catch (Throwable t)
+        {
+            logger.error(t.getMessage(), t);
+            if (t instanceof IOException)
+                chamberManager.handleIOException((IOException) t);
         }
     }
 

@@ -133,19 +133,15 @@ public class Gyle extends GyleDto
      * Note: Recent readings are stored buffered in memory. When the buffer size limit is reached
      * they're flushed to persistent storage (files on disk). The set of data files for the gyle
      * are consolidated once in a while.
+     * @throws IOException
      */
-    public void collectReadings(ChamberManager chamberManager, Date timeNow)
+    public void collectReadings(ChamberManager chamberManager, Date timeNow) throws IOException
     {
         final int chamberId = chamber.getId();
         logger.debug("collectReadings() for chamber " + chamberId);
 
         ChamberReadings chamberReadings = chamberManager.getReadings(chamberId, timeNow);
-        if (chamberReadings == null)
-        {
-            logger.error("chamberManager.getReadings() for chamber " + chamberId + " returned null");
-            return;
-        }
-        else if (logger.isDebugEnabled())
+        if (logger.isDebugEnabled())
         {
             logger.debug("Chamber " + chamberId + " readings: " + chamberReadings.toString());
         }

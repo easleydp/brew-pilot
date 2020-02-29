@@ -1,5 +1,6 @@
 package com.easleydp.tempctrl.domain;
 
+import java.io.IOException;
 import java.util.Date;
 
 /**
@@ -11,9 +12,15 @@ import java.util.Date;
  */
 public interface ChamberManager
 {
-    public void setParameters(int chamberId, ChamberParameters params);
+    void setParameters(int chamberId, ChamberParameters params) throws IOException;
 
-    public ChamberReadings getReadings(int chamberId, Date timeNow);
+    ChamberReadings getReadings(int chamberId, Date timeNow) throws IOException;
 
-    public void slurpLogMessages();
+    void slurpLogMessages() throws IOException;
+
+    /**
+     * Perform any remedial action that may be necessary on one of the above method
+     * throwing an IOException, e.g. reset comms port.
+     */
+    default void handleIOException(IOException e) {}
 }

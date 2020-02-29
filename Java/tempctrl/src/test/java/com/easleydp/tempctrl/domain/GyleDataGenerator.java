@@ -3,6 +3,7 @@ package com.easleydp.tempctrl.domain;
 import static org.apache.commons.lang3.time.DateUtils.*;
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -29,7 +30,7 @@ public class GyleDataGenerator
     private static final int genMultiplier = 4;
     private static final int maxGenerations = 3;
 
-    private void collectReadings()
+    private void collectReadings() throws IOException
     {
         chamberManagerSim.setNowTime(timeNow);
         gyle.collectReadings(chamberManagerSim, timeNow);

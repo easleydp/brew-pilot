@@ -465,6 +465,7 @@ public class Gyle extends GyleDto
                 }
                 String ndjson = writer.toString() + NDJSON_NEWLINE_DELIM;
                 Files.writeString(logFile, ndjson, StandardCharsets.UTF_8);
+                // Java 8: Files.write(logFile, Collections.singleton(ndjson), StandardCharsets.UTF_8);
 
                 // No need to clear `readings`; the caller will now release this buffer.
             }

@@ -76,5 +76,6 @@ public class ChamberRepository
                 .filter(ch -> ch.getId() == id)
                 .findFirst()
                 .orElseThrow();
+                // Java 8: .orElseThrow(IllegalArgumentException::new);
     }
 }

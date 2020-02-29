@@ -46,6 +46,8 @@ Sensor sensorData[SENSOR_COUNT];
 #define T_EXTERNAL 4
 #define T_PI 5
 
+static const char* logPrefixTemperature = "T";
+
 void initSensorData(uint8_t ourIndex, uint16_t shortAddress, int8_t error) {
   sensorData[ourIndex].shortAddress = shortAddress;
   sensorData[ourIndex].error = error;
@@ -77,8 +79,7 @@ void initTemperatureSensors() {
   dallas.requestTemperatures();
   uint8_t sensorCount = dallas.getDS18Count();
   if (sensorCount != SENSOR_COUNT) {
-    Serial.print(F("ERROR! sensor count: "));
-    Serial.println(sensorCount);
+    logMsg(LOG_ERROR, logPrefixTemperature, 'C', 1, sensorCount/* uint8_t */);
     return;
   }
 

@@ -33,11 +33,11 @@ public class ArduinoMessenger implements AutoCloseable
     private static final byte BYTE_START = ("" + CHAR_START).getBytes(US_ASCII)[0];
     private static final byte BYTE_END = ("" + CHAR_END).getBytes(US_ASCII)[0];
 
-    public ArduinoMessenger()
+    public ArduinoMessenger() throws IOException
     {
         comPort = findUsbSerialPort();
         if (comPort == null)
-            throw new RuntimeException("Failed to find USB serial port");
+            throw new IOException("Failed to find USB serial port");
         logger.info("Found USB serial port " + comPort.getSystemPortName());
         comPort.openPort();
         comPort.setBaudRate(57600);

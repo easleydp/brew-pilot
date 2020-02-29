@@ -287,6 +287,16 @@ public class ArduinoChamberManager implements ChamberManager
 
                         return String.format("{mS: %d}", bytesToUint32(buffer[0], buffer[1], buffer[2], buffer[3]));
                 }
+            case "T":
+                switch (id)
+                {
+                    case 'C':
+                        // sensorCount/* uint8_t */
+                        if (buffer.length != 1)
+                            return "{error: \"Expected 1 byte\"}";
+
+                        return String.format("{sensorCount: %d}", buffer[0]);
+                }
         }
 
         // Catch all - format as byte array
@@ -337,7 +347,7 @@ public class ArduinoChamberManager implements ChamberManager
         logger.error("Chamber params mismatch: Chamber " + chamberId + " " + paramName + " should be " + expected + " but is " + actual);
     }
 
-    private ArduinoMessenger getMessenger()
+    private ArduinoMessenger getMessenger() throws IOException
     {
         if (messenger == null)
             messenger = new ArduinoMessenger();  // can throw

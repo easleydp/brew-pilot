@@ -1,4 +1,4 @@
-FROM adoptopenjdk:11-jre-hotspot
+FROM hypriot/rpi-java
 
 # # Run application as non-root user to help to mitigate some risks
 # RUN groupadd -r spring && useradd -r spring -g spring && \
@@ -20,6 +20,6 @@ ENV dataDir /staticContent/data
 # To this list will need to be dynamically appended: --pwdhash.guest=... --pwdhash.admin=...
 # These can simply be appended after `docker run <image name>`, as described here:
 # <https://www.manifold.co/blog/arguments-and-variables-in-docker-94746642f64b>
-ENTRYPOINT ["java", "-jar", "/app.jar"]
+ENTRYPOINT ["java", "-jar", "app.jar"]
 
 # End

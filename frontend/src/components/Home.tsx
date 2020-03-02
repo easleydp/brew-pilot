@@ -25,9 +25,9 @@ const Home = ({ chamberSummaries, chamberSummariesError }: HomeProps) => {
       chamberSummaries,
       '=================== Home useEffect invoked ======================'
     );
-    // If we know the user is definitely not logged in, go straight to login form.
+    // If we know the user is definitely not logged in, go straight to signin form.
     if (isAuth === Auth.NotLoggedIn) {
-      history.push('/login', { from: '/home' });
+      history.push('/signin', { from: '/home' });
     }
   }, []);
 

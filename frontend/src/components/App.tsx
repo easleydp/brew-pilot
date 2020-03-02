@@ -43,20 +43,20 @@ const Nested = () => {
         console.debug(error);
         const status = error.response && error.response.status;
         if (status === 403 || status === 401) {
-          console.debug(status, 'Redirecting to login');
+          console.debug(status, 'Redirecting to signin');
           dispatch({ type: 'LOGOUT' });
           setChamberSummaries([]);
-          history.push('/login', { from: '/' });
+          history.push('/signin', { from: '/' });
         } else {
           setChamberSummariesError('' + error);
         }
       }
     };
 
-    // If we know the user is definitely not logged in, go straight to login form.
+    // If we know the user is definitely not logged in, go straight to signin form.
     if (isAuth === Auth.NotLoggedIn) {
       setChamberSummaries([]);
-      history.push('/login', { from: '/' });
+      history.push('/signin', { from: '/' });
     } else {
       fetchData();
     }
@@ -120,7 +120,7 @@ const Nested = () => {
               </Nav.Link>
             )}
             {isLoggedIn && (
-              <Nav.Link as={NavLink} to="/logout" onMouseDown={closeNav}>
+              <Nav.Link as={NavLink} to="/signout" onMouseDown={closeNav}>
                 Logout
               </Nav.Link>
             )}
@@ -130,8 +130,9 @@ const Nested = () => {
 
       {/* A <Switch> looks through its child <Route>s and renders the first one that matches the current URL. */}
       <Switch>
-        <Route path="/login" component={Login} />
-        <Route path="/logout" component={Logout} />
+        {/* "/signin" rather "/login" to avoid clash with SprintBoot URL. Likewise "/signout" */}
+        <Route path="/signin" component={Login} />
+        <Route path="/signout" component={Logout} />
         <Route path="/status" component={Status} />
         <Route path="/gyle-chart/:chamberId" component={GyleChart} />
         <Route path="/">

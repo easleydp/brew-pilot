@@ -76,9 +76,9 @@ const GyleChart = () => {
             console.debug(url + ' ERROR', error);
             const status = error.response && error.response.status;
             if (status === 403 || status === 401) {
-              console.debug(status, 'Redirecting to login');
+              console.debug(status, 'Redirecting to signin');
               dispatch({ type: 'LOGOUT' });
-              history.push('/login', { from: '/' });
+              history.push('/signin', { from: '/' });
             }
             reject(error);
           });
@@ -98,9 +98,9 @@ const GyleChart = () => {
             console.debug(url + ' ERROR', error);
             const status = error.response && error.response.status;
             if (status === 403 || status === 401) {
-              console.debug(status, 'Redirecting to login');
+              console.debug(status, 'Redirecting to signin');
               dispatch({ type: 'LOGOUT' });
-              history.push('/login', { from: '/' });
+              history.push('/signin', { from: '/' });
             }
             reject(error);
           });
@@ -582,9 +582,9 @@ const GyleChart = () => {
 
     let anotherChartVar: Chart;
 
-    // If we know the user is definitely not logged in, go straight to login form.
+    // If we know the user is definitely not logged in, go straight to signin form.
     if (isAuth === Auth.NotLoggedIn) {
-      history.push('/login', { from: '/gyle-chart/' + chamberId });
+      history.push('/signin', { from: '/gyle-chart/' + chamberId });
     } else {
       getGyleDetails()
         .then(_gyleDetails => {

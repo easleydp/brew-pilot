@@ -77,27 +77,27 @@ const Login: React.FC = () => {
   };
 
   // let { from } = location.state || { from: { pathname: '/' } };
-  // let login = () => {
+  // let signin = () => {
   //   fakeAuth.authenticate(() => {
   //     history.replace(from);
   //   });
   // };
 
   return (
-    <div className="login wrapper fadeInDown">
+    <div className="signin wrapper fadeInDown">
       {/* <p>You must log in to view the page at {from.pathname}</p>
-      <button onClick={login}>Log in</button> */}
+      <button onClick={signin}>Log in</button> */}
       <div id="formContent">
         {/* <div className="fadeIn first">
           <img src="http://danielzawadzki.com/codepen/01/icon.svg" id="icon" alt="User Icon" />
         </div> */}
 
-        <form action="/login" onSubmit={handleSubmit}>
+        <form action="/signin" onSubmit={handleSubmit}>
           <input
             type="text"
-            id="login"
+            id="signin"
             className="fadeIn second"
-            name="login"
+            name="signin"
             placeholder="username"
             onChange={e => setUsername(e.target.value)}
             onKeyPress={e => handleKeyPress(e)}

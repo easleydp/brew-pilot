@@ -24,9 +24,9 @@ const Status: React.FC = () => {
       console.debug('/admin/log-chart/status ERROR', error);
       const status = error.response && error.response.status;
       if (status === 403 || status === 401) {
-        console.debug(status, 'Redirecting to login');
+        console.debug(status, 'Redirecting to signin');
         dispatch({ type: 'LOGOUT' });
-        history.push('/login', { from: '/status' });
+        history.push('/signin', { from: '/status' });
       }
     }
   };
@@ -37,9 +37,9 @@ const Status: React.FC = () => {
       '=================== Status useEffect invoked ======================'
     );
 
-    // If we know the user is definitely not logged in, go straight to login form.
+    // If we know the user is definitely not logged in, go straight to signin form.
     if (isAuth === Auth.NotLoggedIn) {
-      history.push('/login', { from: '/status' });
+      history.push('/signin', { from: '/status' });
     } else {
       fetchData();
     }

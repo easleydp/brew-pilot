@@ -15,7 +15,7 @@ const Logout: React.FC = () => {
       .then(function(response) {
         console.log(response);
         dispatch({ type: 'LOGOUT' });
-        history.push('/login');
+        history.push('/signin');
       })
       .catch(function(error) {
         console.log(error);
@@ -23,7 +23,7 @@ const Logout: React.FC = () => {
       });
   }, []);
 
-  return <div className="logout">{helperText}</div>;
+  return <div className="signout">{helperText}</div>;
 };
 
 export default Logout;

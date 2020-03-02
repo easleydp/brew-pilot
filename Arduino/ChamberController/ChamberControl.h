@@ -80,7 +80,7 @@ void heater(ChamberData& cd, uint8_t outputLevel) {
 
 // Called as frequently as possible (but possibly as infrequently as once a second or so given how long controlChambers() can take).
 // Given the main loop sometimes takes a second or so to complete and given our heaterLevel has 100 steps, let's use a period of
-// 100 seconds. (If the main control loop occasionally takes longer than one second to call us again, no big deal.) So, 
+// 100 seconds. (If the main control loop occasionally takes longer than one second to call us again, no big deal.) So,
 // heaterLevel of 1 will give 1 sec ON followed by 99 secs OFF; heaterLevel of 99 will give 99 secs ON followed by 1 sec OFF; etc.
 void maintainHeaters() {
   for (byte i = 0; i < CHAMBER_COUNT; i++) {
@@ -244,18 +244,19 @@ void controlChambers() {
     prevMillisChamberControl = uptimeMillis;
 
     uint32_t t = millis();
-    readTemperatures();  // Seems to take about 120ms per sensor
-    logMsg(LOG_DEBUG, logPrefixChamberControl, 'j', 1, ((uint32_t) millis() - t)/* uint32_t */);
-    tExternal = getTExternalX10();
-    tPi = getTPiX10();
-    for (byte i = 0; i < CHAMBER_COUNT; i++) {
-      ChamberData& cd = chamberDataArray[i];
-      const uint8_t chamberId = cd.params.chamberId;
-      cd.tBeer = getTBeerX10(chamberId);
-      cd.tChamber = getTChamberX10(chamberId);
-      controlChamber(cd);
+    if (readTemperatures()) {  // Seems to take about 120ms per sensor
+      logMsg(LOG_DEBUG, logPrefixChamberControl, 'j', 1, ((uint32_t) millis() - t)/* uint32_t */);
+      tExternal = getTExternalX10();
+      tPi = getTPiX10();
+      for (byte i = 0; i < CHAMBER_COUNT; i++) {
+        ChamberData& cd = chamberDataArray[i];
+        const uint8_t chamberId = cd.params.chamberId;
+        cd.tBeer = getTBeerX10(chamberId);
+        cd.tChamber = getTChamberX10(chamberId);
+        controlChamber(cd);
+      }
+      logMsg(LOG_DEBUG, logPrefixChamberControl, 'k', 1, ((uint32_t) millis() - t)/* uint32_t */);  // ~1100ms for 6 sensors
     }
-    logMsg(LOG_DEBUG, logPrefixChamberControl, 'k', 1, ((uint32_t) millis() - t)/* uint32_t */);  // ~1100ms for 6 sensors
   }
   maintainHeaters();
 }

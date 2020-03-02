@@ -7,6 +7,8 @@ build/
 !**/src/main/**
 !**/src/test/**
 
+/logs
+
 src/test/resources/testData/chambers/*/gyles/*/logs
 
 ### STS ###

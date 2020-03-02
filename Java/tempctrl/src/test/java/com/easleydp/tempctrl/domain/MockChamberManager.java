@@ -9,6 +9,7 @@ import java.util.Random;
 import org.springframework.core.env.Environment;
 import org.springframework.util.Assert;
 
+/** A mock ChamberManager for testing purposes. */
 public class MockChamberManager implements ChamberManager
 {
     private Map<Integer, ChamberParameters> chamberParametersById = new HashMap<>();

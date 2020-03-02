@@ -55,12 +55,12 @@ public class SecurityConfig
 
         // For debug: String pwdHash = encoder().encode("?????");
         String pwdHash = env.getProperty("pwdhash.guest");
-        Assert.state(pwdHash != null, "Guest password not specified");
+        Assert.state(pwdHash != null && pwdHash.length() > 0, "Guest password not specified");
         manager.createUser(User.withUsername("guest").password(pwdHash)
                 .roles("USER").build());
 
         pwdHash = env.getProperty("pwdhash.admin");
-        Assert.state(pwdHash != null, "Admin password not specified");
+        Assert.state(pwdHash != null && pwdHash.length() > 0, "Admin password not specified");
         manager.createUser(User.withUsername("admin").password(pwdHash)
                 .roles("USER", "ADMIN").build());
 

@@ -14,6 +14,9 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Joiner;
 
+/**
+ * Interfaces to an Arduino microcontroller
+ */
 public class ArduinoChamberManager implements ChamberManager
 {
     private static final Logger logger = LoggerFactory.getLogger(ArduinoChamberManager.class);

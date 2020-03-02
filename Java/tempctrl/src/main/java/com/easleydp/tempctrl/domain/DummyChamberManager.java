@@ -4,6 +4,9 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.Random;
 
+/**
+ * A ChamberManager that can be used for convenience to remove the need for actual hardware.
+ */
 public class DummyChamberManager implements ChamberManager
 {
     private ChamberRepository chamberRepository;

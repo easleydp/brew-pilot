@@ -21,7 +21,7 @@ const Logout: React.FC = () => {
         console.log(error);
         setHelperText('Failed to logout: ' + error);
       });
-  }, []);
+  }, [dispatch, history]);
 
   return <div className="signout">{helperText}</div>;
 };

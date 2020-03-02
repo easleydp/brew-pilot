@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { StateProvider, Auth, useAppState } from './state';
-import { useHistory, withRouter, RouteComponentProps } from 'react-router-dom';
+import { useHistory } from 'react-router-dom';
 //import logo from '../logo.svg';
 import './App.scss';
 import axios from 'axios';
 import { BrowserRouter as Router, Switch, Route, NavLink } from 'react-router-dom';
-import PropTypes from 'prop-types';
-import PrivateRoute from './PrivateRoute';
+// import PropTypes from 'prop-types';
+// import PrivateRoute from './PrivateRoute';
 // import { LinkContainer } from 'react-router-bootstrap';
 import { Nav, Navbar, NavDropdown } from 'react-bootstrap';
 
@@ -60,7 +60,7 @@ const Nested = () => {
     } else {
       fetchData();
     }
-  }, [isAuth, history]);
+  }, [isAuth, history, dispatch]);
 
   // Approximation of https://github.com/react-bootstrap/react-bootstrap/issues/1301#issuecomment-251281488
   // NOTE: Not at all good that we're currently relying on `onMouseDown` on `Nav.Link`.

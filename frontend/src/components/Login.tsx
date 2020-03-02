@@ -1,8 +1,7 @@
 import './Login.scss';
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import NavbarCollapse from 'react-bootstrap/NavbarCollapse';
 import { useAppState } from './state';
 
 const Login: React.FC = () => {
@@ -13,7 +12,7 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [isButtonDisabled, setIsButtonDisabled] = useState(true);
   const [helperText, setHelperText] = useState('');
-  const [error, setError] = useState(false);
+  //const [error, setError] = useState(false);
 
   const { dispatch } = useAppState();
 
@@ -44,7 +43,7 @@ const Login: React.FC = () => {
       })
       .then(response => {
         console.debug(response);
-        setError(false);
+        //setError(false);
         dispatch({
           type: 'LOGIN',
           isAdmin: response.data.isAdmin,
@@ -56,7 +55,7 @@ const Login: React.FC = () => {
       })
       .catch(error => {
         console.debug(error);
-        setError(true);
+        //setError(true);
         setHelperText('Incorrect username or password');
         setIsButtonDisabled(false);
       });

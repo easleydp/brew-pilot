@@ -5,7 +5,7 @@ import { useAppState, Auth } from './state';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 
-import Highcharts, { Chart, Series, SeriesOptions } from 'highcharts/highstock';
+import Highcharts, { Chart, Series } from 'highcharts/highstock';
 
 const GyleChart = () => {
   const history = useHistory();
@@ -579,8 +579,6 @@ const GyleChart = () => {
       tChamberSeries: SeriesPlus,
       fridgeSeries: SeriesPlus,
       heaterSeries: SeriesPlus;
-
-    let anotherChartVar: Chart;
 
     // If we know the user is definitely not logged in, go straight to signin form.
     if (isAuth === Auth.NotLoggedIn) {

@@ -29,7 +29,7 @@ const Home = ({ chamberSummaries, chamberSummariesError }: HomeProps) => {
     if (isAuth === Auth.NotLoggedIn) {
       history.push('/signin', { from: '/home' });
     }
-  }, []);
+  }, [chamberSummaries, history, isAuth]);
 
   function gaugeCard(cs: IChamberSummary) {
     const instruction = cs.tTarget ? `${isMobile ? 'Tap' : 'Click '} for details` : 'Inactive';

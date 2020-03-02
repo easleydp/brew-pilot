@@ -2,6 +2,21 @@
   &.none-found {
     padding: 70px 0;
     text-align: center;
+
+    /* Fade in as workaround to the flash os "None found" while waiting for ajax response.
+    TODO: Fix properly. */
+    opacity: 0;
+    -webkit-animation: fadeIn ease-in 1;
+    -moz-animation: fadeIn ease-in 1;
+    animation: fadeIn ease-in 1;
+
+    -webkit-animation-fill-mode: forwards;
+    -moz-animation-fill-mode: forwards;
+    animation-fill-mode: forwards;
+
+    -webkit-animation-duration: 1s;
+    -moz-animation-duration: 1s;
+    animation-duration: 1s;
   }
 
   h3 {

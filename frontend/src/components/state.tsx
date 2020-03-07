@@ -5,7 +5,7 @@ import React, { Dispatch, createContext, useContext, useReducer } from 'react';
 export enum Auth {
   LoggedIn,
   NotLoggedIn,
-  Unknown,
+  Unknown, // e.g. after the user hits F5, we don't know whether they're logged-in or not
 }
 export interface AppState {
   isAuth: Auth;

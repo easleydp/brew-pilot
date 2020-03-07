@@ -27,7 +27,7 @@ const Home = ({ chamberSummaries, chamberSummariesError }: HomeProps) => {
     );
     // If we know the user is definitely not logged in, go straight to signin form.
     if (isAuth === Auth.NotLoggedIn) {
-      history.push('/signin', { from: '/home' });
+      history.push('/signin', { from: '/' });
     }
   }, [chamberSummaries, history, isAuth]);
 

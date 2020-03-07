@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { StateProvider, Auth, useAppState } from './state';
 import { useHistory } from 'react-router-dom';
 //import logo from '../logo.svg';
@@ -28,17 +28,24 @@ const Nested = () => {
   const isAdmin = isLoggedIn && state.isAdmin;
 
   const history = useHistory();
+  const prevIsAuthRef = useRef<Auth | null>(null);
+
   useEffect(() => {
-    console.info(Auth[isAuth], '=================== App useEffect invoked ======================');
+    console.log(Auth[isAuth], '=================== App useEffect invoked ===================');
 
     const fetchData = async () => {
       try {
-        const response = await axios('/guest/chamber-summaries-and-user-type');
-        setChamberSummaries(response.data.chamberSummaries);
-        dispatch({
-          type: 'LOGIN',
-          isAdmin: response.data.isAdmin,
-        });
+        // If the previous auth state was `Unknown` and the new state is `LoggedIn` then we don't need to make the Ajax call again.
+        const prevIsAuth = prevIsAuthRef.current;
+        prevIsAuthRef.current = isAuth;
+        if (prevIsAuth !== Auth.Unknown || isAuth !== Auth.LoggedIn) {
+          const response = await axios('/guest/chamber-summaries-and-user-type');
+          setChamberSummaries(response.data.chamberSummaries);
+          dispatch({
+            type: 'LOGIN',
+            isAdmin: response.data.isAdmin,
+          });
+        }
       } catch (error) {
         console.debug(error);
         const status = error.response && error.response.status;
@@ -130,7 +137,7 @@ const Nested = () => {
 
       {/* A <Switch> looks through its child <Route>s and renders the first one that matches the current URL. */}
       <Switch>
-        {/* "/signin" rather "/login" to avoid clash with SprintBoot URL. Likewise "/signout" */}
+        {/* "/signin" rather "/login" to avoid clash with Spring Security URL. Likewise "/signout" */}
         <Route path="/signin" component={Login} />
         <Route path="/signout" component={Logout} />
         <Route path="/status" component={Status} />

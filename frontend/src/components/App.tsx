@@ -35,10 +35,15 @@ const Nested = () => {
 
     const fetchData = async () => {
       try {
-        // If the previous auth state was `Unknown` and the new state is `LoggedIn` then we don't need to make the Ajax call again.
+        // If the previous auth state was `Unknown` and the new state is `LoggedIn` and
+        // we have data then we don't need to make the Ajax call again.
         const prevIsAuth = prevIsAuthRef.current;
         prevIsAuthRef.current = isAuth;
-        if (prevIsAuth !== Auth.Unknown || isAuth !== Auth.LoggedIn) {
+        if (
+          prevIsAuth !== Auth.Unknown ||
+          isAuth !== Auth.LoggedIn ||
+          chamberSummaries.length === 0
+        ) {
           const response = await axios('/guest/chamber-summaries-and-user-type');
           setChamberSummaries(response.data.chamberSummaries);
           dispatch({

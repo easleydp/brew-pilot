@@ -20,14 +20,14 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 
 @RestController
-public class LogChartController
+public class StatusController
 {
     @Autowired
     private ChamberManager chamberManager;
 
     Supplier<ChamberManagerStatus> chamberManagerStatusSupplier;
 
-    public LogChartController()
+    public StatusController()
     {
         chamberManagerStatusSupplier = Suppliers.memoizeWithExpiration(
                 new Supplier<ChamberManagerStatus>() {

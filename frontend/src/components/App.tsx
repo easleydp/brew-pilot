@@ -25,7 +25,7 @@ const Nested = () => {
   const { state, dispatch } = useAppState();
   const isAuth = state && state.isAuth;
   const isLoggedIn = isAuth === Auth.LoggedIn;
-  const isAdmin = isLoggedIn && state.isAdmin;
+  //const isAdmin = isLoggedIn && state.isAdmin;
 
   const history = useHistory();
   const prevIsAuthRef = useRef<Auth | null>(null);

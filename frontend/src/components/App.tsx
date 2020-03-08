@@ -103,7 +103,7 @@ const Nested = () => {
                 Home
               </Nav.Link>
             )}
-            {isLoggedIn && (
+            {/* {isLoggedIn && (
               <NavDropdown title="Chambers" id="basic-nav-dropdown">
                 {chamberSummaries.map((cs, index) => {
                   return (
@@ -125,7 +125,7 @@ const Nested = () => {
               <Nav.Link as={NavLink} to="/profiles" onMouseDown={closeNav}>
                 Temperature profiles
               </Nav.Link>
-            )}
+            )} */}
             {/* {isAdmin && ( */}
             {isLoggedIn && (
               <Nav.Link as={NavLink} to="/status" onMouseDown={closeNav}>

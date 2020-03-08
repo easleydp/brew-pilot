@@ -151,7 +151,7 @@ const Gauge = ({ chamberId, tTarget }: GaugeProps) => {
         const point = chart.series[0].points[0];
         function getReadings() {
           axios
-            .get(`/guest/chamber/${chamberId}/summary-status`)
+            .get(`/tempctrl/guest/chamber/${chamberId}/summary-status`)
             .then(function(response) {
               const status: ISummaryStatus = response.data;
               const tBeer = (status.tBeer || 0) / 10;

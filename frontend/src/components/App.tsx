@@ -44,7 +44,7 @@ const Nested = () => {
           isAuth !== Auth.LoggedIn ||
           chamberSummaries.length === 0
         ) {
-          const response = await axios('/guest/chamber-summaries-and-user-type');
+          const response = await axios('/tempctrl/guest/chamber-summaries-and-user-type');
           setChamberSummaries(response.data.chamberSummaries);
           dispatch({
             type: 'LOGIN',
@@ -111,7 +111,7 @@ const Nested = () => {
                       {index > 0 && <NavDropdown.Divider />}
                       <NavDropdown.Item
                         as={NavLink}
-                        to={`/guest/chamber/${cs.id}`}
+                        to={`/tempctrl/guest/chamber/${cs.id}`}
                         onSelect={closeNav}
                       >
                         {cs.name}

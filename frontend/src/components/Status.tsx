@@ -47,8 +47,7 @@ const Status: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axios('/guest/log-chart/status');
-        console.debug('/guest/log-chart/status', response);
+        const response = await axios('/tempctrl/guest/log-chart/status');
         setStatus(response.data);
         if (isAuth === Auth.Unknown) {
           dispatch({

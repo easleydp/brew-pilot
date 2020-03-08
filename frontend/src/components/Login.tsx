@@ -33,7 +33,7 @@ const Login: React.FC = () => {
     params.append('username', username);
     params.append('password', password);
     axios
-      .post('/login', params, {
+      .post('/tempctrl/login', params, {
         headers: {
           'X-XSRF-TOKEN': '_csrf',
           //'Content-Type': 'application/json;charset=ISO-8859-1',

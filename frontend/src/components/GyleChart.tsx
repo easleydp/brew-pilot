@@ -96,7 +96,7 @@ const GyleChart = () => {
 
   // Returns promise for retrieving latest readings
   const getLatestReadings = (): Promise<IReadings[]> => {
-    const url = '/guest/chamber/' + chamberId + '/recent-readings';
+    const url = '/tempctrl/guest/chamber/' + chamberId + '/recent-readings';
     return new Promise((resolve, reject) => {
       axios
         .get(url, { params: { sinceDt: lastDtRef.current || 0 } })
@@ -348,7 +348,7 @@ const GyleChart = () => {
 
     // Returns promise for retrieving IGyleDetails
     const getActiveGyleDetails = (): Promise<IGyleDetails> => {
-      const url = '/guest/chamber/' + chamberId + '/active-gyle-details';
+      const url = '/tempctrl/guest/chamber/' + chamberId + '/active-gyle-details';
       return new Promise((resolve, reject) => {
         axios
           .get(url)
@@ -593,7 +593,12 @@ const GyleChart = () => {
           return;
         }
         axios
-          .get(`/data/chambers/${chamberId}/gyles/${gyleDetails.gyleId}/logs/${logName}.ndjson`)
+          .get(
+            // Note: We'll configure nginx to handle `/tempctrl/data` itself rather then pass to app server.
+            // Only reason for `/tempctrl` prefix is to make this work with React's proxy server. In this
+            // case the app server DOES handle the data requests.
+            `/tempctrl/data/chambers/${chamberId}/gyles/${gyleDetails.gyleId}/logs/${logName}.ndjson`
+          )
           .then(response => {
             const ndjson: string = response.data;
             const readings: IReadings[] = ndjson

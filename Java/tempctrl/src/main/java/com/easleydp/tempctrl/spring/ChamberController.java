@@ -127,7 +127,7 @@ public class ChamberController
                 PropertyUtils.getReadingsPeriodMillis(),
                 chamber.getName(),
                 chamber.isHasHeater(),
-                activeGyle.getId(), activeGyle.getName(), activeGyle.getTemperatureProfile(),
+                activeGyle.getId(), activeGyle.getName(), activeGyle.getTemperatureProfile(), activeGyle.getDtStarted(),
                 activeGyle.getRecentReadings(),
                 activeGyle.getReadingsLogFilePaths().stream()
                         .map(path -> path.getFileName().toString().replace(".ndjson", ""))
@@ -142,11 +142,12 @@ public class ChamberController
         @SuppressWarnings("unused") public final int gyleId;
         @SuppressWarnings("unused") public final String gyleName;
         @SuppressWarnings("unused") public final TemperatureProfileDto temperatureProfile;
+        @SuppressWarnings("unused") public final long dtStarted;
         @SuppressWarnings("unused") public final List<ChamberReadings> recentReadings;
         @SuppressWarnings("unused") public final List<String> readingsLogs;
         public ActiveGyleDetails(int readingsTimestampResolutionMillis, int readingsPeriodMillis,
                 String chamberName, boolean hasHeater, int gyleId, String gyleName,
-                TemperatureProfileDto temperatureProfile, List<ChamberReadings> recentReadings,
+                TemperatureProfileDto temperatureProfile, long dtStarted, List<ChamberReadings> recentReadings,
                 List<String> readingsLogs)
         {
             this.readingsTimestampResolutionMillis = readingsTimestampResolutionMillis;
@@ -156,6 +157,7 @@ public class ChamberController
             this.gyleId = gyleId;
             this.gyleName = gyleName;
             this.temperatureProfile = temperatureProfile;
+            this.dtStarted = dtStarted;
             this.recentReadings = recentReadings;
             this.readingsLogs = readingsLogs;
         }

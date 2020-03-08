@@ -149,14 +149,14 @@ public class LogChartController
 
     private static class JavaMemory
     {
-        public final long free;
         public final long total;
+        public final long free;
+
 
         @SuppressWarnings("unused")
-        public String getFriendly()
+        public int getPercentageFree()
         {
-            long percentage = free * 100 / total;
-            return percentage + "% of total is free";
+            return (int)(free * 100 / total);
         }
 
         JavaMemory()
@@ -168,23 +168,21 @@ public class LogChartController
 
     private static class FileSystem
     {
-        public final long totalSpace;
-        @SuppressWarnings("unused")
-        public final long freeSpace;
-        public final long usableSpace;
+        public final long total;  // Size of the partition. (This is the largest of three figures.)
+        public final long free;   // Number of unallocated bytes in the partition. (Less than total, greater than usable.)
+        // public final long usable; // Space available to this virtual machine. (This is the lowest of three figures.)
 
         @SuppressWarnings("unused")
-        public String getFriendly()
+        public int getPercentageFree()
         {
-            long percentage = usableSpace * 100 / totalSpace;
-            return percentage + "% of total is usable";
+            return (int)(free * 100 / total);
         }
 
         FileSystem(File root)
         {
-            totalSpace = root.getTotalSpace();
-            freeSpace = root.getFreeSpace();
-            usableSpace = root.getUsableSpace();
+            total = root.getTotalSpace();
+            free = root.getFreeSpace();
+            // usable = root.getUsableSpace();
         }
     }
 

@@ -48,6 +48,8 @@ const GyleChart = () => {
     gyleId: number;
     gyleName: string;
     temperatureProfile: ITemperatureProfile;
+    dtStarted: number;
+    dtEnded: number | undefined;
     recentReadings: IReadings[];
     readingsLogs: string[];
   }
@@ -370,7 +372,8 @@ const GyleChart = () => {
       const hourMs = 1000 * 60 * 60;
 
       const formatTimeAsHtml = function(ms: number) {
-        const totalHours = Math.round(ms / hourMs); // Round to nearest hour (i.e. what we'll snap to)
+        const dtStarted = getGyleDetails().dtStarted;
+        const totalHours = Math.round((ms - dtStarted) / hourMs); // Round to nearest hour (i.e. what we'll snap to)
         const days = Math.floor(totalHours / 24) + 1;
         const hours = Math.floor(totalHours % 24);
         if (days === 1) {

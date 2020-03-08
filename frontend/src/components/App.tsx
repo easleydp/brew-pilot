@@ -72,7 +72,7 @@ const Nested = () => {
     } else {
       fetchData();
     }
-  }, [history, dispatch]);
+  }, [isAuth, history, dispatch]);
 
   // Approximation of https://github.com/react-bootstrap/react-bootstrap/issues/1301#issuecomment-251281488
   // NOTE: Not at all good that we're currently relying on `onMouseDown` on `Nav.Link`.

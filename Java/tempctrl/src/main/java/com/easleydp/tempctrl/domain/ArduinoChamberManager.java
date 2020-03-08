@@ -37,6 +37,24 @@ public class ArduinoChamberManager implements ChamberManager
     }
 
     @Override
+    public ChamberManagerStatus getChamberManagerStatus() throws IOException
+    {
+        getMessenger().sendRequest("status");
+        String response = getMessenger().getResponse("status:");
+        String[] values = response.split(",");
+        // Expecting:
+        // uptimeMins,minFreeRam,temperatureSensorsOk,logDataEjected
+        if (values.length != 4)
+            throw new IOException("Unexpected 'status' response: " + response);
+        int i = 0;
+        return new ChamberManagerStatus(
+                parseInt(values[i++]),
+                parseInt(values[i++]),
+                parseBool(values[i++]),
+                parseBool(values[i++]));
+    }
+
+    @Override
     public void setParameters(int chamberId, ChamberParameters params) throws IOException
     {
         chamberParametersByChamberId.put(chamberId, params);

@@ -16,6 +16,11 @@ public interface ChamberManager
 
     ChamberReadings getReadings(int chamberId, Date timeNow) throws IOException;
 
+    default ChamberManagerStatus getChamberManagerStatus() throws IOException
+    {
+        return new ChamberManagerStatus(-1, -1, false, false);
+    }
+
     void slurpLogMessages() throws IOException;
 
     /**

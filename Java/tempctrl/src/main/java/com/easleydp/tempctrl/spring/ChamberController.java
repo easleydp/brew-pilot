@@ -27,6 +27,25 @@ public class ChamberController
     @Autowired
     private ChamberRepository chamberRepository;
 
+// TODO: Delete is still commented-out after April 2020
+//    /**
+//     * FE calls this to discover whether the user is logged-in. Clearly, if the request succeeds
+//     * the FE has discovered the user is logged-in. Returns true if the user is admin.
+//     */
+//    @GetMapping("/guest/user-type")
+//    public UserType getUserType(HttpServletRequest request)
+//    {
+//        return new UserType(request.isUserInRole("ADMIN"));
+//    }
+//    private static final class UserType
+//    {
+//        @SuppressWarnings("unused") public final boolean isAdmin;
+//        public UserType(boolean isAdmin)
+//        {
+//            this.isAdmin = isAdmin;
+//        }
+//    }
+//
     /**
      * This is the initial end point used by the FE home page. The FE may be calling this
      * prospectively, not knowing whether the user is logged-in. Clearly, if the request succeeds
@@ -53,7 +72,6 @@ public class ChamberController
         @SuppressWarnings("unused") public final boolean isAdmin;
         public ChamberSummariesAndUserType(List<ChamberSummary> chamberSummaries, boolean isAdmin)
         {
-            super();
             this.chamberSummaries = chamberSummaries;
             this.isAdmin = isAdmin;
         }

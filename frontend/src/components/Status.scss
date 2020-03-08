@@ -1,0 +1,26 @@
+.status-page {
+  > p {
+    margin: 20px;
+  }
+  > pre {
+    padding: 10px;
+    background-color: #333;
+    color: #ddd;
+
+    .string {
+      color: #ffa600;
+    }
+    .number {
+      color: #a7ff00;
+    }
+    .boolean {
+      color: #00c3ff;
+    }
+    .null {
+      color: #00c3ff;
+    }
+    .key {
+      color: #00f2ff;
+    }
+  }
+}

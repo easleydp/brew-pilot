@@ -37,7 +37,7 @@ const GyleChart = () => {
     tChamber: number | undefined;
     tPi: number | undefined;
     heaterOutput: number | undefined;
-    coolerOn: boolean | undefined;
+    fridgeOn: boolean | undefined;
     mode: Mode | undefined;
   }
   interface IGyleDetails {
@@ -58,7 +58,7 @@ const GyleChart = () => {
     // We need access to these private properties since Series.points isn't 'live' while adding points.
     // Actually, we could do without this if we kept the last added point for each series as some local state.
     xData: number[]; // Time axis - never null;
-    yData: (number | null)[]; // Property axis - can be null for discontinuous properties such as coolerOn.
+    yData: (number | null)[]; // Property axis - can be null for discontinuous properties such as fridgeOn.
   }
 
   const chartRef = useRef<Chart | null>(null);
@@ -189,12 +189,12 @@ const GyleChart = () => {
           );
         }
 
-        const { tTarget, tBeer, tExternal, tChamber, coolerOn, heaterOutput } = readings;
+        const { tTarget, tBeer, tExternal, tChamber, fridgeOn, heaterOutput } = readings;
         maybeAddTemperaturePoint(dt, tTarget, tTargetSeries);
         maybeAddTemperaturePoint(dt, tBeer, tBeerSeries);
         maybeAddTemperaturePoint(dt, tExternal, tExternalSeries);
         maybeAddTemperaturePoint(dt, tChamber, tChamberSeries);
-        maybeAddFridgePoint(dt, coolerOn, fridgeSeries);
+        maybeAddFridgePoint(dt, fridgeOn, fridgeSeries);
         heaterSeries && maybeAddHeaterPoint(dt, heaterOutput, heaterSeries);
       });
 
@@ -235,9 +235,9 @@ const GyleChart = () => {
     }
   };
 
-  const maybeAddFridgePoint = (dt: number, coolerOn: boolean | undefined, series: SeriesPlus) => {
-    if (coolerOn !== undefined) {
-      const value = coolerOn ? 10 : null;
+  const maybeAddFridgePoint = (dt: number, fridgeOn: boolean | undefined, series: SeriesPlus) => {
+    if (fridgeOn !== undefined) {
+      const value = fridgeOn ? 10 : null;
       const valuesLen = series.yData ? series.yData.length : 0;
       // Only add if it's a different value than previous.
       if (valuesLen === 0) {
@@ -385,30 +385,35 @@ const GyleChart = () => {
       const series = [
         {
           name: 'Target beer temp.',
+          id: 'tTarget',
           type: 'line',
           dashStyle: 'ShortDot',
           color: '#777',
         } as Highcharts.SeriesLineOptions,
         {
           name: 'Beer temp.',
+          id: 'tBeer',
           type: 'spline',
           color: 'rgba(247, 163, 92, 1.0)',
           showInNavigator: true,
         } as Highcharts.SeriesSplineOptions,
         {
           name: 'Chamber temp.',
+          id: 'tChamber',
           selected: false,
           type: 'spline',
           color: 'rgba(131, 50, 168, 0.5)',
         } as Highcharts.SeriesSplineOptions,
         {
           name: 'Outside temp.',
+          id: 'tExternal',
           selected: false,
           type: 'spline',
           color: 'rgba(0, 150, 0, 0.5)',
         } as Highcharts.SeriesSplineOptions,
         {
           name: 'Fridge on',
+          id: 'fridgeOn',
           selected: false,
           type: 'area',
           color: 'rgba(113, 166, 210, 1.0)',
@@ -421,6 +426,7 @@ const GyleChart = () => {
       if (hasHeater) {
         series.push({
           name: 'Heater output',
+          id: 'heaterOutput',
           selected: false,
           type: 'areaspline',
           color: 'rgba(255, 90, 150, 0.75)',
@@ -477,7 +483,23 @@ const GyleChart = () => {
           tooltip: {
             useHTML: true,
             formatter: function() {
-              const friendlyTemp = `<strong>${this.y}&deg;C</strong>`;
+              const point = this.points && this.points[0];
+              const series = point && point.series;
+              const seriesId = series && series.options.id;
+              console.log(0, this, series, seriesId);
+
+              let friendlyValue;
+              if (seriesId === 'fridgeOn') {
+                friendlyValue = `Fridge <strong>${this.y ? 'ON' : 'OFF'}</strong>`;
+              } else if (seriesId === 'heaterOutput') {
+                if (this.y) {
+                  friendlyValue = `Heater output <strong>${Math.round(this.y)}%</strong>`;
+                } else {
+                  friendlyValue = `Heater <strong>OFF</strong>`;
+                }
+              } else {
+                friendlyValue = `<strong>${Math.round(this.y * 10) / 10}&deg;C</strong>`;
+              }
 
               // TODO - analyse how this used to work in the js version. In this ts version there
               // are two issues (the first being easy to deal with): (1) this.points may be
@@ -488,8 +510,7 @@ const GyleChart = () => {
               //   }
 
               const friendlyTime = formatTimeAsHtml(this.x).toLowerCase();
-              return `${friendlyTemp} at<br/>${friendlyTime}`;
-              // return `${friendlyTemp} at<br/>${this.x / 30000}`;
+              return `${friendlyValue} at<br/>${friendlyTime}`;
             },
           },
 

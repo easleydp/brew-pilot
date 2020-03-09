@@ -87,6 +87,16 @@ public class SecurityConfig
             configure(http, "/guest/**", "USER");
         }
     }
+    @Configuration
+    @Order(3)
+    public static class ActuatorConfigurationAdapter extends MyWebSecurityConfigurerAdapter
+    {
+        @Override
+        protected void configure(HttpSecurity http) throws Exception
+        {
+            configure(http, "/actuator/**", "ADMIN");
+        }
+    }
 
 // Uncomment this to disable authentication for actuator
 //    @Configuration

@@ -11,7 +11,7 @@ const Logout: React.FC = () => {
 
   useEffect(() => {
     axios
-      .get('/logout')
+      .get('/tempctrl/logout')
       .then(function(response) {
         console.log(response);
         dispatch({ type: 'LOGOUT' });

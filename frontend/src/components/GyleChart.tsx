@@ -486,14 +486,13 @@ const GyleChart = () => {
               const point = this.points && this.points[0];
               const series = point && point.series;
               const seriesId = series && series.options.id;
-              console.log(0, this, series, seriesId);
 
               let friendlyValue;
               if (seriesId === 'fridgeOn') {
                 friendlyValue = `Fridge <strong>${this.y ? 'ON' : 'OFF'}</strong>`;
               } else if (seriesId === 'heaterOutput') {
                 if (this.y) {
-                  friendlyValue = `Heater output <strong>${Math.round(this.y)}%</strong>`;
+                  friendlyValue = `Heater output <strong>${Math.round(this.y * 10)}%</strong>`;
                 } else {
                   friendlyValue = `Heater <strong>OFF</strong>`;
                 }

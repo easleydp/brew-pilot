@@ -218,6 +218,20 @@ public class ArduinoChamberManager implements ChamberManager
     {
         switch (prefix)
         {
+            case "MN":
+                switch (id)
+                {
+                    case '0':
+                        // float, uint32, int16
+                        if (buffer.length != 10)
+                            return "{error: \"Expected 10 bytes\"}";
+
+                        int i = 0;
+                        return String.format("{pi: %f, uint32: 0x%x, int16: %d}",
+                                bytesToFloat(buffer[i++], buffer[i++], buffer[i++], buffer[i++]),
+                                bytesToUint32(buffer[i++], buffer[i++], buffer[i++], buffer[i++]),
+                                bytesToInt16(buffer[i++], buffer[i++]));
+                }
             case "PID":
                 switch (id)
                 {
@@ -333,22 +347,22 @@ public class ArduinoChamberManager implements ChamberManager
         return sb.toString();
     }
 
-    private static float bytesToFloat(byte a, byte b, byte c, byte d)
+    static float bytesToFloat(byte loLo, byte loHi, byte hiLo, byte hiHi)
     {
-        int intBits = d << 24 | (c & 0xFF) << 16 | (b & 0xFF) << 8 | (a & 0xFF);
+        int intBits = hiHi << 24 | (hiLo & 0xFF) << 16 | (loHi & 0xFF) << 8 | (loLo & 0xFF);
         return Float.intBitsToFloat(intBits);
     }
 
-    private static int bytesToInt16(byte a, byte b)
+    static short bytesToInt16(byte lo, byte hi)
     {
-        return (b & 0xff) << 8 |  (a & 0xff);
+        return (short) (((hi & 0xFF) << 8) | (lo & 0xFF));
     }
 
     // Returning as long because Java has no `unsigned int`
-    private static long bytesToUint32(byte a, byte b, byte c, byte d)
+    static long bytesToUint32(byte loLo, byte loHi, byte hiLo, byte hiHi)
     {
         // <https://stackoverflow.com/a/27610608/65555>
-        return ((long) bytesToInt16(c, d) & 0xffff) << 16 | ((long) bytesToInt16(a, b) & 0xffff);
+        return ((long) bytesToInt16(hiLo, hiHi) & 0xffff) << 16 | ((long) bytesToInt16(loLo, loHi) & 0xffff);
     }
 
     private static void logChamberParamMismatchError(int chamberId, String paramName, Object expected, Object actual)

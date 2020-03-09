@@ -84,7 +84,7 @@ const Status: React.FC = () => {
       {!status ? (
         <p>Status unknown</p>
       ) : (
-        <pre dangerouslySetInnerHTML={syntaxHighlight(JSON.stringify(status, undefined, 2))}></pre>
+        <pre dangerouslySetInnerHTML={syntaxHighlight(JSON.stringify(status, undefined, 4))}></pre>
       )}
     </div>
   );

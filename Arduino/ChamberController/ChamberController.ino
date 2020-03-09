@@ -31,7 +31,7 @@ void setup() {
   initLoggingData();
   initChamberData();
 
-  logMsg(LOG_WARN, mainLogPrefix, '0');
+  logMsg(LOG_WARN, mainLogPrefix, '0', 1, 3.14159274101F, (uint32_t) 0xFEDC, (int16_t) -12345);
 }
 
 //TODO:

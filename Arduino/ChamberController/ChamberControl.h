@@ -3,6 +3,10 @@
 #define ON 1
 #define OFF 0
 
+// When tExternal is in our favour (for heating or cooling) by at least this much
+// we may avoid actively heating/cooling.
+#define T_EXTERNAL_BOOST_THRESHOLD 20 /* 2 degrees */
+
 static const char* logPrefixChamberControl = "CC";
 static const char* logPrefixPid = "PID";
 
@@ -79,8 +83,8 @@ void heater(ChamberData& cd, uint8_t outputLevel) {
 
 
 // Called as frequently as possible (but possibly as infrequently as once a second or so given how long controlChambers() can take).
-// Given the main loop sometimes takes a second or so to complete and given our heaterLevel has 100 steps, let's use a period of
-// 100 seconds. (If the main control loop occasionally takes longer than one second to call us again, no big deal.) So,
+// Given that the main loop sometimes takes a second or so to complete and given our heaterLevel has 100 steps, let's use a period
+// of 100 seconds. (If the main control loop occasionally takes longer than one second to call us again, no big deal.) So,
 // heaterLevel of 1 will give 1 sec ON followed by 99 secs OFF; heaterLevel of 99 will give 99 secs ON followed by 1 sec OFF; etc.
 void maintainHeaters() {
   for (byte i = 0; i < CHAMBER_COUNT; i++) {
@@ -117,17 +121,17 @@ void controlChamber(ChamberData& cd) {
 
   int16_t tError = cd.tTarget - cd.tBeer; // +ve - beer too cool; -ve beer too warm
 
+  // +ve - in our favour for heating the beer; -ve - in our favour for cooling the beer
+  int16_t tExternalBoost = tExternal - cd.tBeer;
+
   if (mode == MODE_NONE) {
     // Just monitoring
   } else if (mode == MODE_HEAT) {
-    fSetting = OFF;
     hSetting = cd.tBeer < params.tMax ? 75/* 75% rather than full on */ : 0;
   } else if (mode == MODE_COOL) {
-    hSetting = 0;
     fSetting = cd.tBeer > params.tMin ? ON : OFF;
   } else if (mode == MODE_AUTO  ||  mode == MODE_HOLD) {
     if (tError == 0) {  // Zero error (rare!)
-      hSetting = 0;
       if (cd.fridgeOn) {
         // Fridge is on. Keep it on only if hot outside and beer temp is rising.
         if (tExternal > cd.tTarget  &&  cd.tBeerLastDelta > 0) {
@@ -137,32 +141,25 @@ void controlChamber(ChamberData& cd) {
         }
       }
     } else if (tError > 0) {  // beer too cool, needs heating
-      int16_t tExternalBoost = tExternal - cd.tBeer; // +ve - in our favour
       if (cd.exothermic) {
         // Assuming our tBeer sensor is near the outside of the fermentation vessel, exothermic means the
         // beer will actually be warmer internally than our tBeer reading suggests. Compensate for this
         // by adding a couple of degrees to tExternalBoost, i.e. so we're less eager to apply heating.
         tExternalBoost += 20;
       }
-      if (tExternalBoost > 0) {  // Outside temp is in our favour
+      if ((tExternalBoost - T_EXTERNAL_BOOST_THRESHOLD) > tError) {  // Outside temp is markedly in our favour
         // Needs heating but we can leave it to tExternal
-        hSetting = 0;
-        fSetting = OFF;  // Under the circumstances maybe this should be forced?
-      } else {  // Outside temp is NOT in our favour
-        fSetting = OFF;
+      } else {  // Outside temp is not sufficiently in our favour
         heatPidWise = true;
       }
     } else { // (tError < 0)  beer too warm
-      if (tExternal < cd.tBeer) {  // Outside temp is in our favour
-        hSetting = 0;
+      if ((tExternalBoost + T_EXTERNAL_BOOST_THRESHOLD) < tError) {  // Outside temp is markedly in our favour
         // Beer needs cooling but we can leave it to tExternal
         // UNLESS exothermic, in which case we'll need to actively cool.
         if (cd.exothermic) {
           fSetting = ON;
-        } else {
-          fSetting = OFF;
         }
-      } else {  // Outside temp is NOT in our favour
+      } else {  // Outside temp is not sufficiently in our favour
         if (!cd.fridgeOn) {
           fSetting = ON;
         } else {
@@ -244,7 +241,7 @@ void controlChambers() {
     prevMillisChamberControl = uptimeMillis;
 
     uint32_t t = millis();
-    if (readTemperatures()) {  // Seems to take about 120ms per sensor
+    if (readTemperatures()) {  // Seems to take about 120ms per sensor (~720ms for 6 sensors)
       logMsg(LOG_DEBUG, logPrefixChamberControl, 'j', 1, ((uint32_t) millis() - t)/* uint32_t */);
       tExternal = getTExternalX10();
       tPi = getTPiX10();

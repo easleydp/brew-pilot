@@ -152,7 +152,7 @@ void controlChamber(ChamberData& cd) {
       } else {  // Outside temp is not sufficiently in our favour
         heatPidWise = true;
       }
-    } else { // (tError < 0)  beer too warm
+    } else { // (tError < 0)  beer too warm, needs cooling
       if ((tExternalBoost + T_EXTERNAL_BOOST_THRESHOLD) < tError) {  // Outside temp is markedly in our favour
         // Beer needs cooling but we can leave it to tExternal
         // UNLESS exothermic, in which case we'll need to actively cool.
@@ -243,13 +243,12 @@ void controlChambers() {
     uint32_t t = millis();
     if (readTemperatures()) {  // Seems to take about 120ms per sensor (~720ms for 6 sensors)
       logMsg(LOG_DEBUG, logPrefixChamberControl, 'j', 1, ((uint32_t) millis() - t)/* uint32_t */);
-      tExternal = getTExternalX10();
-      tPi = getTPiX10();
+      readTExternal();
+      readTPi();
       for (byte i = 0; i < CHAMBER_COUNT; i++) {
         ChamberData& cd = chamberDataArray[i];
-        const uint8_t chamberId = cd.params.chamberId;
-        cd.tBeer = getTBeerX10(chamberId);
-        cd.tChamber = getTChamberX10(chamberId);
+        readTBeer(cd);
+        readTChamber(cd);
         controlChamber(cd);
       }
       logMsg(LOG_DEBUG, logPrefixChamberControl, 'k', 1, ((uint32_t) millis() - t)/* uint32_t */);  // ~1100ms for 6 sensors

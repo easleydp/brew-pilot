@@ -198,7 +198,7 @@ public class ArduinoChamberManager implements ChamberManager
                 throw new IOException("Bad 'logMsg' response: " + logMessage +
                         ". Actual buffer length was " + buffer.length + " rather than " + buffLen + ".");
             }
-            sb.append("; buffer:");
+            sb.append("; buffer: ");
             sb.append(interpretBuffer(prefix, id, buffer));
         }
         switch (logLevel)
@@ -224,7 +224,7 @@ public class ArduinoChamberManager implements ChamberManager
                     case '0':
                         // float, uint32, int16
                         if (buffer.length != 10)
-                            return "{error: \"Expected 10 bytes\"}";
+                            return "setup {error: \"Expected 10 bytes\"}";
 
                         int i = 0;
                         return String.format("{pi: %f, uint32: 0x%x, int16: %d}",
@@ -238,7 +238,7 @@ public class ArduinoChamberManager implements ChamberManager
                     case '~':
                         // tError/* int16 */, cd.integral/* float */, cd.priorError/* float */
                         if (buffer.length != 10)
-                            return "{error: \"Expected 10 bytes\"}";
+                            return "PID state variables {error: \"Expected 10 bytes\"}";
 
                         int i = 0;
                         int tError = bytesToInt16(buffer[i++], buffer[i++]);
@@ -248,19 +248,24 @@ public class ArduinoChamberManager implements ChamberManager
                     case '+': case '-': case '!':
                         // pidOutput/* float */
                         if (buffer.length != 4)
-                            return "{error: \"Expected 4 bytes\"}";
+                            return "we've screwed-up somehow {error: \"Expected 4 bytes\"}";
 
                         return String.format("{pidOutput: %.3f}", bytesToFloat(buffer[0], buffer[1], buffer[2], buffer[3]));
                     case 'd':
                         // tBeerLastDelta/* int8 */
                         if (buffer.length != 1)
-                            return "{error: \"Expected 1 byte\"}";
+                            return "Decay {error: \"Expected 1 byte\"}";
 
                         return String.format("{tBeerLastDelta: %d}", buffer[0]);
                 }
             case "CD":
                 switch (id)
                 {
+                    case 'p': case 'P':
+                        if (buffer.length != 0)
+                            return "{error: \"Expected 0 bytes\"}";
+
+                        return "getEepromChamberParams " + (id == 'p' ? "good" : "bad");
                     case '0':
                         // tTarget/* int16_t */, mode/* char */
                         if (buffer.length != 3)
@@ -272,21 +277,24 @@ public class ArduinoChamberManager implements ChamberManager
                             logger.warn("CD:0 Arduino logMsg, bad mode char: " + buffer[2]);
                             ch = '!';
                         }
-                        return String.format("{tTarget: %d, mode: \"%c\"}",
+                        return String.format("updateChamberParamsAndTarget {tTarget: %d, mode: \"%c\"}",
                                 bytesToInt16(buffer[0], buffer[1]), ch);
                     case '1': case '2': case 'T': case 't':
                         // tTarget/* int16_t */
                         if (buffer.length != 2)
                             return "{error: \"Expected 2 bytes\"}";
 
-                        return String.format("{tTarget: %d}",
+                        return String.format("%s {tTarget: %d}",
+                                id == '1' ? "saveTTarget" : id == '2' ? "saveTTargetOnceInAWhile" : id == 'T' ? "getEepromTTargetWithChecksum error" : "getEepromTTargetWithChecksum good",
                                 bytesToInt16(buffer[0], buffer[1]));
                     case 'Q': case 'U':
                         // chamberId/* uint8_t */
                         if (buffer.length != 1)
                             return "{error: \"Expected 1 byte\"}";
 
-                        return String.format("{chamberId: %d}", buffer[0]);
+                        return String.format("%s {chamberId: %d}",
+                                id == 'Q' ? "getEepromChamberParams bad chamberId: " : "getEepromTTargetWithChecksum bad chamberId",
+                                buffer[0]);
                 }
             case "CC":
                 switch (id)
@@ -296,7 +304,7 @@ public class ArduinoChamberManager implements ChamberManager
                         if (buffer.length != 1)
                             return "{error: \"Expected 1 byte\"}";
 
-                        return String.format("{fridgeStateChangeMins: %d}", buffer[0]);
+                        return String.format("%s {fridgeStateChangeMins: %d}", id == 'F' ? "fridge ON" : "fridge OFF", buffer[0]);
                     case 'H':
                         // outputLevel/* uint8_t */
                         if (buffer.length != 1)
@@ -308,7 +316,9 @@ public class ArduinoChamberManager implements ChamberManager
                         if (buffer.length != 4)
                             return "{error: \"Expected 4 bytes\"}";
 
-                        return String.format("{mS: %d}", bytesToUint32(buffer[0], buffer[1], buffer[2], buffer[3]));
+                        return String.format("%s {mS: %d}",
+                                id == 'j' ? "readTemperatures duration" : "readTemperatures & control duration",
+                                bytesToUint32(buffer[0], buffer[1], buffer[2], buffer[3]));
                 }
             case "T":
                 switch (id)
@@ -318,7 +328,13 @@ public class ArduinoChamberManager implements ChamberManager
                         if (buffer.length != 1)
                             return "{error: \"Expected 1 byte\"}";
 
-                        return String.format("{sensorCount: %d}", buffer[0]);
+                        return String.format("Unexpected sensorCount {%d}", buffer[0]);
+                    case 'D':
+                        // sensorIndex/* uint8_t */, reading/* float */
+                        if (buffer.length != 5)
+                            return "{error: \"Expected 5 bytes\"}";
+
+                        return String.format("Sensor disconnected? {sensorIndex: %d, pidOutput: %.3f}", buffer[0], bytesToFloat(buffer[1], buffer[2], buffer[3], buffer[4]));
                 }
         }
 

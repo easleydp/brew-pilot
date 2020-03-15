@@ -8,8 +8,8 @@
 
 #include "Common.h"
 #include "Logging.h"
-#include "Temperature.h"
 #include "ChamberData.h"
+#include "Temperature.h"
 #include "ChamberControl.h"
 #include "Led.h"
 #include "MessageHandlingGen.h"
@@ -31,7 +31,7 @@ void setup() {
   initLoggingData();
   initChamberData();
 
-  logMsg(LOG_WARN, mainLogPrefix, '0', 1, 3.14159274101F, (uint32_t) 0xFEDC, (int16_t) -12345);
+  logMsg(LOG_INFO, mainLogPrefix, '0', 1, 3.14159274101F, (uint32_t) 0xFEDC, (int16_t) -12345);
 }
 
 //TODO:

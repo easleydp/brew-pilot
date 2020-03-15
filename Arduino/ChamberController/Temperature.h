@@ -118,6 +118,12 @@ void initTemperatureSensors() {
 int16_t getTemperatureX10(uint8_t sensorIndex) {
   Sensor& sensor = *(&sensorData[sensorIndex]);  // Who knows why `sensorData[sensorIndex]` doesn't work
   float reading = dallas.getTempCByIndex(sensor.dallasIndex) + ((float) sensor.error) / 100.0f;
+  // A disconnected sensor seems to give a reading of approximately -127.
+  // Regard anything less that -50 as an error and return a special value that denotes 'DO NOT USE!'
+  if (reading < -50.0f) {
+    logMsg(LOG_ERROR, logPrefixTemperature, 'D', 1, sensorIndex/* uint8_t */, reading/* float */);
+    return SHRT_MIN;
+  }
   int16_t readingX10 = (reading + 0.05f) * 10;
   int16_t prevReading = sensor.prevReading;
   if (prevReading == INT_MIN) {
@@ -126,18 +132,24 @@ int16_t getTemperatureX10(uint8_t sensorIndex) {
   sensor.prevReading = readingX10;
   return (prevReading + readingX10) / 2;
 }
-/* Convenience accessors */
-int16_t getTBeerX10(uint8_t chamberId) {
-  return getTemperatureX10(chamberId == 1 ? CH1_T_BEER : CH2_T_BEER);
+
+void readTBeer(ChamberData& cd) {
+  const uint8_t chamberId = cd.params.chamberId;
+  int16_t t = getTemperatureX10(chamberId == 1 ? CH1_T_BEER : CH2_T_BEER);
+  cd.tBeer = t != SHRT_MIN ? t : cd.tTarget;
 }
-int16_t getTChamberX10(uint8_t chamberId) {
-  return getTemperatureX10(chamberId == 1 ? CH1_T_CHAMBER : CH2_T_CHAMBER);
+void readTChamber(ChamberData& cd) {
+  const uint8_t chamberId = cd.params.chamberId;
+  int16_t t = getTemperatureX10(chamberId == 1 ? CH1_T_CHAMBER : CH2_T_CHAMBER);
+  cd.tChamber = t != SHRT_MIN ? t : cd.tTarget;
 }
-int16_t getTExternalX10() {
-  return getTemperatureX10(T_EXTERNAL);
+void readTExternal() {
+  int16_t t = getTemperatureX10(T_EXTERNAL);
+  tExternal = t != SHRT_MIN ? t : 0;
 }
-int16_t getTPiX10() {
-  return getTemperatureX10(T_PI);
+void readTPi() {
+  int16_t t = getTemperatureX10(T_PI);
+  tPi = t != SHRT_MIN ? t : 0;
 }
 
 //unsigned long prevMillisReadTemperatures = 0;

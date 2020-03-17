@@ -132,10 +132,10 @@ void handleGetLogMessages() {
 }
 
 void handleStatus() {
-  sendToMasterStart(); 
+  sendToMasterStart();
   Serial.print(F("status:")); Serial.print(uptimeMins);
   printComma(); Serial.print(minFreeRam);
-  printComma(); Serial.print(temperatureSensorsOk);
+  printComma(); Serial.print(badSensorCount);
   printComma(); Serial.print(logDataEjected);
   sendToMasterEnd();
 }

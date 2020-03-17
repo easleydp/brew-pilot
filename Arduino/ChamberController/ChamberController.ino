@@ -1,3 +1,14 @@
+/*
+ * I/O pins
+ */
+// Input
+#define PIN__ONE_WIRE_BUS 2  // Temperature sensor bus [WHITE]
+// Output
+#define PIN__CH1_FRIDGE   7  // Mechanical relay, ch1  [YELLOW]
+#define PIN__CH2_FRIDGE   8  // Mechanical relay, ch2  [ORANGE]
+#define PIN__CH1_HEATER   12 // SSR, ch1. (Says "low level trigger" but isn't)  [ORANGE/WHITE]
+
+
 #include <limits.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -16,10 +27,14 @@
 #include "MessageHandlingDomain.h"
 #include "TimeKeeping.h"
 
+
 static const char* mainLogPrefix = "MN";
 
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
+  pinMode(PIN__CH1_FRIDGE, OUTPUT);
+  pinMode(PIN__CH2_FRIDGE, OUTPUT);
+  pinMode(PIN__CH1_HEATER, OUTPUT);
   //buzzLed();
 
   Serial.begin(57600);
@@ -34,38 +49,20 @@ void setup() {
   logMsg(LOG_INFO, mainLogPrefix, '0', 1, 3.14159274101F, (uint32_t) 0xFEDC, (int16_t) -12345);
 }
 
-//TODO:
-// investigate why two readings with zeros
-// Check LedFlip still works since enhancing to handle wrapping
-
-/*
- * https://forum.arduino.cc/index.php?topic=122413.0
- *
- * if all your time calculations are done as:
-if  ((later_time - earlier_time ) >=duration ) {action}
-then the rollover does generally not come into play.
- *
- * millis() returns an unsigned long.
- *
- * Whenever you subtract an older time from a newer one, you get the correct unsigned result. No matter if there was an overflow.
- *
- * >>>> if ((unsigned long)(currentMillis - previousMillis) >= interval) {
- * #define TIME_UP(curr, prev, interval)  ((unsigned long)(curr - prev) >= interval)
- */
-
 void loop() {
   keepTrackOfTime();
   handleMessages();
-  if (!temperatureSensorsOk) {
+  if (badSensorCount) {
     initTemperatureSensors();
   }
-  if (temperatureSensorsOk) {
-    //testTemperatureSensors();
-    controlChambers();
-    setFlipLedPeriod(1000);
-  } else {
+  if (/* still bad */badSensorCount) {
     setFlipLedPeriod(200);
+  } else {
+    setFlipLedPeriod(1000);
+    //testTemperatureSensors();
   }
+  // Note: Even in the face of bad sensors we (conservatively) control chambers.
+  controlChambers();
 }
 
 // End

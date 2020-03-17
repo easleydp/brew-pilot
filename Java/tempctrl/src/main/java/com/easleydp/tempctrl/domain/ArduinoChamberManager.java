@@ -43,14 +43,14 @@ public class ArduinoChamberManager implements ChamberManager
         String response = getMessenger().getResponse("status:");
         String[] values = response.split(",");
         // Expecting:
-        // uptimeMins,minFreeRam,temperatureSensorsOk,logDataEjected
+        // uptimeMins,minFreeRam,badSensorCount,logDataEjected
         if (values.length != 4)
             throw new IOException("Unexpected 'status' response: " + response);
         int i = 0;
         return new ChamberManagerStatus(
                 parseInt(values[i++]),
                 parseInt(values[i++]),
-                parseBool(values[i++]),
+                parseInt(values[i++]),
                 parseBool(values[i++]));
     }
 
@@ -324,11 +324,11 @@ public class ArduinoChamberManager implements ChamberManager
                 switch (id)
                 {
                     case 'C':
-                        // sensorCount/* uint8_t */
+                        // badSensorCount/* uint8_t */
                         if (buffer.length != 1)
                             return "{error: \"Expected 1 byte\"}";
 
-                        return String.format("Unexpected sensorCount {%d}", buffer[0]);
+                        return String.format("badSensorCount {%d}", buffer[0]);
                     case 'D':
                         // sensorIndex/* uint8_t */, reading/* float */
                         if (buffer.length != 5)

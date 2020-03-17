@@ -1,7 +1,3 @@
-
-// Data wire is conntected to the Arduino digital pin 2
-#define ONE_WIRE_BUS 2
-
 // Only used for test. Otherwise we read temperatures whenever requested.
 #define TEMP_READINGS_MILLIS 10000
 
@@ -9,7 +5,7 @@
 #define SENSOR_COUNT 6
 
 // Setup a oneWire instance to communicate with any OneWire devices
-OneWire oneWire(ONE_WIRE_BUS);
+OneWire oneWire(PIN__ONE_WIRE_BUS);
 // Pass our oneWire reference to Dallas Temperature sensor
 DallasTemperature dallas(&oneWire);
 
@@ -70,7 +66,7 @@ Sensor* findSensorByAddress(const DeviceAddress& fullAddress) {
   return NULL;
 }
 
-boolean temperatureSensorsOk = false;
+uint8_t badSensorCount = 0;
 
 // This must be called once each period before reading the individual temperatures (using getTemperatureX10()).
 // Retuns true if all ok.
@@ -78,8 +74,8 @@ boolean readTemperatures() {
   dallas.requestTemperatures();
   uint8_t sensorCount = dallas.getDS18Count();
   if (sensorCount != SENSOR_COUNT) {
-    logMsg(LOG_ERROR, logPrefixTemperature, 'C', 1, sensorCount/* uint8_t */);
-    temperatureSensorsOk = false;
+    badSensorCount = SENSOR_COUNT - sensorCount;
+    logMsg(LOG_ERROR, logPrefixTemperature, 'C', 1, badSensorCount/* uint8_t */);
     return false;
   }
   return true;
@@ -90,28 +86,27 @@ void initTemperatureSensors() {
   delay(1000);
   dallas.begin();
   delay(1000);
-  if (readTemperatures()) {
-    // Edit this in sympathy with SENSOR_COUNT, having established the device errors using calibrateTemperatureSensors()
-    initSensorData(CH1_T_BEER,    0x3A11, 19);
-    initSensorData(CH1_T_CHAMBER, 0x3606, 7);
-    initSensorData(CH2_T_BEER,    0x3EE1, 6);
-    initSensorData(CH2_T_CHAMBER, 0x79BA, -6);
-    initSensorData(T_EXTERNAL,    0xBD96, -9);
-    initSensorData(T_PI,          0x3B79, -13);
+  readTemperatures();
+  // Edit this in sympathy with SENSOR_COUNT, having established the device errors using calibrateTemperatureSensors()
+  initSensorData(CH1_T_BEER,    0x3A11, 19);
+  initSensorData(CH1_T_CHAMBER, 0x3606, 7);
+  initSensorData(CH2_T_BEER,    0x3EE1, 6);
+  initSensorData(CH2_T_CHAMBER, 0x79BA, -6);
+  initSensorData(T_EXTERNAL,    0xBD96, -9);
+  initSensorData(T_PI,          0x3B79, -13);
 
-    DeviceAddress address;
-    for (uint8_t i = 0; i < SENSOR_COUNT; i++) {
-      dallas.getAddress(address, i);
-      Sensor* ptr = findSensorByAddress(address);
-      if (ptr == NULL) {
-        Serial.print(F("ERROR! no found: "));
-        Serial.println(shortenAddress(address), HEX);
-        return;
-      }
-      ptr->dallasIndex = i;
+  DeviceAddress address;
+  for (uint8_t i = 0; i < SENSOR_COUNT; i++) {
+    dallas.getAddress(address, i);
+    Sensor* ptr = findSensorByAddress(address);
+    if (ptr == NULL) {
+      Serial.print(F("ERROR! no found: "));
+      Serial.println(shortenAddress(address), HEX);
+      return;
     }
-    temperatureSensorsOk = true;
+    ptr->dallasIndex = i;
   }
+  badSensorCount = 0;
 }
 
 // Retrieves latest reading for the specified sensor, converts to int x10, and applies a degree of averaging w.r.t. previous readings.
@@ -154,7 +149,7 @@ void readTPi() {
 
 //unsigned long prevMillisReadTemperatures = 0;
 //void testTemperatureSensors() {
-//  if (!temperatureSensorsOk)
+//  if (badSensorCount > 0)
 //    return;
 //  if (uptimeMillis - prevMillisReadTemperatures >= TEMP_READINGS_MILLIS) {
 //    prevMillisReadTemperatures = uptimeMillis;

@@ -11,15 +11,18 @@ static const char* logPrefixChamberControl = "CC";
 static const char* logPrefixPid = "PID";
 
 void forceFridge(ChamberData& cd, byte setting) {
+  uint8_t pin = cd.params.chamberId == 1 ? PIN__CH1_FRIDGE : PIN__CH2_FRIDGE;
   if (setting == ON) {
-    //TODO: FRIDGE PIN ON
+    // FRIDGE ON
+    digitalWrite(pin, HIGH);
     if (!cd.fridgeOn) {
       logMsg(LOG_INFO, logPrefixChamberControl, 'F', cd.params.chamberId, cd.fridgeStateChangeMins/* uint8_t */);
       cd.fridgeStateChangeMins = 0;
       cd.fridgeOn = true;
     }
   } else {
-    //TODO: FRIDGE PIN OFF
+    // FRIDGE OFF
+    digitalWrite(pin, LOW);
     if (cd.fridgeOn) {
       logMsg(LOG_INFO, logPrefixChamberControl, 'f', cd.params.chamberId, cd.fridgeStateChangeMins/* uint8_t */);
       cd.fridgeStateChangeMins = 0;
@@ -31,13 +34,15 @@ void forceFridge(ChamberData& cd, byte setting) {
 
 void setHeaterElement(ChamberData& cd, byte setting) {
   if (setting == ON) {
-    //TODO: HEATER PIN ON
+    // HEATER ON
+    digitalWrite(PIN__CH1_HEATER, HIGH);
     if (!cd.heaterElementOn) {
       cd.heaterElementStateChangeSecs = 0;
       cd.heaterElementOn = true;
     }
   } else {
-    //TODO: HEATER PIN OFF
+    // HEATER OFF
+    digitalWrite(PIN__CH1_HEATER, LOW);
     if (cd.heaterElementOn) {
       cd.heaterElementStateChangeSecs = 0;
       cd.heaterElementOn = false;
@@ -241,18 +246,17 @@ void controlChambers() {
     prevMillisChamberControl = uptimeMillis;
 
     uint32_t t = millis();
-    if (readTemperatures()) {  // Seems to take about 120ms per sensor (~720ms for 6 sensors)
-      logMsg(LOG_DEBUG, logPrefixChamberControl, 'j', 1, ((uint32_t) millis() - t)/* uint32_t */);
-      readTExternal();
-      readTPi();
-      for (byte i = 0; i < CHAMBER_COUNT; i++) {
-        ChamberData& cd = chamberDataArray[i];
-        readTBeer(cd);
-        readTChamber(cd);
-        controlChamber(cd);
-      }
-      logMsg(LOG_DEBUG, logPrefixChamberControl, 'k', 1, ((uint32_t) millis() - t)/* uint32_t */);  // ~1100ms for 6 sensors
+    readTemperatures();  // Seems to take about 120ms per sensor (~720ms for 6 sensors)
+    logMsg(LOG_DEBUG, logPrefixChamberControl, 'j', 1, ((uint32_t) millis() - t)/* uint32_t */);
+    readTExternal();
+    readTPi();
+    for (byte i = 0; i < CHAMBER_COUNT; i++) {
+      ChamberData& cd = chamberDataArray[i];
+      readTBeer(cd);
+      readTChamber(cd);
+      controlChamber(cd);
     }
+    logMsg(LOG_DEBUG, logPrefixChamberControl, 'k', 1, ((uint32_t) millis() - t)/* uint32_t */);  // ~1100ms for 6 sensors
   }
   maintainHeaters();
 }

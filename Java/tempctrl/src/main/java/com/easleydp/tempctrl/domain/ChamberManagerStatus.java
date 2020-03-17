@@ -9,17 +9,17 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 public class ChamberManagerStatus
 {
     public ChamberManagerStatus(
-            int uptimeMins, int minFreeRam, boolean temperatureSensorsOk, boolean logDataEjected)
+            int uptimeMins, int minFreeRam, int badSensorCount, boolean logDataEjected)
     {
         this.uptimeMins = uptimeMins;
         this.minFreeRam = minFreeRam;
-        this.temperatureSensorsOk = temperatureSensorsOk;
+        this.badSensorCount = badSensorCount;
         this.logDataEjected = logDataEjected ? true : null;
     }
 
     private final int uptimeMins;
     public final int minFreeRam;
-    public final boolean temperatureSensorsOk;
+    public final int badSensorCount;
     @JsonInclude(Include.NON_NULL)
     public final Boolean logDataEjected;
 

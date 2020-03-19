@@ -2,6 +2,8 @@ package com.easleydp.tempctrl.domain;
 
 import java.util.Iterator;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.util.Assert;
 
@@ -14,6 +16,8 @@ import org.springframework.util.Assert;
  */
 public class TemperatureProfile extends TemperatureProfileDto
 {
+    private static final Logger logger = LoggerFactory.getLogger(TemperatureProfile.class);
+
     public TemperatureProfile(TemperatureProfileDto temperatureProfileDto)
     {
         BeanUtils.copyProperties(temperatureProfileDto, this);
@@ -68,7 +72,7 @@ public class TemperatureProfile extends TemperatureProfileDto
             prevPoint = point;
             point = iter.next();
 
-            if (millisSinceStart == point.getMillisSinceStart())
+            if (point.getMillisSinceStart() == millisSinceStart)
                 return point.getTargetTemp();
 
             if (point.getMillisSinceStart() > millisSinceStart)

@@ -14,7 +14,7 @@ void forceFridge(ChamberData& cd, byte setting) {
   uint8_t pin = cd.params.chamberId == 1 ? PIN__CH1_FRIDGE : PIN__CH2_FRIDGE;
   if (setting == ON) {
     // FRIDGE ON
-    digitalWrite(pin, HIGH);
+    digitalWrite(pin, LOW);
     if (!cd.fridgeOn) {
       logMsg(LOG_INFO, logPrefixChamberControl, 'F', cd.params.chamberId, cd.fridgeStateChangeMins/* uint8_t */);
       cd.fridgeStateChangeMins = 0;
@@ -22,7 +22,7 @@ void forceFridge(ChamberData& cd, byte setting) {
     }
   } else {
     // FRIDGE OFF
-    digitalWrite(pin, LOW);
+    digitalWrite(pin, HIGH);
     if (cd.fridgeOn) {
       logMsg(LOG_INFO, logPrefixChamberControl, 'f', cd.params.chamberId, cd.fridgeStateChangeMins/* uint8_t */);
       cd.fridgeStateChangeMins = 0;
@@ -35,14 +35,14 @@ void forceFridge(ChamberData& cd, byte setting) {
 void setHeaterElement(ChamberData& cd, byte setting) {
   if (setting == ON) {
     // HEATER ON
-    digitalWrite(PIN__CH1_HEATER, HIGH);
+    digitalWrite(PIN__CH1_HEATER, LOW);
     if (!cd.heaterElementOn) {
       cd.heaterElementStateChangeSecs = 0;
       cd.heaterElementOn = true;
     }
   } else {
     // HEATER OFF
-    digitalWrite(PIN__CH1_HEATER, LOW);
+    digitalWrite(PIN__CH1_HEATER, HIGH);
     if (cd.heaterElementOn) {
       cd.heaterElementStateChangeSecs = 0;
       cd.heaterElementOn = false;
@@ -186,7 +186,7 @@ void controlChamber(ChamberData& cd) {
     if (pidOutput < 0.0) { // we've screwed-up somehow
       logMsg(LOG_ERROR, logPrefixPid, '!', chamberId, pidOutput/* float */);
       hSetting = 0;
-    } else if (pidOutput >= 100.0) {
+    } else if (pidOutput > 100.0) {
       logMsg(LOG_WARN, logPrefixPid, '+', chamberId, pidOutput/* float */);
       hSetting = 100;
     } else {

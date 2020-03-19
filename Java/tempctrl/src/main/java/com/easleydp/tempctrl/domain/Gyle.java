@@ -116,9 +116,13 @@ public class Gyle extends GyleDto
 
     public ChamberParameters getChamberParameters(Date timeNow)
     {
+    	Long dtStarted = getDtStarted();
+        Assert.state(dtStarted != null, "getDtStarted() should be non-null");
         long timeNowMs = timeNow.getTime();
+        long millisSinceStart = timeNowMs - dtStarted;
+        logger.debug("millisSinceStart: " + millisSinceStart + "(timeNowMs=" + timeNowMs + ", dtStarted=" + dtStarted + ")");
         TemperatureProfile tp = getTemperatureProfile();
-        return new ChamberParameters(tp.getTargetTempAt(timeNowMs), tp.getTargetTempAt(timeNowMs + 1000 * 60 * 60),
+        return new ChamberParameters(tp.getTargetTempAt(millisSinceStart), tp.getTargetTempAt(millisSinceStart + 1000 * 60 * 60),
                 chamber.gettMin(), chamber.gettMax(), chamber.isHasHeater(), chamber.getKp(), chamber.getKi(), chamber.getKd(),
                 isActive() ? Mode.AUTO : Mode.NONE);
     }

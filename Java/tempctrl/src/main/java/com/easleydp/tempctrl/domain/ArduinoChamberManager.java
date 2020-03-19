@@ -238,25 +238,27 @@ public class ArduinoChamberManager implements ChamberManager
                     case '~':
                         // tError/* int16 */, cd.integral/* float */, cd.priorError/* float */
                         if (buffer.length != 10)
-                            return "PID state variables {error: \"Expected 10 bytes\"}";
+                            return "{error: \"Expected 10 bytes\"}";
 
                         int i = 0;
                         int tError = bytesToInt16(buffer[i++], buffer[i++]);
                         float integral = bytesToFloat(buffer[i++], buffer[i++], buffer[i++], buffer[i++]);
                         float priorError = bytesToFloat(buffer[i++], buffer[i++], buffer[i++], buffer[i++]);
-                        return String.format("{tError: %d, integral: %.3f, priorError: %.3f}", tError, integral, priorError);
+                        return String.format("PID state variables  {tError: %d, integral: %.3f, priorError: %.3f}", tError, integral, priorError);
                     case '+': case '-': case '!':
                         // pidOutput/* float */
                         if (buffer.length != 4)
-                            return "we've screwed-up somehow {error: \"Expected 4 bytes\"}";
+                            return "{error: \"Expected 4 bytes\"}";
 
-                        return String.format("{pidOutput: %.3f}", bytesToFloat(buffer[0], buffer[1], buffer[2], buffer[3]));
+                        return String.format("%s {pidOutput: %.3f}",
+                                id == '+' ? "pidOutput > 100" : id == '-' ? "pidOutput" : "pidOutput < 0 (we've screwed-up somehow)",
+                        		bytesToFloat(buffer[0], buffer[1], buffer[2], buffer[3]));
                     case 'd':
                         // tBeerLastDelta/* int8 */
                         if (buffer.length != 1)
-                            return "Decay {error: \"Expected 1 byte\"}";
+                            return "{error: \"Expected 1 byte\"}";
 
-                        return String.format("{tBeerLastDelta: %d}", buffer[0]);
+                        return String.format("Decay {tBeerLastDelta: %d}", buffer[0]);
                 }
             case "CD":
                 switch (id)

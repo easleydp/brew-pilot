@@ -6,6 +6,8 @@ import java.nio.file.Paths;
 
 import javax.annotation.PostConstruct;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -27,7 +29,7 @@ import com.easleydp.tempctrl.domain.PropertyUtils;
 @EnableScheduling
 public class TempctrlApplication
 {
-    // private static final Logger logger = LoggerFactory.getLogger(TempctrlApplication.class);
+    private static final Logger logger = LoggerFactory.getLogger(TempctrlApplication.class);
 
     @Autowired
     private Environment env;
@@ -56,7 +58,9 @@ public class TempctrlApplication
     @Bean
     public ChamberManager chamberManager(ChamberRepository chamberRepository)
     {
-        return PropertyUtils.getBoolean("dummy.chambers", false) ?
+    	boolean useDummyChamberManager = PropertyUtils.getBoolean("dummy.chambers", false);
+    	logger.info("Using " + (useDummyChamberManager ? "DummyChamberManager" : "ArduinoChamberManager"));
+        return useDummyChamberManager ?
                     new DummyChamberManager(chamberRepository) :
                     new ArduinoChamberManager(chamberRepository);
     }

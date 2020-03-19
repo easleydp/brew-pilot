@@ -6,7 +6,7 @@
 // Output
 #define PIN__CH1_FRIDGE   7  // Mechanical relay, ch1  [YELLOW]
 #define PIN__CH2_FRIDGE   8  // Mechanical relay, ch2  [ORANGE]
-#define PIN__CH1_HEATER   12 // SSR, ch1. (Says "low level trigger" but isn't)  [ORANGE/WHITE]
+#define PIN__CH1_HEATER   12 // SSR, ch1               [ORANGE/WHITE]
 
 
 #include <limits.h>
@@ -36,6 +36,11 @@ void setup() {
   pinMode(PIN__CH2_FRIDGE, OUTPUT);
   pinMode(PIN__CH1_HEATER, OUTPUT);
   //buzzLed();
+
+  // Since all the relays are 'low level trigger', switch them all OFF
+  digitalWrite(PIN__CH1_FRIDGE, HIGH);
+  digitalWrite(PIN__CH2_FRIDGE, HIGH);
+  digitalWrite(PIN__CH1_HEATER, HIGH);
 
   Serial.begin(57600);
   while (!Serial) {

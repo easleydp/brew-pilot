@@ -68,18 +68,19 @@ public class CollectReadingsScheduler
 
         try
         {
-            logger.debug("Slurping log messages before sending parameters to chamber " + chamberId);
+        	logger.debug("================ takeReadingsForChamber(" + chamberId + ", " + date + ")");
+            logger.debug("Slurping log messages BEFORE SENDING parameters to chamber " + chamberId);
             chamberManager.slurpLogMessages();
             ChamberParameters cp = ag != null ? ag.getChamberParameters(date) : ch.getPartialChamberParameters();
             chamberManager.setParameters(chamberId, cp);
-            logger.debug("Slurping log messages after sending parameters to chamber " + chamberId);
+            logger.debug("Slurping log messages AFTER SENDING parameters to chamber " + chamberId);
             chamberManager.slurpLogMessages();
 
             if (ag != null)
             {
-                logger.debug("taking readings for chamber " + ag.chamber.getId() + " gyle " + ag.gyleDir.getFileName());
+                logger.debug("Taking readings for chamber " + ag.chamber.getId() + " gyle " + ag.gyleDir.getFileName());
                 ag.collectReadings(chamberManager, date);
-                logger.debug("Slurping log messages after collecting readings for chamber " + chamberId);
+                logger.debug("Slurping log messages AFTER COLLECTING readings for chamber " + chamberId);
                 chamberManager.slurpLogMessages();
             }
         }

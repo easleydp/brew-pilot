@@ -231,11 +231,23 @@ public class ArduinoChamberManager implements ChamberManager
                                 bytesToFloat(buffer[i++], buffer[i++], buffer[i++], buffer[i++]),
                                 bytesToUint32(buffer[i++], buffer[i++], buffer[i++], buffer[i++]),
                                 bytesToInt16(buffer[i++], buffer[i++]));
+                    default:
+                        break;
                 }
             case "PID":
                 switch (id)
                 {
+	                case 'W':
+	                {
+	                    // intergalContrib/* float */
+	                    if (buffer.length != 4)
+	                        return "{error: \"Expected 4 bytes\"}";
+	
+	                    int i = 0;
+	                    return String.format("Reject {intergalContrib: %.3f}", bytesToFloat(buffer[i++], buffer[i++], buffer[i++], buffer[i++]));
+	                }
                     case '~':
+                    {
                         // tError/* int16 */, cd.integral/* float */, cd.priorError/* float */
                         if (buffer.length != 10)
                             return "{error: \"Expected 10 bytes\"}";
@@ -245,6 +257,7 @@ public class ArduinoChamberManager implements ChamberManager
                         float integral = bytesToFloat(buffer[i++], buffer[i++], buffer[i++], buffer[i++]);
                         float priorError = bytesToFloat(buffer[i++], buffer[i++], buffer[i++], buffer[i++]);
                         return String.format("PID state variables  {tError: %d, integral: %.3f, priorError: %.3f}", tError, integral, priorError);
+                    }
                     case '+': case '-': case '!':
                         // pidOutput/* float */
                         if (buffer.length != 4)
@@ -253,12 +266,35 @@ public class ArduinoChamberManager implements ChamberManager
                         return String.format("%s {pidOutput: %.3f}",
                                 id == '+' ? "pidOutput > 100" : id == '-' ? "pidOutput" : "pidOutput < 0 (we've screwed-up somehow)",
                         		bytesToFloat(buffer[0], buffer[1], buffer[2], buffer[3]));
+                    case 'C':
+                    {
+                        // PID output Components, 3 floats */
+                        if (buffer.length != 12)
+                            return "{error: \"Expected 12 bytes\"}";
+
+                        int i = 0;
+                        float c1 = bytesToFloat(buffer[i++], buffer[i++], buffer[i++], buffer[i++]);
+                        float c2 = bytesToFloat(buffer[i++], buffer[i++], buffer[i++], buffer[i++]);
+                        float c3 = bytesToFloat(buffer[i++], buffer[i++], buffer[i++], buffer[i++]);
+                        return String.format("PID output components  {Kp*tError: %.3f, Ki*integral: %.3f, Kd*(tError-priorError): %.3f}", c1, c2, c3);
+                    }
                     case 'd':
                         // tBeerLastDelta/* int8 */
                         if (buffer.length != 1)
                             return "{error: \"Expected 1 byte\"}";
 
                         return String.format("Decay {tBeerLastDelta: %d}", buffer[0]);
+                    case 'D':
+                    {
+                        // integral/* float */
+                        if (buffer.length != 4)
+                            return "{error: \"Expected 4 bytes\"}";
+
+                        int i = 0;
+                        return String.format("Decay {integral: %.3f}", bytesToFloat(buffer[i++], buffer[i++], buffer[i++], buffer[i++]));
+                    }
+                    default:
+                        break;
                 }
             case "CD":
                 switch (id)
@@ -297,6 +333,8 @@ public class ArduinoChamberManager implements ChamberManager
                         return String.format("%s {chamberId: %d}",
                                 id == 'Q' ? "getEepromChamberParams bad chamberId: " : "getEepromTTargetWithChecksum bad chamberId",
                                 buffer[0]);
+                    default:
+                        break;
                 }
             case "CC":
                 switch (id)
@@ -321,6 +359,8 @@ public class ArduinoChamberManager implements ChamberManager
                         return String.format("%s {mS: %d}",
                                 id == 'j' ? "readTemperatures duration" : "readTemperatures & control duration",
                                 bytesToUint32(buffer[0], buffer[1], buffer[2], buffer[3]));
+                    default:
+                        break;
                 }
             case "T":
                 switch (id)
@@ -337,6 +377,8 @@ public class ArduinoChamberManager implements ChamberManager
                             return "{error: \"Expected 5 bytes\"}";
 
                         return String.format("Sensor disconnected? {sensorIndex: %d, pidOutput: %.3f}", buffer[0], bytesToFloat(buffer[1], buffer[2], buffer[3], buffer[4]));
+                    default:
+                        break;
                 }
         }
 

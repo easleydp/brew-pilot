@@ -85,8 +85,7 @@ public class TemperatureProfile extends TemperatureProfileDto
                 final long xB = point.getMillisSinceStart();
                 final long x = millisSinceStart;
                 // https://en.wikipedia.org/wiki/Interpolation#Linear_interpolation
-                final long y = yA + (yB - yA) * (x - xA) / (xB - xA);
-                return (int) y;
+                return Math.round(yA + (yB - yA) * (x - xA) / (xB - xA));
             }
         }
         return point.getTargetTemp();

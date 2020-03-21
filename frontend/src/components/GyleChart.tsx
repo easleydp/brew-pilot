@@ -483,33 +483,45 @@ const GyleChart = () => {
           tooltip: {
             useHTML: true,
             formatter: function() {
-              const point = this.points && this.points[0];
-              const series = point && point.series;
-              const seriesId = series && series.options.id;
-
-              let friendlyValue;
-              if (seriesId === 'fridgeOn') {
-                friendlyValue = `Fridge <strong>${this.y ? 'ON' : 'OFF'}</strong>`;
-              } else if (seriesId === 'heaterOutput') {
-                if (this.y) {
-                  friendlyValue = `Heater output <strong>${Math.round(this.y * 10)}%</strong>`;
-                } else {
-                  friendlyValue = `Heater <strong>OFF</strong>`;
-                }
-              } else {
-                friendlyValue = `<strong>${Math.round(this.y * 10) / 10}&deg;C</strong>`;
+              const points = this.points;
+              if (!points) {
+                return false;
               }
+              const tips: Array<string | null> = points.map(p => {
+                const series = p.series;
+                const seriesId = series && series.options.id;
+                if (!seriesId) {
+                  return null;
+                }
 
-              // TODO - analyse how this used to work in the js version. In this ts version there
-              // are two issues (the first being easy to deal with): (1) this.points may be
-              // undefined; (2) Point has no `index` property.
-              //   const i = this.points[0].point.index;
-              //   if (i === 0) {
-              //     return `Started at ${friendlyTemp}`;
-              //   }
+                let friendlyValue;
+                if (seriesId === 'fridgeOn') {
+                  friendlyValue = `Fridge <strong>${p.y ? 'ON' : 'OFF'}</strong>`;
+                } else if (seriesId === 'heaterOutput') {
+                  if (p.y) {
+                    friendlyValue = `Heater output <strong>${Math.round(p.y * 10)}%</strong>`;
+                  } else {
+                    friendlyValue = `Heater <strong>OFF</strong>`;
+                  }
+                } else {
+                  friendlyValue = `${series.name} <strong>${Math.round(p.y * 10) /
+                    10}&deg;C</strong>`;
+                }
 
-              const friendlyTime = formatTimeAsHtml(this.x).toLowerCase();
-              return `${friendlyValue} at<br/>${friendlyTime}`;
+                // TODO - analyse how this used to work in the js version. In this ts version there
+                // are two issues (the first being easy to deal with): (1) this.points may be
+                // undefined; (2) Point has no `index` property.
+                //   const i = this.points[0].point.index;
+                //   if (i === 0) {
+                //     return `Started at ${friendlyTemp}`;
+                //   }
+
+                return friendlyValue;
+              });
+
+              // First array item is the 'header'
+              tips.unshift(formatTimeAsHtml(this.x));
+              return tips;
             },
           },
 

@@ -124,7 +124,7 @@ void controlChamber(ChamberData& cd) {
   // See if a local mode has been set (via the panel switch), fall-back to the value set by the RPi
   const char mode = cd.mode != MODE_UNSET ? cd.mode : params.mode;
 
-  int16_t tError = cd.tTarget - cd.tBeer; // +ve - beer too cool; -ve beer too warm
+  const int16_t tError = cd.tTarget - cd.tBeer; // +ve - beer too cool; -ve beer too warm
 
   // +ve - in our favour for heating the beer; -ve - in our favour for cooling the beer
   int16_t tExternalBoost = tExternal - cd.tBeer;
@@ -144,6 +144,11 @@ void controlChamber(ChamberData& cd) {
           if (cd.tTargetNext <= cd.tTarget)
             fSetting = ON;
         }
+      } else {
+        // Continue to 'heatPidWise' if tExternal < target. In this condition we want the
+        // integral component to maintain the target temperature with a steady heater output.
+        if (tExternal < cd.tTarget)
+          heatPidWise = true;
       }
     } else if (tError > 0) {  // beer too cool, needs heating
       if (cd.exothermic) {
@@ -178,9 +183,20 @@ void controlChamber(ChamberData& cd) {
 
   // Note: we maintain the PID state variables - integral & priorError - even when
   // not PID heating in case we commence PID heating next time round.
-  cd.integral += tError;
+
+  // To avoid integral wind-up, we constrain as follows: If the integral contribution is too large, reject the adjustment.
+  float latestIntegral = cd.integral + tError;
+  float intergalContrib = params.Ki*latestIntegral;
+  if (abs(intergalContrib) > 50)
+    logMsg(LOG_DEBUG, logPrefixPid, 'W', chamberId, intergalContrib/* float */);
+  else
+    cd.integral = latestIntegral;
+
   logMsg(LOG_DEBUG, logPrefixPid, '~', chamberId, tError/* int16 */, cd.integral/* float */, cd.priorError/* float */);
   if (heatPidWise) {
+    // Tuning insight - see what each PID factor is contributing:
+    logMsg(LOG_DEBUG, logPrefixPid, 'C'/* PID output Components (3 floats) */,
+      chamberId, params.Kp*tError, params.Ki*cd.integral, params.Kd*(tError - cd.priorError));
     float pidOutput = params.Kp*tError + params.Ki*cd.integral + params.Kd*(tError - cd.priorError);
     // PID output range check
     if (pidOutput < 0.0) { // we've screwed-up somehow
@@ -191,19 +207,22 @@ void controlChamber(ChamberData& cd) {
       hSetting = 100;
     } else {
       logMsg(LOG_DEBUG, logPrefixPid, '-', chamberId, pidOutput/* float */);
-      hSetting = pidOutput;
+      hSetting = round(pidOutput);
     }
   }
+
+  // Detect tBeer change/trend, with decay each time no change.
   if (cd.priorError - tError != 0) {
     cd.tBeerLastDelta = (cd.priorError - tError) * 10; // *10 is so we don't decay to zero too soon
   } else {
-    // Decay
+    // No change in the error since last time. Decay the last recorded change in error.
     logMsg(LOG_DEBUG, logPrefixPid, 'd', chamberId, cd.tBeerLastDelta/* int8 */);
     if (cd.tBeerLastDelta > 0)
       cd.tBeerLastDelta -= 1;
     else if (cd.tBeerLastDelta < 0)
       cd.tBeerLastDelta += 1;
   }
+
   cd.priorError = tError;
 
   /* Do it! */

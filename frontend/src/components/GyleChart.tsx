@@ -405,7 +405,7 @@ const GyleChart = () => {
           color: 'rgba(131, 50, 168, 0.5)',
         } as Highcharts.SeriesSplineOptions,
         {
-          name: 'Outside temp.',
+          name: 'Garage temp.', // TODO: Make "Garage" part configurable
           id: 'tExternal',
           selected: false,
           type: 'spline',
@@ -649,13 +649,26 @@ const GyleChart = () => {
     // gyleDetails along with the latestReadings from the supplied gyleDetails.
     const getAggregatedReadings = (gyleDetails: IGyleDetails): Promise<IReadings[]> => {
       return new Promise((resolve, reject) => {
-        const aggregatedReadings: IReadings[] = [];
+        let aggregatedReadings: IReadings[] = [];
         Promise.all(gyleDetails.readingsLogs.map(logName => getLogFileReadings(logName))).then(
           logFilesReadings => {
             logFilesReadings.forEach(logFileReadings => {
               aggregatedReadings.push(...logFileReadings);
             });
             aggregatedReadings.push(...gyleDetails.recentReadings);
+
+            // Drop any readings earlier than the gyle's start time
+            const earliestReading = aggregatedReadings[0];
+            const dtStarted = gyleDetails.dtStarted;
+            if (earliestReading && restoreUtcMillisPrecision(earliestReading.dt) < dtStarted) {
+              const totalCount = aggregatedReadings.length;
+              aggregatedReadings = aggregatedReadings.filter(reading => {
+                return restoreUtcMillisPrecision(reading.dt) >= dtStarted;
+              });
+              const droppedCount = totalCount - aggregatedReadings.length;
+              console.debug(`Dropped ${droppedCount} readings earlier than the gyle's start time`);
+            }
+
             resolve(aggregatedReadings);
           }
         );

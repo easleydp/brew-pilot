@@ -54,12 +54,14 @@ public class SecurityConfig
         InMemoryUserDetailsManager manager = new InMemoryUserDetailsManager();
 
         // For debug: String pwdHash = encoder().encode("?????");
-        String pwdHash = env.getProperty("pwdhash.guest");
+        String pwdHash = env.getProperty("pwdhash.guest")
+            .replaceAll("#dollar#", "\\$");  // For running from vscode
         Assert.state(pwdHash != null && pwdHash.length() > 0, "Guest password not specified");
         manager.createUser(User.withUsername("guest").password(pwdHash)
                 .roles("USER").build());
 
-        pwdHash = env.getProperty("pwdhash.admin");
+        pwdHash = env.getProperty("pwdhash.admin")
+            .replaceAll("#dollar#", "\\$");  // For running from vscode
         Assert.state(pwdHash != null && pwdHash.length() > 0, "Admin password not specified");
         manager.createUser(User.withUsername("admin").password(pwdHash)
                 .roles("USER", "ADMIN").build());

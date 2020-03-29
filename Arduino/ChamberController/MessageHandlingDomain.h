@@ -12,23 +12,35 @@ void handleSetChamberParams(char* cmd) {
 
   i = j;
   j = nullNextComma(cmd, i);
-  int tTarget = atoi(&cmd[i]);
+  int16_t tTarget = atoi(&cmd[i]);
 
   i = j;
   j = nullNextComma(cmd, i);
-  int tTargetNext = atoi(&cmd[i]);
+  int16_t tTargetNext = atoi(&cmd[i]);
 
   i = j;
   j = nullNextComma(cmd, i);
-  int tMin = atoi(&cmd[i]);
+  int16_t tMin = atoi(&cmd[i]);
 
   i = j;
   j = nullNextComma(cmd, i);
-  int tMax = atoi(&cmd[i]);
+  int16_t tMax = atoi(&cmd[i]);
 
   i = j;
   j = nullNextComma(cmd, i);
   boolean hasHeater = atoi(&cmd[i]);
+
+  i = j;
+  j = nullNextComma(cmd, i);
+  uint8_t fridgeMinOnTimeMins = atoi(&cmd[i]);
+
+  i = j;
+  j = nullNextComma(cmd, i);
+  uint8_t fridgeMinOffTimeMins = atoi(&cmd[i]);
+
+  i = j;
+  j = nullNextComma(cmd, i);
+  uint8_t fridgeSwitchOnLagMins = atoi(&cmd[i]);
 
   i = j;
   j = nullNextComma(cmd, i);
@@ -50,7 +62,8 @@ void handleSetChamberParams(char* cmd) {
   if (cdPtr == NULL) {
     return respondWithError("chamberId,", itoa(chamberId));
   }
-  updateChamberParamsAndTarget(*cdPtr, tTarget, tTargetNext, tMin, tMax, hasHeater, Kp, Ki, Kd, mode);
+  updateChamberParamsAndTarget(*cdPtr, tTarget, tTargetNext, tMin, tMax, hasHeater,
+    fridgeMinOnTimeMins, fridgeMinOffTimeMins, fridgeSwitchOnLagMins, Kp, Ki, Kd, mode);
   sendAck();
 }
 
@@ -73,6 +86,12 @@ void handleGetChamberReadings(const char* cmd) {
   Serial.print(cdPtr->params.tMax);
   printComma();
   Serial.print(cdPtr->params.hasHeater);
+  printComma();
+  Serial.print(cdPtr->params.fridgeMinOnTimeMins);
+  printComma();
+  Serial.print(cdPtr->params.fridgeMinOffTimeMins);
+  printComma();
+  Serial.print(cdPtr->params.fridgeSwitchOnLagMins);
   printComma();
   Serial.print(cdPtr->params.Kp);
   printComma();

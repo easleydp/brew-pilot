@@ -21,8 +21,6 @@
 // Unset. Only applicable to ChamberData.mode (ChamberParams,mode should always be set).
 #define MODE_UNSET '-'
 
-#define FRIDGE_MIN_OFF_TIME_MINS 10 // TODO: swap for configurable ChamberParams.fridgeMinOffTimeMins
-#define FRIDGE_MIN_ON_TIME_MINS 5   // TODO: swap for configurable ChamberParams.fridgeMinOnTimeMins
 
 /**
  * Parameters that seldom change.
@@ -33,14 +31,11 @@
 typedef struct {
   uint8_t chamberId;  // 1, 2, etc.
 
-  int16_t tMin;
-  int16_t tMax;
+  int16_t tMin, tMax;
   boolean hasHeater;
-  //TODO: uint8_t fridgeMinOnTimeMins, fridgeMinOffTimeMins
+  uint8_t fridgeMinOnTimeMins, fridgeMinOffTimeMins, fridgeSwitchOnLagMins;
   // Heater PID parameters
-  float Kp;
-  float Ki;
-  float Kd;
+  float Kp, Ki, Kd;
   char mode;  // This is the mode set by the RPi. May be overridden locally (by the panel switch).
 
   uint16_t checksum;
@@ -155,8 +150,9 @@ void saveTTargetOnceInAWhile(uint8_t chamberId, int16_t tTarget) {
 
 boolean tTargetSaved[CHAMBER_COUNT] = {false, false};
 void updateChamberParamsAndTarget(
-  ChamberData& cd, int16_t tTarget, int16_t tTargetNext, int16_t tMin, int16_t tMax, 
-  boolean hasHeater, float Kp, float Ki, float Kd, char mode) {
+  ChamberData& cd, int16_t tTarget, int16_t tTargetNext, int16_t tMin, int16_t tMax, boolean hasHeater,
+  uint8_t fridgeMinOnTimeMins, uint8_t fridgeMinOffTimeMins, uint8_t fridgeSwitchOnLagMins,
+  float Kp, float Ki, float Kd, char mode) {
 
   uint8_t chamberId = cd.params.chamberId;
 
@@ -168,6 +164,9 @@ void updateChamberParamsAndTarget(
   cd.params.tMin = tMin;
   cd.params.tMax = tMax;
   cd.params.hasHeater = hasHeater;
+  cd.params.fridgeMinOnTimeMins = fridgeMinOnTimeMins;
+  cd.params.fridgeMinOffTimeMins = fridgeMinOffTimeMins;
+  cd.params.fridgeSwitchOnLagMins = fridgeSwitchOnLagMins;
   cd.params.Kp = Kp;
   cd.params.Ki = Ki;
   cd.params.Kd = Kd;
@@ -199,8 +198,11 @@ void initChamberData() {
     params.tMin = -10;
     params.tMax = 400;
     params.hasHeater = true;
-    params.Kp = 2.0f;
-    params.Ki = 0.01f;
+    params.fridgeMinOnTimeMins = 10;
+    params.fridgeMinOffTimeMins = 15;
+    params.fridgeSwitchOnLagMins = 0;
+    params.Kp = 16.0f;
+    params.Ki = 0.32f;
     params.Kd = 20.0f;
     params.mode = MODE_HOLD;
     params.checksum = generateChecksum(params);

@@ -60,10 +60,12 @@ public class ArduinoChamberManager implements ChamberManager
         chamberParametersByChamberId.put(chamberId, params);
 
         getMessenger().sendRequest("setParams:" + csv(chamberId, params.tTarget, params.tTargetNext, params.tMin, params.tMax,
-                params.hasHeater ? 1 : 0, params.Kp, params.Ki, params.Kd, params.mode));
+                params.hasHeater ? 1 : 0,
+                params.fridgeMinOnTimeMins, params.fridgeMinOffTimeMins, params.fridgeSwitchOnLagMins,
+                params.Kp, params.Ki, params.Kd, params.mode));
         // Examples for console test:
-        //  ^setParams:1,171,172,-10,400,1,2.1,0.01,20.5,A$
-        //  ^setParams:2,100,100,-10,150,0,1.9,0.015,19.5,O$
+        //  ^setParams:1,171,172,-10,400,1,10,10,5,2.1,0.01,20.5,A$
+        //  ^setParams:2,100,100,-10,150,0,10,10,5,1.9,0.015,19.5,O$
         getMessenger().expectResponse("ack");
     }
 
@@ -75,8 +77,8 @@ public class ArduinoChamberManager implements ChamberManager
         logger.debug("Raw chmbrRds:" + response);
         String[] values = response.split(",");
         // Expecting:
-        // tTarget,tTargetNext,tMin,tMax,hasHeater,Kp,Ki,Kd,tBeer,tChamber,tExternal,tPi,heaterOutput,fridgeOn,mode
-        if (values.length != 16)
+        // tTarget,tTargetNext,tMin,tMax,hasHeater,fridgeMinOnTimeMins,fridgeMinOffTimeMins,fridgeSwitchOnLagMins,Kp,Ki,Kd,tBeer,tChamber,tExternal,tPi,heaterOutput,fridgeOn,mode
+        if (values.length != 19)
         {
             throw new IOException("Unexpected 'chmbrRds' response: " + response);
         }
@@ -88,6 +90,9 @@ public class ArduinoChamberManager implements ChamberManager
         int tMin = parseInt(values[i++]);
         int tMax = parseInt(values[i++]);
         boolean hasHeater = parseBool(values[i++]);
+        int fridgeMinOnTimeMins = parseInt(values[i++]);
+        int fridgeMinOffTimeMins = parseInt(values[i++]);
+        int fridgeSwitchOnLagMins = parseInt(values[i++]);
         double Kp = parseDouble(values[i++]);
         double Ki = parseDouble(values[i++]);
         double Kd = parseDouble(values[i++]);
@@ -118,12 +123,19 @@ public class ArduinoChamberManager implements ChamberManager
             if (params.tMax != tMax)
                 logChamberParamMismatchError(chamberId, "tMax", params.tMax, tMax);
             if (params.hasHeater != hasHeater)
-                logChamberParamMismatchError(chamberId, "hasHeater", params.hasHeater, tMax);
+                logChamberParamMismatchError(chamberId, "hasHeater", params.hasHeater, hasHeater);
+            if (params.fridgeMinOnTimeMins != fridgeMinOnTimeMins)
+                logChamberParamMismatchError(chamberId, "fridgeMinOnTimeMins", params.fridgeMinOnTimeMins, fridgeMinOnTimeMins);
+            if (params.fridgeMinOffTimeMins != fridgeMinOffTimeMins)
+                logChamberParamMismatchError(chamberId, "fridgeMinOffTimeMins", params.fridgeMinOffTimeMins, fridgeMinOffTimeMins);
+            if (params.fridgeSwitchOnLagMins != fridgeSwitchOnLagMins)
+                logChamberParamMismatchError(chamberId, "fridgeSwitchOnLagMins", params.fridgeSwitchOnLagMins, fridgeSwitchOnLagMins);
             // Deliberately not consistency checking the floating point values due to likelihood of rounding errors.
         }
 
         return new ChamberReadings(timeNow, tTarget, tBeer, tExternal, tChamber, tPi,
-                heaterOutput, fridgeOn, modeActual, new ChamberParameters(tTarget, tTargetNext, tMin, tMax, hasHeater, Kp, Ki, Kd, modeParam));
+                heaterOutput, fridgeOn, modeActual, new ChamberParameters(tTarget, tTargetNext, tMin, tMax, hasHeater,
+                fridgeMinOnTimeMins, fridgeMinOffTimeMins, fridgeSwitchOnLagMins, Kp, Ki, Kd, modeParam));
     }
 
     @Override
@@ -239,12 +251,12 @@ public class ArduinoChamberManager implements ChamberManager
                 {
 	                case 'W':
 	                {
-	                    // intergalContrib/* float */
+	                    // integralContrib/* float */
 	                    if (buffer.length != 4)
 	                        return "{error: \"Expected 4 bytes\"}";
-	
+
 	                    int i = 0;
-	                    return String.format("Reject {intergalContrib: %.3f}", bytesToFloat(buffer[i++], buffer[i++], buffer[i++], buffer[i++]));
+	                    return String.format("Reject {integralContrib: %.3f}", bytesToFloat(buffer[i++], buffer[i++], buffer[i++], buffer[i++]));
 	                }
                     case '~':
                     {

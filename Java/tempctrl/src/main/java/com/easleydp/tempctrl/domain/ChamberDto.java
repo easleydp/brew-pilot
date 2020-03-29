@@ -6,12 +6,13 @@ package com.easleydp.tempctrl.domain;
 public class ChamberDto
 {
     private String name;
-    private int fridgeMinOnTimeMins;
-    private int fridgeMinOffTimeMins;
     private int heaterPowerWatts;
     private int tMin;
     private int tMax;
     private boolean hasHeater;
+    private int fridgeMinOnTimeMins;
+    private int fridgeMinOffTimeMins;
+    private int fridgeSwitchOnLagMins;
     private double kp;
     private double ki;
     private double kd;
@@ -41,6 +42,15 @@ public class ChamberDto
     public void setFridgeMinOffTimeMins(int fridgeMinOffTimeMins)
     {
         this.fridgeMinOffTimeMins = fridgeMinOffTimeMins;
+    }
+
+    public int getFridgeSwitchOnLagMins()
+    {
+        return fridgeSwitchOnLagMins;
+    }
+    public void setFridgeSwitchOnLagMins(int fridgeSwitchOnLagMins)
+    {
+        this.fridgeSwitchOnLagMins = fridgeSwitchOnLagMins;
     }
 
     public int getHeaterPowerWatts()

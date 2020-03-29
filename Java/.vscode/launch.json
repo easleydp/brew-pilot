@@ -1,0 +1,30 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Debug (Launch) - Current File",
+      "request": "launch",
+      "mainClass": "${file}"
+    },
+    {
+      "type": "java",
+      "cwd": "${workspaceFolder}/tempctrl",
+      "name": "Debug (Launch)-TempctrlApplication<tempctrl>",
+      "request": "launch",
+      "mainClass": "com.easleydp.tempctrl.spring.TempctrlApplication",
+      "projectName": "tempctrl",
+      "args": [
+        "--test=3",
+        "--pwdhash.guest=#dollar#2y#dollar#12#dollar#l3GS5ljhN9bmcL6T55hcV.V8R59MJXUtVcYMVcUez0qs8ZGnaPN8S",
+        "--pwdhash.admin=#dollar#2y#dollar#12#dollar#zp7Sma8nmh.1r1gL8lIej.UzlaFlQ8veUh5QNg2I96IXp1LK14996"
+      ],
+      "env": {
+        "spring.profiles.active": "local"
+      }
+    }
+  ]
+}

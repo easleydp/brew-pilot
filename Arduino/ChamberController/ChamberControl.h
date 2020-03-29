@@ -53,13 +53,14 @@ void setHeaterElement(ChamberData& cd, byte setting) {
 
 /** Activates/deactivates the fridge as requested IF this won't unduly stress the compressor. */
 void fridge(ChamberData& cd, byte setting) {
+  ChamberParams& params = cd.params;
   if (setting == ON) {
     // If we think it's already on, set it on again just to be sure.
     // Otherwise (we think it's off), check it's been off for long enough.
     if (cd.fridgeOn) {
       forceFridge(cd, ON);
     } else { // We think fridge is off. Check it's been off for long enough.
-      if (cd.fridgeStateChangeMins >= FRIDGE_MIN_OFF_TIME_MINS) {
+      if (cd.fridgeStateChangeMins >= params.fridgeMinOffTimeMins) {
         forceFridge(cd, ON);
       }
     }
@@ -69,7 +70,7 @@ void fridge(ChamberData& cd, byte setting) {
     if (!cd.fridgeOn) {
       forceFridge(cd, OFF);
     } else { // We think fridge is on. Check it's been on for long enough.
-      if (cd.fridgeStateChangeMins >= FRIDGE_MIN_ON_TIME_MINS) {
+      if (cd.fridgeStateChangeMins >= (params.fridgeMinOnTimeMins + params.fridgeSwitchOnLagMins)) {
         forceFridge(cd, OFF);
       }
     }
@@ -173,9 +174,10 @@ void controlChamber(ChamberData& cd) {
         if (!cd.fridgeOn) {
           fSetting = ON;
         } else {
-          // Fridge is already on. Leave it on unless we're approaching the target temp (i.e. within 1 degree) in
-          // which case switch off (min on time permitting, of course).
-          fSetting = tError > -10 ? OFF : ON;
+          // Fridge is already on. Leave it on unless we're approaching the target temp (i.e. within 1 degree)
+          // AND we've been cooling for 10 mins or longer in which case switch off (min on time permitting, of course).
+          if (tError <= -10  ||  cd.fridgeStateChangeMins < 10)
+            fSetting = ON;
         }
       }
     }
@@ -186,9 +188,9 @@ void controlChamber(ChamberData& cd) {
 
   // To avoid integral wind-up, we constrain as follows: If the integral contribution is too large, reject the adjustment.
   float latestIntegral = cd.integral + tError;
-  float intergalContrib = params.Ki*latestIntegral;
-  if (abs(intergalContrib) > 50)
-    logMsg(LOG_DEBUG, logPrefixPid, 'W', chamberId, intergalContrib/* float */);
+  float integralContrib = params.Ki*latestIntegral;
+  if (abs(integralContrib) > 50)
+    logMsg(LOG_DEBUG, logPrefixPid, 'W', chamberId, integralContrib/* float */);
   else
     cd.integral = latestIntegral;
 

@@ -128,7 +128,9 @@ public class Chamber extends ChamberDto
     public ChamberParameters getPartialChamberParameters()
     {
         return new ChamberParameters(0, 0,
-                this.gettMin(), this.gettMax(), this.isHasHeater(), this.getKp(), this.getKi(), this.getKd(), Mode.NONE);
+                this.gettMin(), this.gettMax(), this.isHasHeater(),
+                this.getFridgeMinOnTimeMins(), this.getFridgeMinOffTimeMins(), this.getFridgeSwitchOnLagMins(),
+                this.getKp(), this.getKi(), this.getKd(), Mode.NONE);
     }
 
 }

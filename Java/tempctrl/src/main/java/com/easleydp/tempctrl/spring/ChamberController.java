@@ -181,4 +181,16 @@ public class ChamberController
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Called by 'Fermentation Profile' view to retrieve data for the specified chamber's active gyle.
+     */
+    @GetMapping("/guest/chamber/{chamberId}/active-gyle-profile")
+    public TemperatureProfileDto getActiveGyleProfile(@PathVariable("chamberId") int chamberId)
+    {
+        Chamber chamber = chamberRepository.getChamberById(chamberId); // throws if not found
+        Gyle activeGyle = chamber.getActiveGyle();
+        Assert.state(activeGyle != null, "No active gyle for chamber " + chamberId);
+        return activeGyle.getTemperatureProfile();
+    }
+
 }

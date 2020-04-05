@@ -83,12 +83,13 @@
       inputEnabled: false,
     },
 
-    title: {
-      text: 'Fermentation temperature profile',
-    },
-    subtitle: {
-      text: 'Click the chart to add a new point. Click a point to remove it.',
-    },
+    // Moved to HTML, so we can space efficiently include a "Save" button:
+    // title: {
+    //   text: 'Fermentation temperature profile',
+    // },
+    // subtitle: {
+    //   text: 'Click the chart to add a new point. Click a point to remove it or drag to move.',
+    // },
 
     tooltip: {
       useHTML: true,

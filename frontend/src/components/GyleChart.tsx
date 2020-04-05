@@ -5,6 +5,8 @@ import { useAppState, Auth } from './state';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import useInterval from '../api/useInterval';
+import ITemperatureProfile from '../api/ITemperatureProfile';
+import applyPatchRangeDefaultLeft from '../api/RangeDefaultLeftPatch.js';
 
 import Highcharts, { Chart, Series } from 'highcharts/highstock';
 
@@ -23,12 +25,6 @@ const GyleChart = () => {
     NONE, // No heating, no cooling, just monitoring.
   }
 
-  interface ITemperatureProfile {
-    points: {
-      hoursSinceStart: number;
-      targetTemp: number;
-    }[];
-  }
   interface IReadings {
     dt: number;
     tTarget: number | undefined;
@@ -56,7 +52,7 @@ const GyleChart = () => {
 
   interface SeriesPlus extends Series {
     // We need access to these private properties since Series.points isn't 'live' while adding points.
-    // Actually, we could do without this if we kept the last added point for each series as some local state.
+    // (Actually, we could do without this if we kept the last added point for each series as some local state.)
     xData: number[]; // Time axis - never null;
     yData: (number | null)[]; // Property axis - can be null for discontinuous properties such as fridgeOn.
   }
@@ -345,6 +341,11 @@ const GyleChart = () => {
       chamberId,
       '=================== GyleChart useEffect invoked ======================'
     );
+
+    // For this chart we want the Highstock range selector to default to the right hand side
+    // of the x-axis, i.e. to show latest points by default. (This is the stock behaviour
+    // but we have to take care to undo the patch applied in FermentationProfile.tsx)
+    applyPatchRangeDefaultLeft(Highcharts, false);
 
     // Returns promise for retrieving IGyleDetails
     const getActiveGyleDetails = (): Promise<IGyleDetails> => {
@@ -677,7 +678,7 @@ const GyleChart = () => {
 
     if (isAuth === Auth.NotLoggedIn) {
       // The user is definitely not logged in. Go straight to signin form.
-      history.push('/signin', { from: '/gyle-chart/' + chamberId });
+      history.push('/signin', { from: '/' });
     } else if (isAuth === Auth.Unknown) {
       // The user has hit F5? Go to the home page where we can check if they're logged in.
       history.push('/');

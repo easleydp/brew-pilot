@@ -13,6 +13,7 @@ import { Nav, Navbar, NavDropdown } from 'react-bootstrap';
 import Home from './Home';
 import GyleChart from './GyleChart';
 import Status from './Status';
+import FermentationProfile from './FermentationProfile';
 import Login from './Login';
 import Logout from './Logout';
 import IChamberSummary from '../api/IChamberSummary';
@@ -99,7 +100,7 @@ const Nested = () => {
         <Navbar.Collapse id="basic-navbar-nav">
           <Nav className="mr-auto" onSelect={closeNav}>
             {isLoggedIn && (
-              <Nav.Link as={NavLink} to="/" onMouseDown={closeNav}>
+              <Nav.Link as={NavLink} to="/" onMouseDown={closeNav} exact>
                 Home
               </Nav.Link>
             )}
@@ -128,6 +129,11 @@ const Nested = () => {
             )} */}
             {/* {isAdmin && ( */}
             {isLoggedIn && (
+              <Nav.Link as={NavLink} to="/fermentation-profile" onMouseDown={closeNav}>
+                Fermentation profile
+              </Nav.Link>
+            )}
+            {isLoggedIn && (
               <Nav.Link as={NavLink} to="/status" onMouseDown={closeNav}>
                 Backend status
               </Nav.Link>
@@ -147,6 +153,7 @@ const Nested = () => {
         <Route path="/signin" component={Login} />
         <Route path="/signout" component={Logout} />
         <Route path="/status" component={Status} />
+        <Route path="/fermentation-profile" component={FermentationProfile} />
         <Route path="/gyle-chart/:chamberId" component={GyleChart} />
         <Route path="/">
           <Home chamberSummaries={chamberSummaries} chamberSummariesError={chamberSummariesError} />

@@ -47,7 +47,7 @@ const Gauge = ({ chamberId, tTarget }: GaugeProps) => {
         color: '#e36b6b', // red
       },
     ];
-    if (tTarget) {
+    if (tTarget !== null) {
       const _tTarget = tTarget / 10;
       plotBands.push({
         from: _tTarget - 0.25,
@@ -99,7 +99,7 @@ const Gauge = ({ chamberId, tTarget }: GaugeProps) => {
               outerRadius: '107%',
             },
             {
-              backgroundColor: tTarget ? '#fff' : '#e8e8e8',
+              backgroundColor: tTarget !== null ? '#fff' : '#e8e8e8',
             },
             {
               backgroundColor: '#ddd',

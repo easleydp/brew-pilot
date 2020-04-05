@@ -3,9 +3,18 @@
 #define ON 1
 #define OFF 0
 
+// When cooling the beer over a period of time we can't feather the control input as
+// we can when heating so the achieved temperature profile is inevitably a sawtooth
+// waveform. This waveform should be approximately centred on tTarget.
+#define COOLING_SAWTOOTH_MIDPOINT 2 /* 0.2 degrees (this value assumes fridgeMinOnTimeMins is of the order of 10 mins) */
+
 // When tExternal is in our favour (for heating or cooling) by at least this much
 // we may avoid actively heating/cooling.
 #define T_EXTERNAL_BOOST_THRESHOLD 20 /* 2 degrees */
+
+// To guard against see-sawing between heating & cooling we only consider heating
+// if the fridge has been off for at least this long.
+#define ANTI_SEESAW_MARGIN_MINS 60
 
 static const char* logPrefixChamberControl = "CC";
 static const char* logPrefixPid = "PID";
@@ -152,32 +161,39 @@ void controlChamber(ChamberData& cd) {
           heatPidWise = true;
       }
     } else if (tError > 0) {  // beer too cool, needs heating
-      if (cd.exothermic) {
-        // Assuming our tBeer sensor is near the outside of the fermentation vessel, exothermic means the
-        // beer will actually be warmer internally than our tBeer reading suggests. Compensate for this
-        // by adding a couple of degrees to tExternalBoost, i.e. so we're less eager to apply heating.
-        tExternalBoost += 20;
-      }
-      if ((tExternalBoost - T_EXTERNAL_BOOST_THRESHOLD) > tError) {  // Outside temp is markedly in our favour
-        // Needs heating but we can leave it to tExternal
-      } else {  // Outside temp is not sufficiently in our favour
-        heatPidWise = true;
+      // To help avoid the possibility of see-sawing between heating & cooling, don't even consider
+      // heating if fridge has been on recently (or is on now).
+      if (!cd.fridgeOn && cd.fridgeStateChangeMins >= ANTI_SEESAW_MARGIN_MINS) {
+        if (cd.exothermic) {
+          // Assuming our tBeer sensor is near the outside of the fermentation vessel, exothermic means the
+          // beer will actually be warmer internally than our tBeer reading suggests. Compensate for this
+          // by adding a couple of degrees to tExternalBoost, i.e. so we're less eager to apply heating.
+          tExternalBoost += 20;
+        }
+        if ((tExternalBoost - T_EXTERNAL_BOOST_THRESHOLD) > tError) {  // Outside temp is markedly in our favour
+          // Needs heating but we can leave it to tExternal
+        } else {  // Outside temp is not sufficiently in our favour
+          heatPidWise = true;
+        }
       }
     } else { // (tError < 0)  beer too warm, needs cooling
-      if ((tExternalBoost + T_EXTERNAL_BOOST_THRESHOLD) < tError) {  // Outside temp is markedly in our favour
-        // Beer needs cooling but we can leave it to tExternal
-        // UNLESS exothermic, in which case we'll need to actively cool.
-        if (cd.exothermic) {
-          fSetting = ON;
-        }
-      } else {  // Outside temp is not sufficiently in our favour
-        if (!cd.fridgeOn) {
-          fSetting = ON;
-        } else {
-          // Fridge is already on. Leave it on unless we're approaching the target temp (i.e. within 1 degree)
-          // AND we've been cooling for 10 mins or longer in which case switch off (min on time permitting, of course).
-          if (tError <= -10  ||  cd.fridgeStateChangeMins < 10)
+      const int16_t tErrorAdjustedForSawtooth = tError + COOLING_SAWTOOTH_MIDPOINT; // or maybe not
+      if (tErrorAdjustedForSawtooth < 0) {
+        if ((tExternalBoost + T_EXTERNAL_BOOST_THRESHOLD) < tErrorAdjustedForSawtooth) {  // Outside temp is markedly in our favour
+          // Beer needs cooling but we can leave it to tExternal
+          // UNLESS exothermic, in which case we'll need to actively cool.
+          if (cd.exothermic) {
             fSetting = ON;
+          }
+        } else {  // Outside temp is not sufficiently in our favour
+          if (!cd.fridgeOn) {
+            fSetting = ON;
+          } else {
+            // Fridge is already on. Leave it on unless we're approaching the target temp (i.e. within 1 degree)
+            // AND we've been cooling for 10 mins or longer in which case switch off (min on time permitting, of course).
+            if (tErrorAdjustedForSawtooth <= -10  ||  cd.fridgeStateChangeMins < 10)
+              fSetting = ON;
+          }
         }
       }
     }

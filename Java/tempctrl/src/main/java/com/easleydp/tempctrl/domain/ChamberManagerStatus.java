@@ -2,6 +2,8 @@ package com.easleydp.tempctrl.domain;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import java.util.*;
+import java.util.stream.*;
 
 /**
  * Value object representing the status reported from a chamber manager.
@@ -28,27 +30,49 @@ public class ChamberManagerStatus
     {
         int mins = uptimeMins;
         if (mins < 60)
-            return minutesPart(mins);
+            return mins == 0 ? "0 minutes" : minutesPart(mins);
 
         int hours = mins / 60;
         mins -= hours * 60;
         if (hours < 24)
-            return hoursPart(hours) + ", " + minutesPart(mins);
+            return joinTimeParts(hoursPart(hours), minutesPart(mins));
+
 
         int days = hours / 24;
         hours -= days * 24;
-        return daysPart(days) + ", " + hoursPart(hours) + ", " + minutesPart(mins);
+        if (days < 7)
+            return joinTimeParts(daysPart(days), hoursPart(hours), minutesPart(mins));
+
+        int weeks = days / 7;
+        days -= weeks * 7;
+        return joinTimeParts(weeksPart(days), daysPart(days), hoursPart(hours), minutesPart(mins));
+    }
+    private static String weeksPart(int weeks)
+    {
+        return nPart(weeks, "week");
     }
     private static String daysPart(int days)
     {
-        return days + (days == 1 ? " day" : " days");
+        return nPart(days, "day");
     }
     private static String hoursPart(int hours)
     {
-        return hours + (hours == 1 ? " hour" : " hours");
+        return nPart(hours, "hour");
     }
     private static String minutesPart(int mins)
     {
-        return mins + (mins == 1 ? " minute" : " minutes");
+        return nPart(mins, "minute");
+    }
+    private static String nPart(int n, String name)
+    {
+        if (n == 0)
+            return null;
+        return n + " " + (n == 1 ? name : name + 's');
+    }
+    private static String joinTimeParts(String... parts)
+    {
+        return Arrays.stream(parts)
+            .filter(p -> p != null)
+            .collect(Collectors.joining(", "));
     }
 }

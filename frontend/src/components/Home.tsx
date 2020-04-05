@@ -32,7 +32,8 @@ const Home = ({ chamberSummaries, chamberSummariesError }: HomeProps) => {
   }, [chamberSummaries, history, isAuth]);
 
   function gaugeCard(cs: IChamberSummary) {
-    const instruction = cs.tTarget ? `${isMobile ? 'Tap' : 'Click '} for details` : 'Inactive';
+    const instruction =
+      cs.tTarget !== null ? `${isMobile ? 'Tap' : 'Click '} for details` : 'Inactive';
     return (
       <div className="gauge-card">
         <div className="inner">
@@ -50,7 +51,7 @@ const Home = ({ chamberSummaries, chamberSummariesError }: HomeProps) => {
         {chamberSummaries.map(cs => {
           return (
             <div key={cs.id} className="col-sm-6">
-              {cs.tTarget ? (
+              {cs.tTarget !== null ? (
                 <Link to={`/gyle-chart/${cs.id}`}>{gaugeCard(cs)}</Link>
               ) : (
                 gaugeCard(cs)

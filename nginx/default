@@ -19,73 +19,74 @@
 # Default server configuration
 #
 #server {
-#	listen 80 default_server;
-#	listen [::]:80 default_server;
+#       listen 80 default_server;
+#       listen [::]:80 default_server;
 #
-#	root /var/www/html;
+#       root /var/www/html;
 #
-#	# Add index.php to the list if you are using PHP
-#	index index.html index.htm index.nginx-debian.html;
+#       # Add index.php to the list if you are using PHP
+#       index index.html index.htm index.nginx-debian.html;
 #
-#	server_name _;
+#       server_name _;
 #
-#	location / {
-#		# First attempt to serve request as file, then as directory, then fall back to 404.
-#		try_files $uri $uri/ =404;
-#	}
+#       location / {
+#               # First attempt to serve request as file, then as directory, then fall back to 404.
+#               try_files $uri $uri/ =404;
+#       }
 #}
 
 server {
-	root /var/www/html;
+        root /var/www/html;
 
-	index index.html;
-    server_name brewpilot.cf; # managed by Certbot
+        index index.html;
+        server_name brewpilot.ml; # managed by Certbot
 
-	# was: location ~ ^/(login$|logout$|guest/|admin/) {
-	location /tempctrl {
-		proxy_pass http://localhost:8081;
-		proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-		proxy_set_header X-Forwarded-Proto $scheme;
-		proxy_set_header X-Forwarded-Port $server_port;
-	}
-	# BE created data that nginx serves directly
-	location /tempctrl/data/ {
-		# First attempt to serve request as file, then as directory, then fall back to 404.
-		try_files $uri $uri/ =404;
-		alias /home/david/brew-pilot/staticContent/data/;
-		expires 1y;
-	}
+        # was: location ~ ^/(login$|logout$|guest/|admin/) {
+        location /tempctrl {
+                proxy_pass http://localhost:8081;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+                proxy_set_header X-Forwarded-Port $server_port;
+        }
+        # BE created data that nginx serves directly
+        location /tempctrl/data/ {
+                # First attempt to serve request as file, then as directory, then fall back to 404.
+                try_files $uri $uri/ =404;
+                alias /home/david/brew-pilot/staticContent/data/;
+                expires 1y;
+        }
 
-	# FE app router based URLs
-	location / {
-		# First attempt to serve request as file, then as directory, then fall back to assuming React Router will handle.
-		try_files $uri $uri/ /index.html$is_args$args;
-		root /home/david/brew-pilot/frontend;
-	}
-	# FE app static resources
-	location /static {
-		# First attempt to serve request as file, then as directory, then fall back to 404.
-		try_files $uri $uri/ =404;
-		root /home/david/brew-pilot/frontend;
-		expires 1d;
-	}
+        # FE app router based URLs
+        location / {
+                # First attempt to serve request as file, then as directory, then fall back to assuming React Router will handle.
+                try_files $uri $uri/ /index.html$is_args$args;
+                root /home/david/brew-pilot/frontend;
+        }
+        # FE app static resources
+        location /static {
+                # First attempt to serve request as file, then as directory, then fall back to 404.
+                try_files $uri $uri/ =404;
+                root /home/david/brew-pilot/frontend;
+                expires 1d;
+        }
 
     listen [::]:443 ssl ipv6only=on; # managed by Certbot
     listen 443 ssl; # managed by Certbot
-    ssl_certificate /etc/letsencrypt/live/brewpilot.cf/fullchain.pem; # managed by Certbot
-    ssl_certificate_key /etc/letsencrypt/live/brewpilot.cf/privkey.pem; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/brewpilot.ml/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/brewpilot.ml/privkey.pem; # managed by Certbot
     include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+
 }
 
 server {
-    if ($host = brewpilot.cf) {
+    if ($host = brewpilot.ml) {
         return 301 https://$host$request_uri;
     } # managed by Certbot
 
-	listen 80 ;
-	listen [::]:80 ;
-    server_name brewpilot.cf;
+    listen 80 ;
+    listen [::]:80 ;
+    server_name brewpilot.ml;
     return 404; # managed by Certbot
 }
 
@@ -95,15 +96,15 @@ server {
 # to sites-enabled/ to enable it.
 #
 #server {
-#	listen 80;
-#	listen [::]:80;
+#       listen 80;
+#       listen [::]:80;
 #
-#	server_name example.com;
+#       server_name example.com;
 #
-#	root /var/www/example.com;
-#	index index.html;
+#       root /var/www/example.com;
+#       index index.html;
 #
-#	location / {
-#		try_files $uri $uri/ =404;
-#	}
+#       location / {
+#               try_files $uri $uri/ =404;
+#       }
 #}

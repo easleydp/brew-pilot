@@ -1,7 +1,6 @@
 /* Based on highstock.src.js 7.2.1 */
 
 (function() {
-  console.log(-2, window);
   var splat = Highcharts.splat;
   var addEvent = Highcharts.addEvent;
   var isNumber = Highcharts.isNumber;
@@ -81,16 +80,22 @@
       axis.max = correctFloat(axis.log2lin(axis.max), 16);
     }
     // handle zoomed range
-    // HACK x2
-    //                if (axis.range && defined(axis.max)) {
-    if (axis.range && defined(axis.min)) {
-      // #618, #6773:
-      //                    axis.userMin = axis.min = hardMin =
-      //                        Math.max(axis.dataMin, axis.minFromRange());
-      //                    axis.userMax = hardMax = axis.max;
-      axis.userMin = axis.min = hardMin = axis.dataMin;
-      axis.userMax = hardMax = axis.userMin + axis.range;
-      axis.range = null; // don't use it when running setExtremes
+    // HACK
+    if (Highcharts.defaultOptions._rangeDefaultLeft) {
+      if (axis.range && defined(axis.min)) {
+        // #618, #6773:
+        axis.userMin = axis.min = hardMin = axis.dataMin;
+        axis.userMax = hardMax = axis.userMin + axis.range;
+        axis.range = null; // don't use it when running setExtremes
+      }
+    } else {
+      // Original:
+      if (axis.range && defined(axis.max)) {
+        // #618, #6773:
+        axis.userMin = axis.min = hardMin = Math.max(axis.dataMin, axis.minFromRange());
+        axis.userMax = hardMax = axis.max;
+        axis.range = null; // don't use it when running setExtremes
+      }
     }
     // Hook for Highstock Scroller. Consider combining with beforePadding.
     fireEvent(axis, 'foundExtremes');
@@ -238,7 +243,9 @@
       dataMax = unionExtremes.dataMax,
       // HACK
       //                    newMin,
-      newMin = baseAxis && Math.round(Math.max(baseAxis.min, pick(dataMin, baseAxis.min))),
+      newMin = Highcharts.defaultOptions._rangeDefaultLeft
+        ? baseAxis && Math.round(Math.max(baseAxis.min, pick(dataMin, baseAxis.min)))
+        : undefined,
       newMax = baseAxis && Math.round(Math.min(baseAxis.max, pick(dataMax, baseAxis.max))), // #1568
       type = rangeOptions.type,
       baseXAxisOptions,
@@ -284,10 +291,14 @@
       // Fixed times like minutes, hours, days
     } else if (range) {
       // HACK
-      //                   newMin = Math.max(newMax - range, dataMin);
-      //                   newMax = Math.min(newMin + range, dataMax);
-      newMax = Math.min(newMin + range, dataMax);
-      newMin = Math.max(newMax - range, dataMin);
+      if (Highcharts.defaultOptions._rangeDefaultLeft) {
+        newMax = Math.min(newMin + range, dataMax);
+        newMin = Math.max(newMax - range, dataMin);
+      } else {
+        // Original:
+        newMin = Math.max(newMax - range, dataMin);
+        newMax = Math.min(newMin + range, dataMax);
+      }
     } else if (type === 'ytd') {
       // On user clicks on the buttons, or a delayed action running from
       // the beforeRender event (below), the baseAxis is defined.

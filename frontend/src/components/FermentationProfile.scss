@@ -14,6 +14,7 @@
     .item.button {
       margin-top: 20px;
       text-align: center;
+      border-radius: 6px;
       &.left {
         visibility: hidden;
       }
@@ -34,6 +35,18 @@
 
     p {
       margin: 0;
+    }
+  }
+
+  .highcharts-figure {
+    margin: 0;
+    #profile-chart-ct {
+      width: 100%;
+      // 120px is the navbar and instructions height.
+      // TODO: Dynamically measure this height rather than hard-coding.
+      height: -webkit-calc(100vh - 120px);
+      height: -moz-calc(100vh - 120px);
+      height: calc(100vh - 120px);
     }
   }
 }

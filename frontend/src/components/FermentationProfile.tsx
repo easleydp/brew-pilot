@@ -156,14 +156,6 @@ const FermentationProfile = () => {
           inputEnabled: false,
         },
 
-        // Moved to HTML, so we can space efficiently include a "Save" button:
-        // title: {
-        //   text: 'Fermentation temperature profile',
-        // },
-        // subtitle: {
-        //   text: 'Click the chart to add a new point. Click a point to remove it or drag to move.',
-        // },
-
         tooltip: {
           useHTML: true,
           formatter: function () {
@@ -454,8 +446,7 @@ const FermentationProfile = () => {
 
   const instruction = `${isMobile ? 'Tap' : 'Click '} the chart to add a new point. ${
     isMobile ? 'Tap' : 'Click '
-  } an existing point to remove it, or drag to
-    move.`;
+  } an existing point to remove, or drag to move.`;
   return (
     <div className="fermentation-profile">
       <div className="header">

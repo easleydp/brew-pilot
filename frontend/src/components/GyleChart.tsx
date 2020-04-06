@@ -82,7 +82,7 @@ const GyleChart = () => {
 
   // Called by useInterval
   const addLatestReadings = () => {
-    getLatestReadings().then(latestReadings => {
+    getLatestReadings().then((latestReadings) => {
       if (latestReadings.length) {
         lastDtRef.current = latestReadings[latestReadings.length - 1].dt;
         addBunchOfReadings(latestReadings);
@@ -96,10 +96,10 @@ const GyleChart = () => {
     return new Promise((resolve, reject) => {
       axios
         .get(url, { params: { sinceDt: lastDtRef.current || 0 } })
-        .then(response => {
+        .then((response) => {
           return resolve(response.data);
         })
-        .catch(error => {
+        .catch((error) => {
           console.debug(url + ' ERROR', error);
           const status = error.response && error.response.status;
           if (status === 403 || status === 401) {
@@ -353,10 +353,10 @@ const GyleChart = () => {
       return new Promise((resolve, reject) => {
         axios
           .get(url)
-          .then(response => {
+          .then((response) => {
             return resolve(response.data);
           })
-          .catch(error => {
+          .catch((error) => {
             console.debug(url + ' ERROR', error);
             const status = error.response && error.response.status;
             if (status === 403 || status === 401) {
@@ -372,7 +372,7 @@ const GyleChart = () => {
     const buildChart = (chamberName: string, hasHeater: boolean): Chart => {
       const hourMs = 1000 * 60 * 60;
 
-      const formatTimeAsHtml = function(ms: number) {
+      const formatTimeAsHtml = function (ms: number) {
         const dtStarted = getGyleDetails().dtStarted;
         const totalHours = Math.round((ms - dtStarted) / hourMs); // Round to nearest hour (i.e. what we'll snap to)
         const days = Math.floor(totalHours / 24) + 1;
@@ -420,6 +420,7 @@ const GyleChart = () => {
           color: 'rgba(113, 166, 210, 1.0)',
           fillOpacity: 0.3,
           lineWidth: 1,
+          dataGrouping: { enabled: false },
           //showInNavigator: true,
         } as Highcharts.SeriesAreaOptions,
       ] as Array<Highcharts.SeriesOptionsType>;
@@ -483,12 +484,12 @@ const GyleChart = () => {
 
           tooltip: {
             useHTML: true,
-            formatter: function() {
+            formatter: function () {
               const points = this.points;
               if (!points) {
                 return false;
               }
-              const tips: Array<string | null> = points.map(p => {
+              const tips: Array<string | null> = points.map((p) => {
                 const series = p.series;
                 const seriesId = series && series.options.id;
                 if (!seriesId) {
@@ -505,8 +506,9 @@ const GyleChart = () => {
                     friendlyValue = `Heater <strong>OFF</strong>`;
                   }
                 } else {
-                  friendlyValue = `${series.name} <strong>${Math.round(p.y * 10) /
-                    10}&deg;C</strong>`;
+                  friendlyValue = `${series.name} <strong>${
+                    Math.round(p.y * 10) / 10
+                  }&deg;C</strong>`;
                 }
 
                 // TODO - analyse how this used to work in the js version. In this ts version there
@@ -532,7 +534,7 @@ const GyleChart = () => {
               showCheckbox: true,
               selected: true, // Default. Can be overridden per series.
               events: {
-                checkboxClick: function(event) {
+                checkboxClick: function (event) {
                   const series = event.item;
                   if (event.checked) {
                     series.show();
@@ -542,14 +544,14 @@ const GyleChart = () => {
                   return false;
                 },
                 // User may click on legend labels or the checkbox. Amazingly we have to take care of keeping things in sync.
-                hide: function(event) {
+                hide: function (event) {
                   const series = event.target as Series | null;
                   if (series !== null) {
                     series.select(false);
                     return false;
                   }
                 },
-                show: function(event) {
+                show: function (event) {
                   const series = event.target as Series | null;
                   if (series !== null) {
                     series.select(true);
@@ -603,9 +605,9 @@ const GyleChart = () => {
             },
           },
         },
-        chart => {
+        (chart) => {
           // It seems we have to take care of initially hiding any series with `selected: false`
-          chart.series.filter(s => !s.selected).forEach(s => s.hide());
+          chart.series.filter((s) => !s.selected).forEach((s) => s.hide());
         }
       );
     };
@@ -632,15 +634,15 @@ const GyleChart = () => {
             // case the app server DOES handle the data requests.
             `/tempctrl/data/chambers/${chamberId}/gyles/${gyleDetails.gyleId}/logs/${logName}.ndjson`
           )
-          .then(response => {
+          .then((response) => {
             const ndjson: string = response.data;
             const readings: IReadings[] = ndjson
               .split('\n')
-              .filter(json => json)
-              .map(json => JSON.parse(json));
+              .filter((json) => json)
+              .map((json) => JSON.parse(json));
             resolve(readings);
           })
-          .catch(error => {
+          .catch((error) => {
             reject(error);
           });
       });
@@ -651,9 +653,9 @@ const GyleChart = () => {
     const getAggregatedReadings = (gyleDetails: IGyleDetails): Promise<IReadings[]> => {
       return new Promise((resolve, reject) => {
         let aggregatedReadings: IReadings[] = [];
-        Promise.all(gyleDetails.readingsLogs.map(logName => getLogFileReadings(logName))).then(
-          logFilesReadings => {
-            logFilesReadings.forEach(logFileReadings => {
+        Promise.all(gyleDetails.readingsLogs.map((logName) => getLogFileReadings(logName))).then(
+          (logFilesReadings) => {
+            logFilesReadings.forEach((logFileReadings) => {
               aggregatedReadings.push(...logFileReadings);
             });
             aggregatedReadings.push(...gyleDetails.recentReadings);
@@ -663,7 +665,7 @@ const GyleChart = () => {
             const dtStarted = gyleDetails.dtStarted;
             if (earliestReading && restoreUtcMillisPrecision(earliestReading.dt) < dtStarted) {
               const totalCount = aggregatedReadings.length;
-              aggregatedReadings = aggregatedReadings.filter(reading => {
+              aggregatedReadings = aggregatedReadings.filter((reading) => {
                 return restoreUtcMillisPrecision(reading.dt) >= dtStarted;
               });
               const droppedCount = totalCount - aggregatedReadings.length;
@@ -684,7 +686,7 @@ const GyleChart = () => {
       history.push('/');
     } else {
       getActiveGyleDetails()
-        .then(gyleDetails => {
+        .then((gyleDetails) => {
           gyleDetailsRef.current = gyleDetails;
           readingsPeriodMillisRef.current = gyleDetails.readingsPeriodMillis;
           lastDtRef.current = gyleDetails.recentReadings.length
@@ -694,7 +696,7 @@ const GyleChart = () => {
           chart.showLoading();
           return getAggregatedReadings(gyleDetails);
         })
-        .then(aggregatedReadings => {
+        .then((aggregatedReadings) => {
           addBunchOfReadings(aggregatedReadings);
           getCurrentChart().hideLoading();
         });

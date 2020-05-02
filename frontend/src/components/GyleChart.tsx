@@ -446,6 +446,10 @@ const GyleChart = () => {
             enabled: false,
           },
 
+          time: {
+            useUTC: false,
+          },
+
           rangeSelector: {
             allButtonsEnabled: true,
             buttons: [

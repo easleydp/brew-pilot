@@ -109,10 +109,10 @@ public class ArduinoChamberManager implements ChamberManager
 
         // Check consistency of params
         {
-            Gyle activeGyle = chamberRepository.getChamberById(chamberId).getActiveGyle();
-            if (activeGyle == null)
+            Gyle latestGyle = chamberRepository.getChamberById(chamberId).getLatestGyle();
+            if (latestGyle == null  ||  !latestGyle.isActive())
                 throw new IllegalStateException("No active gyle for chamberId " + chamberId);
-            ChamberParameters params = activeGyle.getChamberParameters(timeNow);
+            ChamberParameters params = latestGyle.getChamberParameters(timeNow);
 
             if (params.tTarget != tTarget)
                 logChamberParamMismatchError(chamberId, "tTarget", params.tTarget, tTarget);

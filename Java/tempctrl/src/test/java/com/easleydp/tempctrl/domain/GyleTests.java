@@ -79,7 +79,9 @@ public class GyleTests
 
         chamber = chambers.getChamberById(2);
         assertNotNull(chamber, "Chamber 2 should be found");  // Actually, getChamberById will already have checked not null.
-        assertNull(chamber.getActiveGyle(), "There should be no active gyle");
+        Gyle latestGyle = chamber.getLatestGyle();
+        assertNotNull(latestGyle, "There should be a latest gyle");
+        assertFalse(latestGyle.isActive(), "There should be no active gyle");
         gyle = chamber.getGyleById(1);
         assertNotNull(gyle, "Chamber 2 gyle 1 should be found");  // Actually, getGyleById will already have checked not null.
         gyle.setDtStarted(startTime.getTime());  // So now it's the active gyle

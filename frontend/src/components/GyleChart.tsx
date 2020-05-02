@@ -348,8 +348,8 @@ const GyleChart = () => {
     applyPatchRangeDefaultLeft(Highcharts, false);
 
     // Returns promise for retrieving IGyleDetails
-    const getActiveGyleDetails = (): Promise<IGyleDetails> => {
-      const url = '/tempctrl/guest/chamber/' + chamberId + '/active-gyle-details';
+    const getLatestGyleDetails = (): Promise<IGyleDetails> => {
+      const url = '/tempctrl/guest/chamber/' + chamberId + '/latest-gyle-details';
       return new Promise((resolve, reject) => {
         axios
           .get(url)
@@ -369,7 +369,9 @@ const GyleChart = () => {
       });
     };
 
-    const buildChart = (chamberName: string, hasHeater: boolean): Chart => {
+    const buildChart = (gyleDetails: IGyleDetails): Chart => {
+      const chamberName = gyleDetails.chamberName;
+      const hasHeater = gyleDetails.hasHeater;
       const hourMs = 1000 * 60 * 60;
 
       const formatTimeAsHtml = function (ms: number) {
@@ -479,7 +481,7 @@ const GyleChart = () => {
           },
 
           title: {
-            text: chamberName + ' temperature log',
+            text: chamberName + ' temperature log' + (gyleDetails.dtEnded ? ' (inactive)' : ''),
           },
 
           tooltip: {
@@ -612,9 +614,9 @@ const GyleChart = () => {
       );
     };
 
-    const getOrBuildChart = (chamberName: string, hasHeater: boolean): Chart => {
+    const getOrBuildChart = (gyleDetails: IGyleDetails): Chart => {
       if (!chartRef.current) {
-        chartRef.current = buildChart(chamberName, hasHeater);
+        chartRef.current = buildChart(gyleDetails);
       }
       return chartRef.current;
     };
@@ -685,14 +687,14 @@ const GyleChart = () => {
       // The user has hit F5? Go to the home page where we can check if they're logged in.
       history.push('/');
     } else {
-      getActiveGyleDetails()
+      getLatestGyleDetails()
         .then((gyleDetails) => {
           gyleDetailsRef.current = gyleDetails;
           readingsPeriodMillisRef.current = gyleDetails.readingsPeriodMillis;
           lastDtRef.current = gyleDetails.recentReadings.length
             ? gyleDetails.recentReadings[gyleDetails.recentReadings.length - 1].dt
             : null;
-          const chart = getOrBuildChart(gyleDetails.chamberName, gyleDetails.hasHeater);
+          const chart = getOrBuildChart(gyleDetails);
           chart.showLoading();
           return getAggregatedReadings(gyleDetails);
         })
@@ -704,7 +706,9 @@ const GyleChart = () => {
   }, [dispatch, history, chamberId, isAuth, addBunchOfReadings]);
 
   useInterval(() => {
-    addLatestReadings();
+    if (!getGyleDetails().dtEnded) {
+      addLatestReadings();
+    }
   }, readingsPeriodMillisRef.current);
 
   return (

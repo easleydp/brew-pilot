@@ -42,7 +42,7 @@ const FermentationProfile = () => {
 
     // Returns promise for retrieving ITemperatureProfile
     const getTemperatureProfile = (): Promise<ITemperatureProfile> => {
-      const url = '/tempctrl/guest/chamber/1/active-gyle-profile';
+      const url = '/tempctrl/guest/chamber/1/latest-gyle-profile';
       return new Promise((resolve, reject) => {
         axios
           .get(url)

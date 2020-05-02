@@ -3,6 +3,8 @@
 
 # Log file
 *.log
+/Java/logs
+/Java/pi-logs
 
 # BlueJ files
 *.ctxt
@@ -24,6 +26,7 @@ hs_err_pid*
 
 *.code-workspace
 /staticContent
+/pi-staticContent
 /Highcharts
 .dockerignore
 Dockerfile

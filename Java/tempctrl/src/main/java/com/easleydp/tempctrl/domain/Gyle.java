@@ -214,6 +214,9 @@ public class Gyle extends GyleDto
      */
     public List<Path> getReadingsLogFilePaths()
     {
+        if (logAnalysis == null)
+            logAnalysis = new LogAnalysis();
+
         return logAnalysis.logFileDescriptors.stream()
                 .map(lfd -> lfd.logFile)
                 .collect(Collectors.toList());

@@ -33,8 +33,8 @@ public class DummyChamberManager implements ChamberManager
     @Override
     public ChamberReadings getReadings(int chamberId, Date timeNow)
     {
-        Gyle gyle = chamberRepository.getChamberById(chamberId).getActiveGyle();
-        if (gyle == null)
+        Gyle gyle = chamberRepository.getChamberById(chamberId).getLatestGyle();
+        if (gyle == null  ||  !gyle.isActive())
             throw new IllegalStateException("Change " + chamberId + " has no active gyle.");
 
         TemperatureProfile temperatureProfile = gyle.getTemperatureProfile();

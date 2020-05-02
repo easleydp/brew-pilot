@@ -8,6 +8,7 @@ build/
 !**/src/test/**
 
 /logs
+/pi-logs
 
 src/test/resources/testData/chambers/*/gyles/*/logs
 

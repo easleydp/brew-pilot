@@ -25,7 +25,7 @@ public class Chamber extends ChamberDto
     private final Path chamberDir;
     private final List<Path> gyleDirs;  // In reverse order by ID
     private final Map<Integer, Path> gyleDirsById;  // In reverse order by ID
-    private final Gyle activeGyle;
+    private final Gyle latestGyle;
 
     public Chamber(Path chamberDir)
     {
@@ -45,7 +45,7 @@ public class Chamber extends ChamberDto
             this.gyleDirsById = new HashMap<>();
             for (Path gyleDir : gyleDirs)
                 this.gyleDirsById.put(Integer.valueOf(gyleDir.getFileName().toString()), gyleDir);
-            this.activeGyle = determineActiveGyleIfAny();
+            this.latestGyle = determineLatestGyleIfAny();
         }
         catch (IOException e)
         {
@@ -53,14 +53,31 @@ public class Chamber extends ChamberDto
         }
     }
 
-    private Gyle determineActiveGyleIfAny()
+    private Gyle determineLatestGyleIfAny()
     {
-        return gyleDirs.stream()
+        // Latest gyle is the one with the latest dtStarted
+        List<Gyle> gyles = gyleDirs.stream()
             .map(gDir -> new Gyle(this, gDir))
-            .filter(Gyle::isActive)
-            .findFirst()
-            .orElse(null);
+            .collect(Collectors.toList());
+        Gyle latestGyle = null;
+        for (Gyle g : gyles) {
+            Long dtStarted = g.getDtStarted();
+            if (dtStarted != null) {
+                if (latestGyle == null  ||  latestGyle.getDtStarted() < dtStarted) {
+                    latestGyle = g;
+                }
+            }
+        }
+        return latestGyle;
     }
+    // private Gyle determineActiveGyleIfAny()
+    // {
+    //     return gyleDirs.stream()
+    //         .map(gDir -> new Gyle(this, gDir))
+    //         .filter(Gyle::isActive)
+    //         .findFirst()
+    //         .orElse(null);
+    // }
 
     /** Determine the gyle dirs, in reverse order (i.e. latest ID first). */
     private List<Path> getGyleDirs()
@@ -117,9 +134,9 @@ public class Chamber extends ChamberDto
     {
         return chamberDir;
     }
-    public Gyle getActiveGyle()
+    public Gyle getLatestGyle()
     {
-        return activeGyle;
+        return latestGyle;
     }
 
     /**

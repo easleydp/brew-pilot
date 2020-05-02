@@ -57,9 +57,9 @@ public class ChamberController
     {
         List<ChamberSummary> chamberSummaries = chamberRepository.getChambers().stream()
                 .map(c -> {
-                    Gyle ag = c.getActiveGyle();
-                    ChamberReadings readings = ag != null ? ag.getLatestReadings() : null;
-                    Integer tTarget = readings != null ? readings.gettTarget() : null;
+                    Gyle lg = c.getLatestGyle();
+                    ChamberReadings readings = lg != null ? lg.getLatestReadings() : null;
+                    Integer tTarget = readings != null && lg.isActive() ? readings.gettTarget() : null;
                     return new ChamberSummary(c.getId(), c.getName(), tTarget);
                 })
                 .collect(Collectors.toList());
@@ -96,8 +96,8 @@ public class ChamberController
     public SummaryStatus getSummaryStatus(@PathVariable("chamberId") int chamberId)
     {
         Chamber chamber = chamberRepository.getChamberById(chamberId); // throws if not found
-        Gyle activeGyle = chamber.getActiveGyle();
-        ChamberReadings latestReadings = activeGyle != null ? activeGyle.getLatestReadings() : null;
+        Gyle latestGyle = chamber.getLatestGyle();
+        ChamberReadings latestReadings = latestGyle != null ? latestGyle.getLatestReadings() : null;
         if (latestReadings == null)
             return new SummaryStatus(null, null);
         return new SummaryStatus(latestReadings.gettTarget(), latestReadings.gettBeer());
@@ -114,26 +114,27 @@ public class ChamberController
     }
 
     /**
-     * Called by 'Gyle Chart' view to retrieve data for the specified chamber's active gyle.
+     * Called by 'Gyle Chart' view to retrieve data for the specified chamber's latest gyle.
      */
-    @GetMapping("/guest/chamber/{chamberId}/active-gyle-details")
-    public ActiveGyleDetails getActiveGyleDetails(@PathVariable("chamberId") int chamberId)
+    @GetMapping("/guest/chamber/{chamberId}/latest-gyle-details")
+    public LatestGyleDetails getLatestGyleDetails(@PathVariable("chamberId") int chamberId)
     {
         Chamber chamber = chamberRepository.getChamberById(chamberId); // throws if not found
-        Gyle activeGyle = chamber.getActiveGyle();
-        Assert.state(activeGyle != null, "No active gyle for chamber " + chamberId);
-        return new ActiveGyleDetails(
+        Gyle latestGyle = chamber.getLatestGyle();
+        Assert.state(latestGyle != null, "No latest gyle for chamber " + chamberId);
+        return new LatestGyleDetails(
                 PropertyUtils.getReadingsTimestampResolutionMillis(),
                 PropertyUtils.getReadingsPeriodMillis(),
                 chamber.getName(),
                 chamber.isHasHeater(),
-                activeGyle.getId(), activeGyle.getName(), activeGyle.getTemperatureProfile(), activeGyle.getDtStarted(),
-                activeGyle.getRecentReadings(),
-                activeGyle.getReadingsLogFilePaths().stream()
+                latestGyle.getId(), latestGyle.getName(), latestGyle.getTemperatureProfile(),
+                latestGyle.getDtStarted(), latestGyle.getDtEnded(),
+                latestGyle.getRecentReadings(),
+                latestGyle.getReadingsLogFilePaths().stream()
                         .map(path -> path.getFileName().toString().replace(".ndjson", ""))
                         .collect(Collectors.toList()));
     }
-    private static final class ActiveGyleDetails
+    private static final class LatestGyleDetails
     {
         @SuppressWarnings("unused") public final int readingsTimestampResolutionMillis;
         @SuppressWarnings("unused") public final int readingsPeriodMillis;
@@ -142,12 +143,13 @@ public class ChamberController
         @SuppressWarnings("unused") public final int gyleId;
         @SuppressWarnings("unused") public final String gyleName;
         @SuppressWarnings("unused") public final TemperatureProfileDto temperatureProfile;
-        @SuppressWarnings("unused") public final long dtStarted;
+        @SuppressWarnings("unused") public final Long dtStarted;
+        @SuppressWarnings("unused") public final Long dtEnded;
         @SuppressWarnings("unused") public final List<ChamberReadings> recentReadings;
         @SuppressWarnings("unused") public final List<String> readingsLogs;
-        public ActiveGyleDetails(int readingsTimestampResolutionMillis, int readingsPeriodMillis,
+        public LatestGyleDetails(int readingsTimestampResolutionMillis, int readingsPeriodMillis,
                 String chamberName, boolean hasHeater, int gyleId, String gyleName,
-                TemperatureProfileDto temperatureProfile, long dtStarted, List<ChamberReadings> recentReadings,
+                TemperatureProfileDto temperatureProfile, Long dtStarted, Long dtEnded, List<ChamberReadings> recentReadings,
                 List<String> readingsLogs)
         {
             this.readingsTimestampResolutionMillis = readingsTimestampResolutionMillis;
@@ -158,6 +160,7 @@ public class ChamberController
             this.gyleName = gyleName;
             this.temperatureProfile = temperatureProfile;
             this.dtStarted = dtStarted;
+            this.dtEnded = dtEnded;
             this.recentReadings = recentReadings;
             this.readingsLogs = readingsLogs;
         }
@@ -165,32 +168,32 @@ public class ChamberController
     }
 
     /**
-     * Polled by 'Gyle Chart' view to get all readings for the specified chamber's active gyle
+     * Polled by 'Gyle Chart' view to get all readings for the specified chamber's latest gyle
      * since the specified time.
      */
     @GetMapping("/guest/chamber/{chamberId}/recent-readings")
-    public List<ChamberReadings> getActiveGyleRecentReadings(
+    public List<ChamberReadings> getLatestGyleRecentReadings(
             @PathVariable("chamberId") int chamberId,
             @RequestParam(value="sinceDt", required=true) int sinceDt)
     {
         Chamber chamber = chamberRepository.getChamberById(chamberId); // throws if not found
-        Gyle activeGyle = chamber.getActiveGyle();
-        Assert.state(activeGyle != null, "No active gyle for chamber " + chamberId);
-        return activeGyle.getRecentReadings().stream()
+        Gyle latestGyle = chamber.getLatestGyle();
+        Assert.state(latestGyle != null, "No latest gyle for chamber " + chamberId);
+        return latestGyle.getRecentReadings().stream()
                 .filter(cr -> cr.getDt() > sinceDt)
                 .collect(Collectors.toList());
     }
 
     /**
-     * Called by 'Fermentation Profile' view to retrieve data for the specified chamber's active gyle.
+     * Called by 'Fermentation Profile' view to retrieve data for the specified chamber's latest gyle.
      */
-    @GetMapping("/guest/chamber/{chamberId}/active-gyle-profile")
-    public TemperatureProfileDto getActiveGyleProfile(@PathVariable("chamberId") int chamberId)
+    @GetMapping("/guest/chamber/{chamberId}/latest-gyle-profile")
+    public TemperatureProfileDto getLatestGyleProfile(@PathVariable("chamberId") int chamberId)
     {
         Chamber chamber = chamberRepository.getChamberById(chamberId); // throws if not found
-        Gyle activeGyle = chamber.getActiveGyle();
-        Assert.state(activeGyle != null, "No active gyle for chamber " + chamberId);
-        return activeGyle.getTemperatureProfile();
+        Gyle latestGyle = chamber.getLatestGyle();
+        Assert.state(latestGyle != null, "No latest gyle for chamber " + chamberId);
+        return latestGyle.getTemperatureProfile();
     }
 
 }

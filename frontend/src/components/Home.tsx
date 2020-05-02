@@ -32,12 +32,12 @@ const Home = ({ chamberSummaries, chamberSummariesError }: HomeProps) => {
   }, [chamberSummaries, history, isAuth]);
 
   function gaugeCard(cs: IChamberSummary) {
-    const instruction =
-      cs.tTarget !== null ? `${isMobile ? 'Tap' : 'Click '} for details` : 'Inactive';
+    const instruction = `${isMobile ? 'Tap' : 'Click '} for details`;
+    const title = cs.name + (cs.tTarget !== null ? '' : ' (inactive)');
     return (
       <div className="gauge-card">
         <div className="inner">
-          <h3>{cs.name}</h3>
+          <h3>{title}</h3>
           <Gauge chamberId={cs.id} tTarget={cs.tTarget} />
           <div className="instruction">{instruction}</div>
         </div>
@@ -48,14 +48,10 @@ const Home = ({ chamberSummaries, chamberSummariesError }: HomeProps) => {
   return chamberSummaries && chamberSummaries.length ? (
     <div className="home container-fluid">
       <div className="row">
-        {chamberSummaries.map(cs => {
+        {chamberSummaries.map((cs) => {
           return (
             <div key={cs.id} className="col-sm-6">
-              {cs.tTarget !== null ? (
-                <Link to={`/gyle-chart/${cs.id}`}>{gaugeCard(cs)}</Link>
-              ) : (
-                gaugeCard(cs)
-              )}
+              <Link to={`/gyle-chart/${cs.id}`}>{gaugeCard(cs)}</Link>
             </div>
           );
         })}

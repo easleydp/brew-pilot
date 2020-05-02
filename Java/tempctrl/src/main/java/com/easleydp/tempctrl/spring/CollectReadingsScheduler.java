@@ -64,22 +64,22 @@ public class CollectReadingsScheduler
     private void takeReadingsForChamber(Chamber ch, Date date)
     {
         final int chamberId = ch.getId();
-        Gyle ag = ch.getActiveGyle();
+        Gyle lg = ch.getLatestGyle();
 
         try
         {
         	logger.debug("================ takeReadingsForChamber(" + chamberId + ", " + date + ")");
             logger.debug("Slurping log messages BEFORE SENDING parameters to chamber " + chamberId);
             chamberManager.slurpLogMessages();
-            ChamberParameters cp = ag != null ? ag.getChamberParameters(date) : ch.getPartialChamberParameters();
+            ChamberParameters cp = lg != null ? lg.getChamberParameters(date) : ch.getPartialChamberParameters();
             chamberManager.setParameters(chamberId, cp);
             logger.debug("Slurping log messages AFTER SENDING parameters to chamber " + chamberId);
             chamberManager.slurpLogMessages();
 
-            if (ag != null)
+            if (lg != null  &&  lg.isActive())
             {
-                logger.debug("Taking readings for chamber " + ag.chamber.getId() + " gyle " + ag.gyleDir.getFileName());
-                ag.collectReadings(chamberManager, date);
+                logger.debug("Taking readings for chamber " + lg.chamber.getId() + " gyle " + lg.gyleDir.getFileName());
+                lg.collectReadings(chamberManager, date);
                 logger.debug("Slurping log messages AFTER COLLECTING readings for chamber " + chamberId);
                 chamberManager.slurpLogMessages();
             }
@@ -92,15 +92,15 @@ public class CollectReadingsScheduler
         }
     }
 
-    private static void sleep(int millis)
-    {
-        try
-        {
-            Thread.sleep(millis);
-        }
-        catch (InterruptedException e)
-        {
-            throw new RuntimeException("Sleep interrupted");
-        }
-    }
+    // private static void sleep(int millis)
+    // {
+    //     try
+    //     {
+    //         Thread.sleep(millis);
+    //     }
+    //     catch (InterruptedException e)
+    //     {
+    //         throw new RuntimeException("Sleep interrupted");
+    //     }
+    // }
 }

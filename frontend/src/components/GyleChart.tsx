@@ -372,10 +372,25 @@ const GyleChart = () => {
     const buildChart = (gyleDetails: IGyleDetails): Chart => {
       const chamberName = gyleDetails.chamberName;
       const hasHeater = gyleDetails.hasHeater;
+      const dtStarted = gyleDetails.dtStarted;
+      const isBeerFridge = dtStarted < 0;
       const hourMs = 1000 * 60 * 60;
+      const pad2 = (n: number) => {
+        return n < 10 ? '0' + n : '' + n;
+      };
 
       const formatTimeAsHtml = function (ms: number) {
-        const dtStarted = getGyleDetails().dtStarted;
+        if (isBeerFridge) {
+          const d = new Date(ms);
+          // Want e.g. "14:59, 2 May 2020"
+          const hrs = d.getHours(),
+            mins = d.getMinutes();
+          return `${pad2(hrs)}:${pad2(mins)}, ${d.getDate()} ${
+            ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][
+              d.getMonth()
+            ]
+          } ${d.getFullYear()}`;
+        }
         const totalHours = Math.round((ms - dtStarted) / hourMs); // Round to nearest hour (i.e. what we'll snap to)
         const days = Math.floor(totalHours / 24) + 1;
         const hours = Math.floor(totalHours % 24);

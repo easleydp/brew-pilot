@@ -249,6 +249,18 @@ public class ArduinoChamberManager implements ChamberManager
             case "PID":
                 switch (id)
                 {
+	                case 'X':
+	                {
+	                    // tErrorAdjustedForSawtooth/* int16 */, tExternalBoost/* int16 */, T_EXTERNAL_BOOST_THRESHOLD/* int16 */
+	                    if (buffer.length != 4)
+	                        return "{error: \"Expected 4 bytes, got " + buffer.length + "\"}";
+
+                        int i = 0;
+                        int tErrorAdjustedForSawtooth = bytesToInt16(buffer[i++], buffer[i++]);
+                        int tExternalBoost = bytesToInt16(buffer[i++], buffer[i++]);
+                        return String.format("Temp  {tErrorAdjustedForSawtooth: %d, tExternalBoost: %d}",
+                            tErrorAdjustedForSawtooth, tExternalBoost);
+                    }
 	                case 'W':
 	                {
 	                    // integralContrib/* float */

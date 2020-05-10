@@ -14,7 +14,7 @@
 
 // To guard against see-sawing between heating & cooling we only consider heating
 // if the fridge has been off for at least this long.
-#define ANTI_SEESAW_MARGIN_MINS 60
+#define ANTI_SEESAW_MARGIN_MINS 90
 
 static const char* logPrefixChamberControl = "CC";
 static const char* logPrefixPid = "PID";
@@ -178,6 +178,7 @@ void controlChamber(ChamberData& cd) {
       }
     } else { // (tError < 0)  beer too warm, needs cooling
       const int16_t tErrorAdjustedForSawtooth = tError + COOLING_SAWTOOTH_MIDPOINT; // or maybe not
+      logMsg(LOG_DEBUG, logPrefixPid, 'X', chamberId, tErrorAdjustedForSawtooth, tExternalBoost);
       if (tErrorAdjustedForSawtooth < 0) {
         if ((tExternalBoost + T_EXTERNAL_BOOST_THRESHOLD) < tErrorAdjustedForSawtooth) {  // Outside temp is markedly in our favour
           // Beer needs cooling but we can leave it to tExternal

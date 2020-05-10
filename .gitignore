@@ -3,8 +3,6 @@
 
 # Log file
 *.log
-/Java/logs
-/Java/pi-logs
 
 # BlueJ files
 *.ctxt

@@ -41,7 +41,7 @@ const Login: React.FC = () => {
           //multipart/form-data
         },
       })
-      .then(response => {
+      .then((response) => {
         console.debug(response);
         //setError(false);
         dispatch({
@@ -53,7 +53,7 @@ const Login: React.FC = () => {
         let { from } = location.state || { from: { pathname: '/' } };
         history.replace(from);
       })
-      .catch(error => {
+      .catch((error) => {
         console.debug(error);
         //setError(true);
         setHelperText('Incorrect username or password');
@@ -98,8 +98,8 @@ const Login: React.FC = () => {
             className="fadeIn second"
             name="signin"
             placeholder="username"
-            onChange={e => setUsername(e.target.value)}
-            onKeyPress={e => handleKeyPress(e)}
+            onChange={(e) => setUsername(e.target.value)}
+            onKeyPress={(e) => handleKeyPress(e)}
           />
           <input
             type="password"
@@ -107,8 +107,8 @@ const Login: React.FC = () => {
             className="fadeIn third"
             name="password"
             placeholder="password"
-            onChange={e => setPassword(e.target.value)}
-            onKeyPress={e => handleKeyPress(e)}
+            onChange={(e) => setPassword(e.target.value)}
+            onKeyPress={(e) => handleKeyPress(e)}
           />
           <input
             type="submit"

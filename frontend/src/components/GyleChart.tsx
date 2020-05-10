@@ -659,7 +659,21 @@ const GyleChart = () => {
     const getAggregatedReadings = (gyleDetails: IGyleDetails): Promise<IReadings[]> => {
       return new Promise((resolve, reject) => {
         let aggregatedReadings: IReadings[] = [];
-        Promise.all(gyleDetails.readingsLogs.map((logName) => getLogFileReadings(logName))).then(
+        let readingsLogs = gyleDetails.readingsLogs;
+        const isBeerFridge = gyleDetails.dtStarted < 0;
+        if (isBeerFridge) {
+          const genN = 4;
+          // Limit extent of beer fridge chart by fetching no more than one `genN` file (and no files of
+          // any later generations). (With genN=4 this gives us about one month's worth of readings.)
+          const getGen = (logName: string) => {
+            return parseInt(logName.substring(0, logName.indexOf('-')), 10);
+          };
+          readingsLogs = readingsLogs.filter((logName, i) => {
+            const gen = getGen(logName);
+            return gen <= genN && (gen !== genN || getGen(readingsLogs[i + 1]) !== genN);
+          });
+        }
+        Promise.all(readingsLogs.map((logName) => getLogFileReadings(logName))).then(
           (logFilesReadings) => {
             logFilesReadings.forEach((logFileReadings) => {
               aggregatedReadings.push(...logFileReadings);

@@ -136,6 +136,10 @@ void controlChamber(ChamberData& cd) {
 
   const int16_t tError = cd.tTarget - cd.tBeer; // +ve - beer too cool; -ve beer too warm
 
+  // Assume exothermic if not beer fridge and gyle age is between 12h and 4 days.
+  // Note: gyleAgeHours is -1 for beer fridge.
+  const boolean exothermic = 12 < cd.gyleAgeHours && cd.gyleAgeHours < (4 * 24);
+
   // +ve - in our favour for heating the beer; -ve - in our favour for cooling the beer
   int16_t tExternalBoost = tExternal - cd.tBeer;
 
@@ -164,7 +168,7 @@ void controlChamber(ChamberData& cd) {
       // To help avoid the possibility of see-sawing between heating & cooling, don't even consider
       // heating if fridge has been on recently (or is on now).
       if (!cd.fridgeOn && cd.fridgeStateChangeMins >= ANTI_SEESAW_MARGIN_MINS) {
-        if (cd.exothermic) {
+        if (exothermic) {
           // Assuming our tBeer sensor is near the outside of the fermentation vessel, exothermic means the
           // beer will actually be warmer internally than our tBeer reading suggests. Compensate for this
           // by adding a couple of degrees to tExternalBoost, i.e. so we're less eager to apply heating.
@@ -183,7 +187,7 @@ void controlChamber(ChamberData& cd) {
         if ((tExternalBoost + T_EXTERNAL_BOOST_THRESHOLD) < tErrorAdjustedForSawtooth) {  // Outside temp is markedly in our favour
           // Beer needs cooling but we can leave it to tExternal
           // UNLESS exothermic, in which case we'll need to actively cool.
-          if (cd.exothermic) {
+          if (exothermic) {
             fSetting = ON;
           }
         } else {  // Outside temp is not sufficiently in our favour
@@ -264,7 +268,13 @@ void chambersMinuteTick() {
   for (byte i = 0; i < CHAMBER_COUNT; i++) {
     ChamberData& cd = chamberDataArray[i];
     if (cd.fridgeStateChangeMins < 255)
-      cd.fridgeStateChangeMins += 1;
+      cd.fridgeStateChangeMins++;
+
+    // gyleAgeHours also gets set from the RPi. We update it here just in case we're
+    // offline. If we're not offline it'll get reset from RPi soon enough - no biggy.
+    if (uptimeMins % 60 == 0)
+      if (cd.gyleAgeHours != -1) // Not beer fridge
+        cd.gyleAgeHours++;
   }
   memoMinFreeRam(3);
 }

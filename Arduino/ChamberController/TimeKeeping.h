@@ -8,7 +8,7 @@
 //uint32_t millisSinceLastUpdatedMins = 0;
 //uint32_t prevUptimeMillis = 0;
 
-// Called once per ellapsed minute, though not necessarily on a precise scedule.
+// Called once per elapsed minute, though not necessarily on a precise schedule.
 void _minuteTick() {
   uptimeMins++;
   // Notify listeners
@@ -35,7 +35,7 @@ void keepTrackOfTime() {
 }
 
 //void keepTrackOfTime() {
-//  
+//
 //  prevUptimeMillis = uptimeMillis;
 //  uptimeMillis = millis();
 //

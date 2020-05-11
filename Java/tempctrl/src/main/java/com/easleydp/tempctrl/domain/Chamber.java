@@ -140,11 +140,12 @@ public class Chamber extends ChamberDto
     }
 
     /**
-     * Returns ChamberParameters sans tTarget, tTargetNext and mode
+     * Returns ChamberParameters sans gyleAgeHours, tTarget, tTargetNext and mode.
+     * Serves as a sub for Gyle.getChamberParameters() when there is no active/latest gyle.
      */
     public ChamberParameters getPartialChamberParameters()
     {
-        return new ChamberParameters(0, 0,
+        return new ChamberParameters(0, 0, 0,
                 this.gettMin(), this.gettMax(), this.isHasHeater(),
                 this.getFridgeMinOnTimeMins(), this.getFridgeMinOffTimeMins(), this.getFridgeSwitchOnLagMins(),
                 this.getKp(), this.getKi(), this.getKd(), Mode.NONE);

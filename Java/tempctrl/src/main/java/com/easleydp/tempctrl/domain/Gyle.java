@@ -119,10 +119,11 @@ public class Gyle extends GyleDto
     	Long dtStarted = getDtStarted();
         Assert.state(dtStarted != null, "getDtStarted() should be non-null");
         long timeNowMs = timeNow.getTime();
-        long millisSinceStart = timeNowMs - dtStarted;
+        long millisSinceStart = dtStarted < 0 ? 0 : timeNowMs - dtStarted;
         logger.debug("millisSinceStart: " + millisSinceStart + "(timeNowMs=" + timeNowMs + ", dtStarted=" + dtStarted + ")");
         TemperatureProfile tp = getTemperatureProfile();
-        return new ChamberParameters(tp.getTargetTempAt(millisSinceStart), tp.getTargetTempAt(millisSinceStart + 1000 * 60 * 60),
+        int gyleAgeHours = dtStarted < 0 ? -1 : (int) (millisSinceStart / (1000L * 60 * 60));
+        return new ChamberParameters(gyleAgeHours, tp.getTargetTempAt(millisSinceStart), tp.getTargetTempAt(millisSinceStart + 1000 * 60 * 60),
                 chamber.gettMin(), chamber.gettMax(), chamber.isHasHeater(),
                 chamber.getFridgeMinOnTimeMins(), chamber.getFridgeMinOffTimeMins(), chamber.getFridgeSwitchOnLagMins(),
                 chamber.getKp(), chamber.getKi(), chamber.getKd(),

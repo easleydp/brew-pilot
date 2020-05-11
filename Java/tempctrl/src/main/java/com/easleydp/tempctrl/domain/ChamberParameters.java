@@ -6,10 +6,11 @@ public class ChamberParameters
      * NOTE: All temperature values are degrees x 10, e.g. a value of 175 represents 17.5 degrees.
      */
 
-    public ChamberParameters(int tTarget, int tTargetNext, int tMin, int tMax, boolean hasHeater,
+    public ChamberParameters(int gyleAgeHours, int tTarget, int tTargetNext, int tMin, int tMax, boolean hasHeater,
         int fridgeMinOnTimeMins, int fridgeMinOffTimeMins, int fridgeSwitchOnLagMins,
         double Kp, double Ki, double Kd, Mode mode)
     {
+        this.gyleAgeHours = gyleAgeHours;
         this.tTarget = tTarget;
         this.tTargetNext = tTargetNext;
         this.tMin = tMin;
@@ -24,6 +25,7 @@ public class ChamberParameters
         this.mode = mode;
     }
 
+    public final int gyleAgeHours;
     public final int tTarget;
     /** tTargetNext reflects what tTarget WILL be one hour from 'now'. */
     public final int tTargetNext;
@@ -41,7 +43,7 @@ public class ChamberParameters
     @Override
     public String toString()
     {
-        return "[tTarget=" + tTarget + ", tTargetNext=" + tTargetNext
+        return "[gyleAgeHours=" + gyleAgeHours + ", tTarget=" + tTarget + ", tTargetNext=" + tTargetNext
                 + ", tMin=" + tMin + ", tMax=" + tMax + ", hasHeater=" + hasHeater
                 + ", fridgeMinOnTimeMins=" + fridgeMinOnTimeMins + ", fridgeMinOffTimeMins=" + fridgeMinOffTimeMins + ", fridgeSwitchOnLagMins=" + fridgeSwitchOnLagMins
                 + ", Kp=" + Kp + ", Ki=" + Ki + ", Kd=" + Kd + ", mode=" + mode + "]";

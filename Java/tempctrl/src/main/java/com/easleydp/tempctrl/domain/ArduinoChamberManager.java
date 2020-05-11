@@ -59,32 +59,33 @@ public class ArduinoChamberManager implements ChamberManager
     {
         chamberParametersByChamberId.put(chamberId, params);
 
-        getMessenger().sendRequest("setParams:" + csv(chamberId, params.tTarget, params.tTargetNext, params.tMin, params.tMax,
+        getMessenger().sendRequest("setChParams:" + csv(chamberId, params.gyleAgeHours, params.tTarget, params.tTargetNext, params.tMin, params.tMax,
                 params.hasHeater ? 1 : 0,
                 params.fridgeMinOnTimeMins, params.fridgeMinOffTimeMins, params.fridgeSwitchOnLagMins,
                 params.Kp, params.Ki, params.Kd, params.mode));
         // Examples for console test:
-        //  ^setParams:1,171,172,-10,400,1,10,10,5,2.1,0.01,20.5,A$
-        //  ^setParams:2,100,100,-10,150,0,10,10,5,1.9,0.015,19.5,O$
+        //  ^setChParams:1,12,171,172,-10,400,1,10,10,5,2.1,0.01,20.5,A$
+        //  ^setChParams:2,-1,100,100,-10,150,0,10,10,5,1.9,0.015,19.5,O$
         getMessenger().expectResponse("ack");
     }
 
     @Override
     public ChamberReadings getReadings(int chamberId, Date timeNow) throws IOException
     {
-        getMessenger().sendRequest("getChmbrRds:" + chamberId);
-        String response = getMessenger().getResponse("chmbrRds:");
-        logger.debug("Raw chmbrRds:" + response);
+        getMessenger().sendRequest("getChRds:" + chamberId);
+        String response = getMessenger().getResponse("chRds:");
+        logger.debug("Raw chRds:" + response);
         String[] values = response.split(",");
         // Expecting:
-        // tTarget,tTargetNext,tMin,tMax,hasHeater,fridgeMinOnTimeMins,fridgeMinOffTimeMins,fridgeSwitchOnLagMins,Kp,Ki,Kd,tBeer,tChamber,tExternal,tPi,heaterOutput,fridgeOn,mode
-        if (values.length != 19)
+        // gyleAgeHours,tTarget,tTargetNext,tMin,tMax,hasHeater,fridgeMinOnTimeMins,fridgeMinOffTimeMins,fridgeSwitchOnLagMins,Kp,Ki,Kd,tBeer,tChamber,tExternal,tPi,heaterOutput,fridgeOn,mode
+        if (values.length != 20)
         {
-            throw new IOException("Unexpected 'chmbrRds' response: " + response);
+            throw new IOException("Unexpected 'chRds' response: " + response);
         }
         int i = 0;
 
         // Params (for consistency check)
+        int gyleAgeHours = parseInt(values[i++]);
         int tTarget = parseInt(values[i++]);
         int tTargetNext = parseInt(values[i++]);
         int tMin = parseInt(values[i++]);
@@ -114,6 +115,8 @@ public class ArduinoChamberManager implements ChamberManager
                 throw new IllegalStateException("No active gyle for chamberId " + chamberId);
             ChamberParameters params = latestGyle.getChamberParameters(timeNow);
 
+            if (params.gyleAgeHours != gyleAgeHours)
+                logChamberParamMismatchError(chamberId, "gyleAgeHours", params.gyleAgeHours, gyleAgeHours);
             if (params.tTarget != tTarget)
                 logChamberParamMismatchError(chamberId, "tTarget", params.tTarget, tTarget);
             if (params.tTargetNext != tTargetNext)
@@ -134,8 +137,9 @@ public class ArduinoChamberManager implements ChamberManager
         }
 
         return new ChamberReadings(timeNow, tTarget, tBeer, tExternal, tChamber, tPi,
-                heaterOutput, fridgeOn, modeActual, new ChamberParameters(tTarget, tTargetNext, tMin, tMax, hasHeater,
-                fridgeMinOnTimeMins, fridgeMinOffTimeMins, fridgeSwitchOnLagMins, Kp, Ki, Kd, modeParam));
+                heaterOutput, fridgeOn, modeActual,
+                new ChamberParameters(gyleAgeHours, tTarget, tTargetNext, tMin, tMax, hasHeater,
+                    fridgeMinOnTimeMins, fridgeMinOffTimeMins, fridgeSwitchOnLagMins, Kp, Ki, Kd, modeParam));
     }
 
     @Override
@@ -339,23 +343,24 @@ public class ArduinoChamberManager implements ChamberManager
                             logger.warn("CD:0 Arduino logMsg, bad mode char: " + buffer[2]);
                             ch = '!';
                         }
-                        return String.format("updateChamberParamsAndTarget {tTarget: %d, mode: \"%c\"}",
+                        return String.format("updateChamberParams {tTarget: %d, mode: \"%c\"}",
                                 bytesToInt16(buffer[0], buffer[1]), ch);
                     case '1': case '2': case 'T': case 't':
-                        // tTarget/* int16_t */
-                        if (buffer.length != 2)
-                            return "{error: \"Expected 2 bytes\"}";
+                        // tTarget/* int16_t */, gyleAgeHours/* int16_t */
+                        if (buffer.length != 4)
+                            return "{error: \"Expected 4 bytes\"}";
 
-                        return String.format("%s {tTarget: %d}",
-                                id == '1' ? "saveTTarget" : id == '2' ? "saveTTargetOnceInAWhile" : id == 'T' ? "getEepromTTargetWithChecksum error" : "getEepromTTargetWithChecksum good",
-                                bytesToInt16(buffer[0], buffer[1]));
+                        return String.format("%s {tTarget: %d, gyleAgeHours: %d}",
+                                id == '1' ? "saveMovingChamberParams" : id == '2' ? "saveMovingChamberParamsOnceInAWhile" : id == 'T' ? "getEepromMovingChamberParams error" : "getEepromMovingChamberParams good",
+                                bytesToInt16(buffer[0], buffer[1]),
+                                bytesToInt16(buffer[2], buffer[3]));
                     case 'Q': case 'U':
                         // chamberId/* uint8_t */
                         if (buffer.length != 1)
                             return "{error: \"Expected 1 byte\"}";
 
                         return String.format("%s {chamberId: %d}",
-                                id == 'Q' ? "getEepromChamberParams bad chamberId: " : "getEepromTTargetWithChecksum bad chamberId",
+                                id == 'Q' ? "getEepromChamberParams bad chamberId: " : "getEepromMovingChamberParams bad chamberId",
                                 buffer[0]);
                     default:
                         break;

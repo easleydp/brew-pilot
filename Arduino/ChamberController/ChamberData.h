@@ -23,7 +23,7 @@
 
 
 /**
- * Parameters that seldom change.
+ * Chamber Parameters that seldom change.
  * We have defaults for these in the program code but aim to override from
  * manager AND then save/restore the manager supplied values to/from EEPROM.
  * Saved in EEPROM in case of restart with no Pi.
@@ -41,11 +41,15 @@ typedef struct {
   uint16_t checksum;
 } ChamberParams; // 20 bytes
 
+/**
+ * Chamber Parameters that change more regularly.
+ */
 typedef struct {
   uint8_t chamberId;
   int16_t tTarget;
+  int16_t gyleAgeHours;
   uint16_t checksum;
-} TTargetWithChecksum;
+} MovingChamberParams;
 
 // Latest common readings
 int16_t tExternal;
@@ -56,7 +60,7 @@ typedef struct {
   ChamberParams params;
 
   // These are updated more regularly from the RPi
-  boolean exothermic;
+  int16_t gyleAgeHours; // -1 for beer fridge
   int16_t tTarget;  // We store tTarget in EEPROM on change but not more than once an hour
   int16_t tTargetNext;
 
@@ -97,23 +101,23 @@ template<typename T> uint16_t generateChecksum(const T &t) {
 
 /*
  * EEPROM helpers.
- * Memory map: One TTargetWithChecksum per chamber, follwed by one ChamberParams per chamber.
+ * Memory map: One MovingChamberParams per chamber, followed by one ChamberParams per chamber.
  */
-void getEepromTTargetWithChecksum(uint8_t chamberId, TTargetWithChecksum &ttwc) {
-  int addr = (chamberId - 1) * sizeof(TTargetWithChecksum);
-  EEPROM.get(addr, ttwc);
+void getEepromMovingChamberParams(uint8_t chamberId, MovingChamberParams &mcp) {
+  int addr = (chamberId - 1) * sizeof(MovingChamberParams);
+  EEPROM.get(addr, mcp);
 }
-void putEepromTTargetWithChecksum(TTargetWithChecksum &ttwc) {
-  int addr = (ttwc.chamberId - 1) * sizeof(TTargetWithChecksum);
-  EEPROM.put(addr, ttwc);
+void putEepromMovingChamberParams(MovingChamberParams &mcp) {
+  int addr = (mcp.chamberId - 1) * sizeof(MovingChamberParams);
+  EEPROM.put(addr, mcp);
 }
 void getEepromChamberParams(uint8_t chamberId, ChamberParams &params) {
-  int base = CHAMBER_COUNT * sizeof(TTargetWithChecksum);
+  int base = CHAMBER_COUNT * sizeof(MovingChamberParams);
   int addr = base + (chamberId - 1) * sizeof(ChamberParams);
   EEPROM.get(addr, params);
 }
 void putEepromChamberParams(ChamberParams &params) {
-  int base = CHAMBER_COUNT * sizeof(TTargetWithChecksum);
+  int base = CHAMBER_COUNT * sizeof(MovingChamberParams);
   int addr = base + (params.chamberId - 1) * sizeof(ChamberParams);
   EEPROM.put(addr, params);
 }
@@ -127,30 +131,30 @@ ChamberData* findChamber(byte chamberId) {
   return NULL;
 }
 
-void saveTTarget(uint8_t chamberId, int16_t tTarget) {
-  TTargetWithChecksum tTargetWithChecksum = { chamberId, tTarget, 0 };
-  tTargetWithChecksum.checksum = generateChecksum(tTargetWithChecksum);
-  putEepromTTargetWithChecksum(tTargetWithChecksum);
+void saveMovingChamberParams(uint8_t chamberId, int16_t tTarget, int16_t gyleAgeHours) {
+  MovingChamberParams movingChamberParams = { chamberId, tTarget, gyleAgeHours, 0 };
+  movingChamberParams.checksum = generateChecksum(movingChamberParams);
+  putEepromMovingChamberParams(movingChamberParams);
   memoMinFreeRam(20);
 }
 
-const unsigned long saveTTargetInterval = 1000L * 60 * 60; // save tTarget every hour
+const unsigned long saveMovingChamberParamsInterval = 1000L * 60 * 60; // save tTarget every hour
 uint32_t millisSinceLastTTargetSave[CHAMBER_COUNT] = {0, 0};
 uint32_t prevMillisTTargetSave[CHAMBER_COUNT] = {0, 0};
-void saveTTargetOnceInAWhile(uint8_t chamberId, int16_t tTarget) {
-  if (TIME_UP(prevMillisTTargetSave[chamberId - 1], uptimeMillis, saveTTargetInterval)) {
+void saveMovingChamberParamsOnceInAWhile(uint8_t chamberId, int16_t tTarget, int16_t gyleAgeHours) {
+  if (TIME_UP(prevMillisTTargetSave[chamberId - 1], uptimeMillis, saveMovingChamberParamsInterval)) {
     millisSinceLastTTargetSave[chamberId - 1] = 0;
-    saveTTarget(chamberId, tTarget);
-    logMsg(LOG_DEBUG, logPrefixChamberData, '2', chamberId, tTarget/* int16_t */);
+    saveMovingChamberParams(chamberId, tTarget, gyleAgeHours);
+    logMsg(LOG_DEBUG, logPrefixChamberData, '2', chamberId, tTarget/* int16_t */, gyleAgeHours/* int16_t */);
 
     prevMillisTTargetSave[chamberId - 1] = uptimeMillis;
     memoMinFreeRam(21);
   }
 }
 
-boolean tTargetSaved[CHAMBER_COUNT] = {false, false};
-void updateChamberParamsAndTarget(
-  ChamberData& cd, int16_t tTarget, int16_t tTargetNext, int16_t tMin, int16_t tMax, boolean hasHeater,
+boolean movingChamberParamsSaved[CHAMBER_COUNT] = {false, false};
+void updateChamberParams(
+  ChamberData& cd, int16_t gyleAgeHours, int16_t tTarget, int16_t tTargetNext, int16_t tMin, int16_t tMax, boolean hasHeater,
   uint8_t fridgeMinOnTimeMins, uint8_t fridgeMinOffTimeMins, uint8_t fridgeSwitchOnLagMins,
   float Kp, float Ki, float Kd, char mode) {
 
@@ -158,6 +162,7 @@ void updateChamberParamsAndTarget(
 
   logMsg(LOG_DEBUG, logPrefixChamberData, '0', chamberId, tTarget/* int16_t */, mode/* char */);
 
+  cd.gyleAgeHours = gyleAgeHours;
   cd.tTarget = tTarget;
   cd.tTargetNext = tTargetNext;
 
@@ -174,12 +179,12 @@ void updateChamberParamsAndTarget(
   cd.params.checksum = generateChecksum(cd.params);
   putEepromChamberParams(cd.params);
 
-  if (!tTargetSaved[chamberId - 1]) {
-    saveTTarget(chamberId, tTarget);
-    tTargetSaved[chamberId - 1] = true;
-    logMsg(LOG_DEBUG, logPrefixChamberData, '1', chamberId, tTarget/* int16_t */);
+  if (!movingChamberParamsSaved[chamberId - 1]) {
+    saveMovingChamberParams(chamberId, tTarget, gyleAgeHours);
+    movingChamberParamsSaved[chamberId - 1] = true;
+    logMsg(LOG_DEBUG, logPrefixChamberData, '1', chamberId, tTarget/* int16_t */, gyleAgeHours/* int16_t */);
   } else {
-    saveTTargetOnceInAWhile(chamberId, tTarget);
+    saveMovingChamberParamsOnceInAWhile(chamberId, tTarget, gyleAgeHours);
   }
 }
 
@@ -221,17 +226,17 @@ void initChamberData() {
       logMsg(LOG_ERROR, logPrefixChamberData, 'Q', params.chamberId, eepromParams.chamberId/* uint8_t */);
     }
 
-    TTargetWithChecksum tTargetWithChecksum = {};
-    getEepromTTargetWithChecksum(params.chamberId, tTargetWithChecksum);
-    if (tTargetWithChecksum.chamberId == params.chamberId) {
-      if (tTargetWithChecksum.checksum == generateChecksum(tTargetWithChecksum)) {
-        cd.tTarget = cd.tTargetNext = tTargetWithChecksum.tTarget;
-        logMsg(LOG_DEBUG, logPrefixChamberData, 't', params.chamberId, tTargetWithChecksum.tTarget/* int16_t */);
+    MovingChamberParams mcp = {};
+    getEepromMovingChamberParams(params.chamberId, mcp);
+    if (mcp.chamberId == params.chamberId) {
+      if (mcp.checksum == generateChecksum(mcp)) {
+        cd.tTarget = cd.tTargetNext = mcp.tTarget;
+        logMsg(LOG_DEBUG, logPrefixChamberData, 't', params.chamberId, mcp.tTarget/* int16_t */, mcp.gyleAgeHours/* int16_t */);
       } else {
-        logMsg(LOG_ERROR, logPrefixChamberData, 'T', params.chamberId, tTargetWithChecksum.tTarget/* int16_t */);
+        logMsg(LOG_ERROR, logPrefixChamberData, 'T', params.chamberId, mcp.tTarget/* int16_t */, mcp.gyleAgeHours/* int16_t */);
       }
     } else {
-      logMsg(LOG_ERROR, logPrefixChamberData, 'U', params.chamberId, tTargetWithChecksum.chamberId/* uint8_t */);
+      logMsg(LOG_ERROR, logPrefixChamberData, 'U', params.chamberId, mcp.chamberId/* uint8_t */);
     }
   }
 }

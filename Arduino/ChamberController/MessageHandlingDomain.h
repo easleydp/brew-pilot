@@ -1,14 +1,18 @@
 static const char CMD_STATUS[] PROGMEM = "status";
-static const char CMD_SET_CHAMBER_PARAMS[] PROGMEM = "setParams:";
-static const char CMD_GET_CHAMBER_READINGS[] PROGMEM = "getChmbrRds:";
+static const char CMD_SET_CHAMBER_PARAMS[] PROGMEM = "setChParams:";
+static const char CMD_GET_CHAMBER_READINGS[] PROGMEM = "getChRds:";
 //static const char CMD_TEST_LOG_MESSAGE[] PROGMEM = "testLogMsg:";
 static const char CMD_GET_LOG_MESSAGES[] PROGMEM = "getLogMsgs";
-static const char CMD_FLIP_LED[] PROGMEM = "flipLed";
+//static const char CMD_FLIP_LED[] PROGMEM = "flipLed";
 
 void handleSetChamberParams(char* cmd) {
   int i = strlen(strFromProgMem(CMD_SET_CHAMBER_PARAMS));
   int j = nullNextComma(cmd, i);
   byte chamberId = atoi(&cmd[i]);
+
+  i = j;
+  j = nullNextComma(cmd, i);
+  int16_t gyleAgeHours = atoi(&cmd[i]);
 
   i = j;
   j = nullNextComma(cmd, i);
@@ -62,7 +66,7 @@ void handleSetChamberParams(char* cmd) {
   if (cdPtr == NULL) {
     return respondWithError("chamberId,", itoa(chamberId));
   }
-  updateChamberParamsAndTarget(*cdPtr, tTarget, tTargetNext, tMin, tMax, hasHeater,
+  updateChamberParams(*cdPtr, gyleAgeHours, tTarget, tTargetNext, tMin, tMax, hasHeater,
     fridgeMinOnTimeMins, fridgeMinOffTimeMins, fridgeSwitchOnLagMins, Kp, Ki, Kd, mode);
   sendAck();
 }
@@ -76,7 +80,9 @@ void handleGetChamberReadings(const char* cmd) {
     return respondWithError("chamberId,", itoa(chamberId));
   }
   sendToMasterStart();
-  Serial.print(F("chmbrRds:"));
+  Serial.print(F("chRds:"));
+  Serial.print(cdPtr->gyleAgeHours);
+  printComma();
   Serial.print(cdPtr->tTarget);
   printComma();
   Serial.print(cdPtr->tTargetNext);
@@ -166,17 +172,16 @@ void dispatchCmd(char* cmd) {
     handleSetChamberParams(cmd);
   } else if (prefix(strFromProgMem(CMD_GET_CHAMBER_READINGS), cmd)) {
     handleGetChamberReadings(cmd);
-//  } else if (prefix(strFromProgMem(CMD_TEST_LOG_MESSAGE), cmd)) {
-//    handleTestLogMessage(cmd);
+  // } else if (prefix(strFromProgMem(CMD_TEST_LOG_MESSAGE), cmd)) {
+  //   handleTestLogMessage(cmd);
   } else if (strcmp_P(cmd, CMD_GET_LOG_MESSAGES) == 0) {
     handleGetLogMessages();
-  } else if (strcmp_P(cmd, CMD_FLIP_LED) == 0) {
-    //flipLed();
-    sendToMasterStart(); Serial.print(F("ledState:")); Serial.print(ledState); sendToMasterEnd();
+  // } else if (strcmp_P(cmd, CMD_FLIP_LED) == 0) {
+  //   //flipLed();
+  //   sendToMasterStart(); Serial.print(F("ledState:")); Serial.print(ledState); sendToMasterEnd();
   } else {
     sendToMaster("UnrecCmd:", cmd);
   }
-  flipLed();
 }
 
 byte iIpBuf = 0;

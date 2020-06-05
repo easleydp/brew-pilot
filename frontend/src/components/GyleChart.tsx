@@ -451,6 +451,7 @@ const GyleChart = () => {
           color: 'rgba(255, 90, 150, 0.75)',
           fillOpacity: 0.3,
           lineWidth: 1,
+          dataGrouping: { enabled: false },
           //showInNavigator: true,
         } as Highcharts.SeriesAreasplineOptions);
       }

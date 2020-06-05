@@ -1,23 +1,25 @@
 package com.easleydp.tempctrl.spring;
 
-import static com.easleydp.tempctrl.util.StringUtils.*;
+import static com.easleydp.tempctrl.util.StringUtils.substringAfter;
+import static com.easleydp.tempctrl.util.StringUtils.substringBetween;
 
 import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.concurrent.TimeUnit;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
-
 import com.easleydp.tempctrl.domain.ChamberManager;
 import com.easleydp.tempctrl.domain.ChamberManagerStatus;
+import com.easleydp.tempctrl.domain.JvmStatus;
 import com.easleydp.tempctrl.util.OsCommandExecuter;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 public class StatusController
@@ -53,7 +55,7 @@ public class StatusController
         return new StatusReportResponse(
                 OsCommandExecuter.execute("uptime", "-p"),
                 new File(vcgencmd).exists() ? new PiStats() : null,
-                new JavaMemory(),
+                new JvmStatus(),
                 new FileSystem(File.listRoots()[0]),
                 chamberManagerStatusSupplier.get()
         );
@@ -66,19 +68,19 @@ public class StatusController
         private final PiStats piStats;
 
         @SuppressWarnings("unused")
-        public final JavaMemory javaMemory;
-
-        @SuppressWarnings("unused")
         public final FileSystem fileSystem;
+
+        @JsonInclude(Include.NON_NULL)
+        public final JvmStatus jvm;
 
         @JsonInclude(Include.NON_NULL)
         public final ChamberManagerStatus arduino;
 
-        public StatusReportResponse(String uptime, PiStats piStats, JavaMemory javaMemory, FileSystem fileSystem, ChamberManagerStatus arduino)
+        public StatusReportResponse(String uptime, PiStats piStats, JvmStatus jvm, FileSystem fileSystem, ChamberManagerStatus arduino)
         {
             this.uptime = uptime;
             this.piStats = piStats;
-            this.javaMemory = javaMemory;
+            this.jvm = jvm;
             this.fileSystem = fileSystem;
             this.arduino = arduino;
         }
@@ -144,25 +146,6 @@ public class StatusController
                 OsCommandExecuter.execute(vcgencmd, "measure_temp"),
                 OsCommandExecuter.execute(vcgencmd, "measure_volts", "core"),
                 OsCommandExecuter.execute(vcgencmd, "measure_clock", "arm"));
-        }
-    }
-
-    private static class JavaMemory
-    {
-        public final long total;
-        public final long free;
-
-
-        @SuppressWarnings("unused")
-        public int getPercentageFree()
-        {
-            return (int)(free * 100 / total);
-        }
-
-        JavaMemory()
-        {
-            free = Runtime.getRuntime().freeMemory();
-            total = Runtime.getRuntime().totalMemory();
         }
     }
 

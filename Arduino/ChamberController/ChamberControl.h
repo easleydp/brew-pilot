@@ -166,20 +166,16 @@ void controlChamber(ChamberData& cd) {
           heatPidWise = true;
       }
     } else if (tError > 0) {  // beer too cool, needs heating
-      // To help avoid the possibility of see-sawing between heating & cooling, don't even consider
-      // heating if fridge has been on recently (or is on now).
-      if (!cd.fridgeOn && cd.fridgeStateChangeMins >= ANTI_SEESAW_MARGIN_MINS) {
-        if (exothermic) {
-          // Assuming our tBeer sensor is near the outside of the fermentation vessel, exothermic means the
-          // beer will actually be warmer internally than our tBeer reading suggests. Compensate for this
-          // by adding a couple of degrees to tExternalBoost, i.e. so we're less eager to apply heating.
-          tExternalBoost += 20;
-        }
-        if ((tExternalBoost - T_EXTERNAL_BOOST_THRESHOLD) > tError) {  // Outside temp is markedly in our favour
-          // Needs heating but we can leave it to tExternal
-        } else {  // Outside temp is not sufficiently in our favour
-          heatPidWise = true;
-        }
+      if (exothermic) {
+        // Assuming our tBeer sensor is near the outside of the fermentation vessel, exothermic means the
+        // beer will actually be warmer internally than our tBeer reading suggests. Compensate for this
+        // by adding a couple of degrees to tExternalBoost, i.e. so we're less eager to apply heating.
+        tExternalBoost += 20;
+      }
+      if ((tExternalBoost - T_EXTERNAL_BOOST_THRESHOLD) > tError) {  // Outside temp is markedly in our favour
+        // Needs heating but we can leave it to tExternal
+      } else {  // Outside temp is not sufficiently in our favour
+        heatPidWise = true;
       }
     } else { // (tError < 0)  beer too warm, needs cooling
       const int16_t tErrorAdjustedForSawtooth = tError + COOLING_SAWTOOTH_MIDPOINT; // or maybe not
@@ -232,6 +228,16 @@ void controlChamber(ChamberData& cd) {
     } else {
       logMsg(LOG_DEBUG, logPrefixPid, '-', chamberId, pidOutput/* float */);
       hSetting = round(pidOutput);
+    }
+  }
+
+  if (hSetting > 0) {
+    // To help avoid the possibility of see-sawing between heating & cooling, don't even consider
+    // heating if fridge has been on recently (or is on now).
+    if (cd.fridgeOn || cd.fridgeStateChangeMins < ANTI_SEESAW_MARGIN_MINS) {
+      // Heating countermanded
+      logMsg(LOG_DEBUG, logPrefixChamberControl, 'C', chamberId, cd.fridgeStateChangeMins/* uint8_t */, hSetting/* byte */);
+      hSetting = 0;
     }
   }
 

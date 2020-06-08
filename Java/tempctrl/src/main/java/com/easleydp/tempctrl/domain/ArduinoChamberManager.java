@@ -293,7 +293,7 @@ public class ArduinoChamberManager implements ChamberManager
 
                         return String.format("%s {pidOutput: %.3f}",
                                 id == '+' ? "pidOutput > 100" : id == '-' ? "pidOutput" : "pidOutput < 0 (we've screwed-up somehow)",
-                        		bytesToFloat(buffer[0], buffer[1], buffer[2], buffer[3]));
+                                bytesToFloat(buffer[0], buffer[1], buffer[2], buffer[3]));
                     case 'C':
                     {
                         // PID output Components, 3 floats */
@@ -380,6 +380,12 @@ public class ArduinoChamberManager implements ChamberManager
                             return "{error: \"Expected 1 byte\"}";
 
                         return String.format("{heater output: %d}", buffer[0]);
+                    case 'C':
+                        // fridgeStateChangeMins/* uint8_t */, hSetting/* byte */
+                        if (buffer.length != 2)
+                            return "{error: \"Expected 2 bytes\"}";
+
+                        return String.format("Heating countermanded {fridgeStateChangeMins: %d, hSetting: %d}", buffer[0], buffer[1]);
                     case 'j': case 'k':
                         // time/* uint32_t */
                         if (buffer.length != 4)

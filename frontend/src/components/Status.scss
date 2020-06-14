@@ -4,14 +4,14 @@
   }
   > pre {
     padding: 10px;
-    background-color: #333;
-    color: #ddd;
+    background-color: #f8f8f85e;
+    color: #666;
 
     .string {
-      color: #ffa600;
+      color: #ff00fb;
     }
     .number {
-      color: #a7ff00;
+      color: #03771a;
     }
     .boolean {
       color: #00c3ff;
@@ -20,7 +20,7 @@
       color: #00c3ff;
     }
     .key {
-      color: #00f2ff;
+      color: #026fec;
     }
   }
 }

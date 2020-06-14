@@ -2,11 +2,13 @@ package com.easleydp.tempctrl.domain;
 
 import com.easleydp.tempctrl.util.StringUtils;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 
 /**
  * Value object representing the status reported from a chamber manager.
  */
+@JsonPropertyOrder({ "uptime", "minFreeRam", "badSensorCount" })
 public class ChamberManagerStatus
 {
     public ChamberManagerStatus(

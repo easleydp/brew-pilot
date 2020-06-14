@@ -13,6 +13,7 @@ import com.easleydp.tempctrl.domain.ChamberManagerStatus;
 import com.easleydp.tempctrl.domain.JvmStatus;
 import com.easleydp.tempctrl.util.OsCommandExecuter;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
@@ -53,19 +54,38 @@ public class StatusController
     public StatusReportResponse getStatusReport() throws IOException
     {
         return new StatusReportResponse(
-                OsCommandExecuter.execute("uptime", "-p"),
-                new File(vcgencmd).exists() ? new PiStats() : null,
-                new JvmStatus(),
-                new FileSystem(File.listRoots()[0]),
-                chamberManagerStatusSupplier.get()
+            new PiStats(),
+            chamberManagerStatusSupplier.get()
         );
     }
 
     private static final class StatusReportResponse
     {
-        private final String uptime;
+        @JsonInclude(Include.NON_NULL)
+        public final PiStats raspberryPi;
 
-        private final PiStats piStats;
+        @JsonInclude(Include.NON_NULL)
+        public final ChamberManagerStatus arduino;
+
+        public StatusReportResponse(PiStats piStats, ChamberManagerStatus arduino)
+        {
+            this.raspberryPi = piStats;
+            this.arduino = arduino;
+        }
+
+        @JsonInclude(Include.NON_NULL)
+        public Boolean getArduinoIsOffline()
+        {
+            return arduino == null ? true : null;
+        }
+    }
+
+    @JsonPropertyOrder({ "uptime", "temperature", "volts", "clock" })
+    private static class PiStats
+    {
+        private static boolean mockPi = new File(vcgencmd).exists() == false;
+
+        private final String uptime;
 
         @SuppressWarnings("unused")
         public final FileSystem fileSystem;
@@ -73,16 +93,31 @@ public class StatusController
         @JsonInclude(Include.NON_NULL)
         public final JvmStatus jvm;
 
-        @JsonInclude(Include.NON_NULL)
-        public final ChamberManagerStatus arduino;
+        public final String temperature;
+        public final String volts;
+        public final String clock;
 
-        public StatusReportResponse(String uptime, PiStats piStats, JvmStatus jvm, FileSystem fileSystem, ChamberManagerStatus arduino)
+        // Handy for testing
+        public PiStats(String uptime, FileSystem fileSystem, JvmStatus jvm, String temperature, String volts, String clock)
         {
             this.uptime = uptime;
-            this.piStats = piStats;
-            this.jvm = jvm;
             this.fileSystem = fileSystem;
-            this.arduino = arduino;
+            this.temperature = temperature;
+            this.jvm = jvm;
+            this.volts = volts;
+            this.clock = clock;
+        }
+
+        public PiStats()
+        {
+
+            this(
+                OsCommandExecuter.execute("uptime", "-p"),
+                new FileSystem(File.listRoots()[0]),
+                new JvmStatus(),
+                mockPi ? "temp=40.0'C" : OsCommandExecuter.execute(vcgencmd, "measure_temp"),
+                mockPi ? "volt=0.8765V" : OsCommandExecuter.execute(vcgencmd, "measure_volts", "core"),
+                mockPi ? "frequency(48)=750000000" : OsCommandExecuter.execute(vcgencmd, "measure_clock", "arm"));
         }
 
         @JsonInclude(Include.NON_NULL)
@@ -93,59 +128,30 @@ public class StatusController
         }
 
         @JsonInclude(Include.NON_NULL)
-        public BigDecimal getPiTemperature()
+        public BigDecimal getTemperature()
         {
-            if (piStats == null || piStats.temperature == null)
+            if (temperature == null)
                 return null;
             // e.g. "temp=41.0'C"
-            return new BigDecimal(substringBetween(piStats.temperature, "=", "'"));
+            return new BigDecimal(substringBetween(temperature, "=", "'"));
         }
 
         @JsonInclude(Include.NON_NULL)
-        public BigDecimal getPiVolts()
+        public BigDecimal getVolts()
         {
-            if (piStats == null || piStats.volts == null)
+            if (volts == null)
                 return null;
             // e.g. "volt=0.8563V"
-            return new BigDecimal(substringBetween(piStats.volts, "=", "V"));
+            return new BigDecimal(substringBetween(volts, "=", "V"));
         }
 
         @JsonInclude(Include.NON_NULL)
-        public Integer getPiClock()
+        public Integer getClock()
         {
-            if (piStats == null || piStats.clock == null)
+            if (clock == null)
                 return null;
             // e.g. "frequency(48)=750199232"
-            return Integer.parseInt(substringAfter(piStats.clock, "="), 10);
-        }
-
-        @JsonInclude(Include.NON_NULL)
-        public Boolean getArduinoIsOffline()
-        {
-            return arduino == null ? true : null;
-        }
-    }
-
-    private static class PiStats
-    {
-        public final String temperature;
-        public final String volts;
-        public final String clock;
-
-        // Handy for testing
-        public PiStats(String temperature, String volts, String clock)
-        {
-            this.temperature = temperature;
-            this.volts = volts;
-            this.clock = clock;
-        }
-
-        public PiStats()
-        {
-            this(
-                OsCommandExecuter.execute(vcgencmd, "measure_temp"),
-                OsCommandExecuter.execute(vcgencmd, "measure_volts", "core"),
-                OsCommandExecuter.execute(vcgencmd, "measure_clock", "arm"));
+            return Integer.parseInt(substringAfter(clock, "="), 10);
         }
     }
 

@@ -665,7 +665,10 @@ const GyleChart = () => {
             resolve(readings);
           })
           .catch((error) => {
-            reject(error);
+            // Persevere rather than reject (e.g. due to an odd file not being found), otherwise nothing
+            // will be displayed.
+            console.warn(`Error while retrieving ${logName}.ndjson:`, error);
+            resolve([]);
           });
       });
     };

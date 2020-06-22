@@ -90,4 +90,8 @@ public class TemperatureProfile extends TemperatureProfileDto
         }
         return point.getTargetTemp();
     }
+
+	public TemperatureProfileDto toDto() {
+		return new TemperatureProfileDto(points);
+	}
 }

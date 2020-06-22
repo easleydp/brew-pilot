@@ -12,20 +12,25 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.util.Assert;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Chamber extends ChamberDto
 {
+    private static final Logger logger = LoggerFactory.getLogger(Chamber.class);
+
     private final int id;
     private final Path chamberDir;
-    private final List<Path> gyleDirs;  // In reverse order by ID
-    private final Map<Integer, Path> gyleDirsById;  // In reverse order by ID
-    private final Gyle latestGyle;
+    private List<Path> gyleDirs;  // In reverse order by ID
+    private Map<Integer, Path> gyleDirsById;  // In reverse order by ID
+    private Gyle latestGyle;
 
     public Chamber(Path chamberDir)
     {
@@ -41,11 +46,7 @@ public class Chamber extends ChamberDto
             ObjectMapper mapper = new ObjectMapper();
             BeanUtils.copyProperties(mapper.readValue(json, ChamberDto.class), this);
 
-            this.gyleDirs = getGyleDirs();
-            this.gyleDirsById = new HashMap<>();
-            for (Path gyleDir : gyleDirs)
-                this.gyleDirsById.put(Integer.valueOf(gyleDir.getFileName().toString()), gyleDir);
-            this.latestGyle = determineLatestGyleIfAny();
+            checkForGyleUpdates();
         }
         catch (IOException e)
         {
@@ -53,22 +54,33 @@ public class Chamber extends ChamberDto
         }
     }
 
-    private Gyle determineLatestGyleIfAny()
-    {
-        // Latest gyle is the one with the latest dtStarted
-        List<Gyle> gyles = gyleDirs.stream()
-            .map(gDir -> new Gyle(this, gDir))
-            .collect(Collectors.toList());
-        Gyle latestGyle = null;
-        for (Gyle g : gyles) {
-            Long dtStarted = g.getDtStarted();
-            if (dtStarted != null) {
-                if (latestGyle == null  ||  latestGyle.getDtStarted() < dtStarted) {
-                    latestGyle = g;
-                }
-            }
+    private synchronized void digestGyleDirs() {
+        this.gyleDirs = getGyleDirs();
+        this.gyleDirsById = new HashMap<>();
+        for (Path gyleDir : gyleDirs)
+            this.gyleDirsById.put(Integer.valueOf(gyleDir.getFileName().toString()), gyleDir);
+    }
+
+	public synchronized void checkForGyleUpdates() {
+        digestGyleDirs();
+        Gyle _latestGyle = determineLatestGyleIfAny();
+        if (_latestGyle == null  ||  latestGyle == null) {
+            latestGyle = _latestGyle;
+        } else if (_latestGyle.getId() != latestGyle.getId()) {
+            logger.info("Latest gyle superseded. " + latestGyle.getId() + " superseded by " + _latestGyle.getId());
+            latestGyle.close();
+            latestGyle = _latestGyle;
+        } else if (_latestGyle.getFileLastModified() > latestGyle.getFileLastModified()) {
+            logger.info("Latest gyle (" + latestGyle.getId() + ") updated.");
+            latestGyle.refresh();
         }
-        return latestGyle;
+    }
+
+    private synchronized Gyle determineLatestGyleIfAny()
+    {
+        // gyleDirs is sorted by id desc
+        Path latestGyleDir = gyleDirs.isEmpty() ? null : gyleDirs.get(0);
+        return latestGyleDir != null ? new Gyle(this, latestGyleDir) : null;
     }
     // private Gyle determineActiveGyleIfAny()
     // {
@@ -79,8 +91,11 @@ public class Chamber extends ChamberDto
     //         .orElse(null);
     // }
 
-    /** Determine the gyle dirs, in reverse order (i.e. latest ID first). */
-    private List<Path> getGyleDirs()
+    /**
+     * Determine the gyle dirs, in reverse order (i.e. latest ID first).
+     * Ignores dirs with no "gyle.json" file
+     */
+    private synchronized List<Path> getGyleDirs()
     {
         Path gylesDir = chamberDir.resolve("gyles");
         Assert.state(Files.exists(gylesDir), "'gyles' dir should exist for chamber " + id);
@@ -110,7 +125,7 @@ public class Chamber extends ChamberDto
         }
     }
 
-    public Gyle getGyleById(int id)
+    public synchronized Gyle getGyleById(int id)
     {
         Path gyleDir = gyleDirsById.get(id);
         if (gyleDir == null)
@@ -118,7 +133,7 @@ public class Chamber extends ChamberDto
         return new Gyle(this, gyleDir);
     }
 
-    public List<Gyle> getGyles()
+    public synchronized List<Gyle> getGyles()
     {
         return gyleDirs.stream()
                 .map(gDir -> new Gyle(this, gDir))
@@ -134,7 +149,7 @@ public class Chamber extends ChamberDto
     {
         return chamberDir;
     }
-    public Gyle getLatestGyle()
+    public synchronized Gyle getLatestGyle()
     {
         return latestGyle;
     }

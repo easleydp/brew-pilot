@@ -1,0 +1,231 @@
+import './FermenterManagement.scss';
+import React, { useEffect, useState } from 'react';
+import { useHistory } from 'react-router-dom';
+import { useAppState, Auth } from './state';
+import IGyle from '../api/IGyle';
+import axios from 'axios';
+import { Form, Button, Row, Col } from 'react-bootstrap';
+import { useFormik, yupToFormErrors } from 'formik';
+import * as Yup from 'yup';
+
+interface IErrors {
+  formName?: string;
+  formDtStarted?: string;
+  formDtEnded?: string;
+}
+interface IValues {
+  formName?: string;
+  formDtStarted?: string;
+  formDtEnded?: string;
+}
+
+// const validate = (values: IValues) => {
+//   const errors: IErrors = {};
+//   if (values.formDtStarted) {
+//     if (!/^\d+$/.test(values.formDtStarted)) {
+//       errors.formDtStarted = 'Started must be a positive integer';
+//     } else if (values.formDtStarted.length !== 13) {
+//       errors.formDtStarted = `Started must be 13 digits, not ${values.formDtStarted.length}`;
+//     }
+//   }
+//   if (values.formDtEnded) {
+//     if (!values.formDtStarted) {
+//       errors.formDtEnded = 'Ended cannot be specified without Started being set';
+//     } else if (!/^\d+$/.test(values.formDtEnded)) {
+//       errors.formDtEnded = 'Ended must be all digits';
+//     } else if (values.formDtEnded.length !== 13) {
+//       errors.formDtEnded = `Ended must be 13 digits, not ${values.formDtEnded.length}`;
+//     }
+//   }
+//   return errors;
+// };
+
+const FermenterManagement = () => {
+  const history = useHistory();
+  const { state, dispatch } = useAppState();
+  const isAuth = state && state.isAuth;
+
+  const [status, setStatus] = useState<string | null>(null);
+  const [statusClass, setStatusClass] = useState<string>('text-body');
+
+  useEffect(() => {
+    console.info(
+      Auth[isAuth],
+      '=================== FermenterManagement useEffect invoked ======================'
+    );
+
+    if (isAuth === Auth.NotLoggedIn) {
+      // The user is definitely not logged in. Go straight to signin form.
+      history.push('/signin', { from: '/fermentation-management' });
+    } else if (isAuth === Auth.Unknown) {
+      // The user has hit F5? Go to the home page where we can check if they're logged in.
+      history.push('/fermentation-management');
+    } else {
+      getGyle().then((gyle) => {
+        buildForm(gyle);
+      });
+    }
+  }, [dispatch, history, isAuth]);
+
+  // Returns promise for retrieving IGyle
+  const getGyle = (): Promise<IGyle> => {
+    const url = '/tempctrl/guest/chamber/1/latest-gyle';
+    return new Promise((resolve, reject) => {
+      axios
+        .get(url)
+        .then((response) => {
+          return resolve(response.data);
+        })
+        .catch((error) => {
+          console.debug(url + ' ERROR', error);
+          const status = error.response && error.response.status;
+          if (status === 403 || status === 401) {
+            console.debug(status, 'Redirecting to signin');
+            dispatch({ type: 'LOGOUT' });
+            history.push('/signin', { from: '/fermentation-management' });
+          }
+          reject(error);
+        });
+    });
+  };
+
+  const buildForm = (gyle: IGyle) => {
+    formik.setFieldValue('formName', gyle.name);
+    formik.setFieldValue('formDtStarted', gyle.dtStarted || '');
+    formik.setFieldValue('formDtEnded', gyle.dtEnded || '');
+  };
+
+  const formik = useFormik({
+    initialValues: {
+      formName: '',
+      formDtStarted: '',
+      formDtEnded: '',
+    },
+    // validate,
+    validationSchema: Yup.object({
+      formName: Yup.string().required('Required'),
+      formDtStarted: Yup.number()
+        .typeError('Must be an integer')
+        .integer('Must be an integer')
+        .min(1580000000000)
+        .max(2000000000000),
+      formDtEnded: Yup.number()
+        .typeError('Must be an integer')
+        .integer('Must be an integer')
+        .min(1580000000000)
+        .max(2000000000000)
+        .test('', 'Ended cannot be specified without Started being set', function (val) {
+          return !val || this.parent['formDtStarted'];
+        })
+        .test('', 'Ended must be later than Started', function (val) {
+          return !val || val > this.parent['formDtStarted'];
+        }),
+    }),
+    onSubmit: (values, { setSubmitting }) => {
+      // setTimeout(() => {
+      //   console.log(1, formik.isSubmitting, JSON.stringify(values, null, 2));
+      //   setSubmitting(false);
+      // }, 1000);
+      const gyle: IGyle = {
+        name: values.formName,
+        dtStarted: values.formDtStarted ? parseInt(values.formDtStarted) : undefined,
+        dtEnded: values.formDtEnded ? parseInt(values.formDtEnded) : undefined,
+      };
+      setStatus(null);
+      axios
+        .post('/tempctrl/admin/chamber/1/update-gyle', gyle)
+        .then((response) => {
+          setSubmitting(false);
+          setStatus('Updated successfully');
+          setStatusClass('text-body');
+        })
+        .catch((error) => {
+          setSubmitting(false);
+          console.warn(99, error, error.response.data);
+          setStatus(JSON.stringify(error.response.data));
+          setStatusClass('text-error');
+        });
+    },
+  });
+  const handleDtStartedNow = () => {
+    setFieldNow('formDtStarted');
+  };
+  const handleDtEndedNow = () => {
+    setFieldNow('formDtEnded');
+  };
+  const setFieldNow = (field: string) => {
+    const now = Math.round(Date.now() / 1000) * 1000; // Nearest second
+    formik.setFieldValue(field, now);
+  };
+
+  return (
+    <Form className="fermenter-management" onSubmit={formik.handleSubmit}>
+      <Form.Group controlId="formName">
+        <Form.Label>Gyle name</Form.Label>
+        <Form.Control type="text" {...formik.getFieldProps('formName')} />
+        {formik.errors.formName ? (
+          <Form.Text className="text-error">{formik.errors.formName}</Form.Text>
+        ) : null}
+      </Form.Group>
+
+      <Form.Group controlId="formDtStarted">
+        <Form.Label>Started</Form.Label>
+        <Row>
+          <Col>
+            <Form.Control
+              type="text"
+              placeholder="ms since epoch"
+              {...formik.getFieldProps('formDtStarted')}
+            />
+            {formik.errors.formDtStarted ? (
+              <Form.Text className="text-error">{formik.errors.formDtStarted}</Form.Text>
+            ) : null}
+            <Form.Text className="text-muted">Leave blank until yeast pitched.</Form.Text>
+          </Col>
+          <Col>
+            <Button variant="secondary" type="button" onClick={handleDtStartedNow}>
+              Now
+            </Button>
+          </Col>
+        </Row>
+      </Form.Group>
+
+      <Form.Group controlId="formDtEnded">
+        <Form.Label>Ended</Form.Label>
+        <Row>
+          <Col>
+            <Form.Control
+              type="text"
+              placeholder="ms since epoch"
+              {...formik.getFieldProps('formDtEnded')}
+            />
+            {formik.errors.formDtEnded ? (
+              <Form.Text className="text-error">{formik.errors.formDtEnded}</Form.Text>
+            ) : null}
+            <Form.Text className="text-muted">
+              Leave blank until temperature control no longer required.
+            </Form.Text>
+          </Col>
+          <Col>
+            <Button variant="secondary" type="button" onClick={handleDtEndedNow}>
+              Now
+            </Button>
+          </Col>
+        </Row>
+      </Form.Group>
+
+      <Row>
+        <Col>
+          <Button variant="primary" type="submit" disabled={formik.isSubmitting}>
+            Update
+          </Button>
+        </Col>
+        <Col>
+          <Form.Text className={statusClass}>{status}</Form.Text>
+        </Col>
+      </Row>
+    </Form>
+  );
+};
+
+export default FermenterManagement;

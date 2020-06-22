@@ -1,10 +1,14 @@
 package com.easleydp.tempctrl.domain;
 
-import static com.easleydp.tempctrl.domain.Gyle.LogFileDescriptor.*;
-import static com.easleydp.tempctrl.domain.PropertyUtils.*;
-import static com.easleydp.tempctrl.domain.Utils.*;
-import static com.easleydp.tempctrl.domain.optimise.RedundantValues.*;
-import static java.util.Collections.*;
+import static com.easleydp.tempctrl.domain.Gyle.LogFileDescriptor.buildLogFilename;
+import static com.easleydp.tempctrl.domain.PropertyUtils.getBoolean;
+import static com.easleydp.tempctrl.domain.PropertyUtils.getIntArray;
+import static com.easleydp.tempctrl.domain.PropertyUtils.getInteger;
+import static com.easleydp.tempctrl.domain.Utils.reduceUtcMillisPrecision;
+import static com.easleydp.tempctrl.domain.optimise.RedundantValues.nullOutRedundantValues;
+import static com.easleydp.tempctrl.domain.optimise.RedundantValues.removeRedundantIntermediateBeans;
+import static java.util.Collections.emptyList;
+import static java.util.Collections.unmodifiableList;
 
 import java.io.BufferedOutputStream;
 import java.io.FileInputStream;
@@ -28,19 +32,20 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.easleydp.tempctrl.domain.optimise.Smoother;
+import com.easleydp.tempctrl.domain.optimise.Smoother.IntPropertyAccessor;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.databind.SequenceWriter;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.util.Assert;
-
-import com.easleydp.tempctrl.domain.optimise.Smoother;
-import com.easleydp.tempctrl.domain.optimise.Smoother.IntPropertyAccessor;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
-import com.fasterxml.jackson.databind.SequenceWriter;
 
 public class Gyle extends GyleDto
 {
@@ -58,6 +63,7 @@ public class Gyle extends GyleDto
     private boolean firstReadingsCollected = false;
     private ChamberReadings latestChamberReadings;
 
+    private long fileLastModified;
     public final Chamber chamber;
     public final Path gyleDir;
     public final int id;
@@ -83,8 +89,22 @@ public class Gyle extends GyleDto
                 getBoolean("readings.optimise.nullOutRedundantValues", true),
                 getBoolean("readings.optimise.removeRedundantIntermediate", true));
 
+        refresh();
+    }
+
+    public int getId()
+    {
+        return id;
+    }
+
+	public long getFileLastModified() {
+		return fileLastModified;
+	}
+
+	public void refresh() {
         Path jsonFile = gyleDir.resolve("gyle.json");
         Assert.state(Files.exists(jsonFile), "gyle.json should exist");
+        fileLastModified = jsonFile.toFile().lastModified();
         try
         {
             String json = FileUtils.readFileToString(jsonFile.toFile(), StandardCharsets.UTF_8);
@@ -95,12 +115,7 @@ public class Gyle extends GyleDto
         {
             throw new RuntimeException(e);
         }
-    }
-
-    public int getId()
-    {
-        return id;
-    }
+	}
 
     @Override
     public TemperatureProfile getTemperatureProfile()
@@ -117,12 +132,11 @@ public class Gyle extends GyleDto
     public ChamberParameters getChamberParameters(Date timeNow)
     {
     	Long dtStarted = getDtStarted();
-        Assert.state(dtStarted != null, "getDtStarted() should be non-null");
         long timeNowMs = timeNow.getTime();
-        long millisSinceStart = dtStarted < 0 ? 0 : timeNowMs - dtStarted;
+        long millisSinceStart = dtStarted == null ? 0 : timeNowMs - dtStarted;
         logger.debug("millisSinceStart: " + millisSinceStart + "(timeNowMs=" + timeNowMs + ", dtStarted=" + dtStarted + ")");
         TemperatureProfile tp = getTemperatureProfile();
-        int gyleAgeHours = dtStarted < 0 ? -1 : (int) (millisSinceStart / (1000L * 60 * 60));
+        int gyleAgeHours = dtStarted == null ? -1 : (int) (millisSinceStart / (1000L * 60 * 60));
         return new ChamberParameters(gyleAgeHours, tp.getTargetTempAt(millisSinceStart), tp.getTargetTempAt(millisSinceStart + 1000 * 60 * 60),
                 chamber.gettMin(), chamber.gettMax(), chamber.isHasHeater(),
                 chamber.getFridgeMinOnTimeMins(), chamber.getFridgeMinOffTimeMins(), chamber.getFridgeSwitchOnLagMins(),
@@ -197,6 +211,18 @@ public class Gyle extends GyleDto
         firstReadingsCollected = true;
     }
 
+    /** Forces flush and consolidation. */
+    public void close()
+    {
+        if (buffer != null && !buffer.readingsList.isEmpty())
+        {
+            buffer.flush(logsDir, logAnalysis);
+            buffer = null;
+            logAnalysis.maybeConsolidateLogFiles();
+            logAnalysis.performAnyPostConsolidationCleanup();
+        }
+    }
+
     public ChamberReadings getLatestReadings()
     {
         return latestChamberReadings;
@@ -222,6 +248,17 @@ public class Gyle extends GyleDto
                 .map(lfd -> lfd.logFile)
                 .collect(Collectors.toList());
     }
+
+	public void persist() throws IOException {
+        Path jsonFile = gyleDir.resolve("gyle.json");
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectWriter writer = mapper.writer(new DefaultPrettyPrinter());
+        writer.writeValue(jsonFile.toFile(), this.toDto());
+	}
+
+	public GyleDto toDto() {
+		return new GyleDto(getName(), getTemperatureProfile(), getDtStarted(), getDtEnded());
+	}
 
     private class LogAnalysis
     {

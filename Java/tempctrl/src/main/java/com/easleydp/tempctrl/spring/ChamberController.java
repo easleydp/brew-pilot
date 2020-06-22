@@ -1,28 +1,35 @@
 package com.easleydp.tempctrl.spring;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import javax.annotation.PreDestroy;
 import javax.servlet.http.HttpServletRequest;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.util.Assert;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 
 import com.easleydp.tempctrl.domain.Chamber;
 import com.easleydp.tempctrl.domain.ChamberReadings;
 import com.easleydp.tempctrl.domain.ChamberRepository;
 import com.easleydp.tempctrl.domain.Gyle;
+import com.easleydp.tempctrl.domain.GyleDto;
 import com.easleydp.tempctrl.domain.PropertyUtils;
 import com.easleydp.tempctrl.domain.TemperatureProfileDto;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.util.Assert;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 public class ChamberController
 {
-    // private static final Logger logger = LoggerFactory.getLogger(ChamberController.class);
+    private static final Logger logger = LoggerFactory.getLogger(ChamberController.class);
 
     @Autowired
     private ChamberRepository chamberRepository;
@@ -193,7 +200,56 @@ public class ChamberController
         Chamber chamber = chamberRepository.getChamberById(chamberId); // throws if not found
         Gyle latestGyle = chamber.getLatestGyle();
         Assert.state(latestGyle != null, "No latest gyle for chamber " + chamberId);
-        return latestGyle.getTemperatureProfile();
+        return latestGyle.getTemperatureProfile().toDto();
+    }
+
+    @GetMapping("/guest/chamber/{chamberId}/latest-gyle")
+    public GyleDto getLatestGyle(@PathVariable("chamberId") int chamberId)
+    {
+        Chamber chamber = chamberRepository.getChamberById(chamberId); // throws if not found
+        Gyle latestGyle = chamber.getLatestGyle();
+        Assert.state(latestGyle != null, "No latest gyle for chamber " + chamberId);
+        return latestGyle.toDto();
+    }
+
+    @PostMapping("/admin/chamber/{chamberId}/update-gyle")
+    public void updateGyle(@PathVariable("chamberId") int chamberId, @RequestBody GyleDto gyle)
+    {
+        logger.info("update-gyle, " + chamberId + ", " + gyle);
+        Chamber chamber = chamberRepository.getChamberById(chamberId); // throws if not found
+        Gyle latestGyle = chamber.getLatestGyle();
+        Assert.state(latestGyle != null, "No latest gyle for chamber " + chamberId);
+
+        String name = gyle.getName();
+        Assert.state(name != null  &&  name.length() > 0, "name is required");
+        latestGyle.setName(name);
+        latestGyle.setDtStarted(gyle.getDtStarted());
+        latestGyle.setDtEnded(gyle.getDtEnded());
+
+        // FE may not supply temperatureProfile
+        TemperatureProfileDto tp = gyle.getTemperatureProfile();
+        if (tp != null && tp.getPoints().size() > 0) {
+            latestGyle.setTemperatureProfile(tp);
+        }
+
+        try {
+			latestGyle.persist();
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+        }
+    }
+
+    @PreDestroy
+    public void destroy() {
+        logger.info("**** destroy ****");
+        chamberRepository.getChambers().stream()
+            .forEach(chamber -> {
+                Gyle latestGyle = chamber.getLatestGyle();
+                if (latestGyle != null  &&  latestGyle.isActive()) {
+                    logger.info("Closing chamber " + chamber.getId() + ", gyle " + latestGyle.id);
+                    latestGyle.close();
+                }
+            });
     }
 
 }

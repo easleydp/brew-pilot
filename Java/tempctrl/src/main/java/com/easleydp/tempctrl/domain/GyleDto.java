@@ -10,6 +10,15 @@ public class GyleDto
     private Long dtStarted;  // Null if not started
     private Long dtEnded;  // Null if not ended
 
+    public GyleDto() {}
+
+    public GyleDto(String name, TemperatureProfileDto temperatureProfile, Long dtStarted, Long dtEnded) {
+        this.name = name;
+        this.temperatureProfile = temperatureProfile;
+        this.dtStarted = dtStarted;
+        this.dtEnded = dtEnded;
+    }
+
     public String getName()
     {
         return name;
@@ -41,5 +50,15 @@ public class GyleDto
     public void setDtEnded(Long dtEnded)
     {
         this.dtEnded = dtEnded;
+    }
+
+    @Override
+    public String toString() {
+        return "{" +
+            " name='" + getName() + "'" +
+            ", temperatureProfile=" + getTemperatureProfile() +
+            ", dtStarted=" + getDtStarted() +
+            ", dtEnded=" + getDtEnded() +
+            "}";
     }
 }

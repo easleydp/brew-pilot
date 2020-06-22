@@ -46,7 +46,10 @@ public class CollectReadingsScheduler
 
         Date date = new Date();
         chamberRepository.getChambers().stream()
-            .forEach(ch -> takeReadingsForChamber(ch, date));
+            .forEach(ch -> {
+                ch.checkForGyleUpdates();
+                takeReadingsForChamber(ch, date);
+            });
 
         long duration = System.currentTimeMillis() - date.getTime();
         if (duration > longestDuration)

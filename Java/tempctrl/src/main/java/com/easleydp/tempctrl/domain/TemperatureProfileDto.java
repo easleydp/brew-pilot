@@ -14,7 +14,13 @@ public class TemperatureProfileDto
 {
     protected List<PointDto> points = new ArrayList<>();
 
-    public List<PointDto> getPoints()
+    public TemperatureProfileDto() {}
+
+    public TemperatureProfileDto(List<PointDto> points) {
+        this.points = points;
+	}
+
+	public List<PointDto> getPoints()
     {
         return Collections.unmodifiableList(points);
     }
@@ -64,5 +70,12 @@ public class TemperatureProfileDto
         {
             return ((long) hoursSinceStart) * 1000 * 60 * 60;
         }
+    }
+
+    @Override
+    public String toString() {
+        return "{" +
+            " points=" + getPoints() +
+            "}";
     }
 }

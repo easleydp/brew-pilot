@@ -14,6 +14,7 @@ import Home from './Home';
 import GyleChart from './GyleChart';
 import Status from './Status';
 import FermentationProfile from './FermentationProfile';
+import FermenterManagement from './FermenterManagement';
 import Login from './Login';
 import Logout from './Logout';
 import IChamberSummary from '../api/IChamberSummary';
@@ -26,7 +27,7 @@ const Nested = () => {
   const { state, dispatch } = useAppState();
   const isAuth = state && state.isAuth;
   const isLoggedIn = isAuth === Auth.LoggedIn;
-  //const isAdmin = isLoggedIn && state.isAdmin;
+  const isAdmin = isLoggedIn && state.isAdmin;
 
   const history = useHistory();
   const prevIsAuthRef = useRef<Auth | null>(null);
@@ -78,10 +79,10 @@ const Nested = () => {
   // Approximation of https://github.com/react-bootstrap/react-bootstrap/issues/1301#issuecomment-251281488
   // NOTE: Not at all good that we're currently relying on `onMouseDown` on `Nav.Link`.
   const [navExpanded, setNavExpanded] = useState<boolean>(false);
-  const setNavExpandedWrap = function(expanded: boolean) {
+  const setNavExpandedWrap = function (expanded: boolean) {
     setNavExpanded(expanded);
   };
-  const closeNav = function() {
+  const closeNav = function () {
     setNavExpanded(false);
   };
 
@@ -128,6 +129,11 @@ const Nested = () => {
               </Nav.Link>
             )} */}
             {/* {isAdmin && ( */}
+            {isAdmin && (
+              <Nav.Link as={NavLink} to="/fermenter-management" onMouseDown={closeNav}>
+                Fermenter management
+              </Nav.Link>
+            )}
             {isLoggedIn && (
               <Nav.Link as={NavLink} to="/fermentation-profile" onMouseDown={closeNav}>
                 Fermentation profile
@@ -154,6 +160,7 @@ const Nested = () => {
         <Route path="/signout" component={Logout} />
         <Route path="/status" component={Status} />
         <Route path="/fermentation-profile" component={FermentationProfile} />
+        <Route path="/fermenter-management" component={FermenterManagement} />
         <Route path="/gyle-chart/:chamberId" component={GyleChart} />
         <Route path="/">
           <Home chamberSummaries={chamberSummaries} chamberSummariesError={chamberSummariesError} />

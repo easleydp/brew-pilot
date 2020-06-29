@@ -8,6 +8,7 @@ import axios from 'axios';
 import { Form, Button, Row, Col } from 'react-bootstrap';
 import { useFormik, yupToFormErrors } from 'formik';
 import * as Yup from 'yup';
+import Loading from './Loading';
 
 interface IErrors {
   formName?: string;
@@ -47,7 +48,8 @@ const FermenterManagement = () => {
   const { state, dispatch } = useAppState();
   const isAuth = state && state.isAuth;
 
-  const [status, setStatus] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [statusText, setStatusText] = useState<string | null>(null);
   const [statusClass, setStatusClass] = useState<string>('text-body');
 
   useEffect(() => {
@@ -64,6 +66,7 @@ const FermenterManagement = () => {
       history.push('/fermentation-management');
     } else {
       getGyle().then((gyle) => {
+        setLoading(false);
         buildForm(gyle);
       });
     }
@@ -136,18 +139,18 @@ const FermenterManagement = () => {
         dtEnded: values.formDtEnded ? parseInt(values.formDtEnded) : undefined,
         mode: values.formMode,
       };
-      setStatus(null);
+      setStatusText(null);
       axios
         .post('/tempctrl/admin/chamber/1/update-gyle', gyle)
         .then((response) => {
           setSubmitting(false);
-          setStatus('Updated successfully');
+          setStatusText('Updated successfully');
           setStatusClass('text-body');
         })
         .catch((error) => {
           setSubmitting(false);
           console.warn(99, error, error.response.data);
-          setStatus(JSON.stringify(error.response.data));
+          setStatusText(JSON.stringify(error.response.data));
           setStatusClass('text-error');
         });
     },
@@ -163,7 +166,9 @@ const FermenterManagement = () => {
     formik.setFieldValue(field, now);
   };
 
-  return (
+  return loading ? (
+    <Loading />
+  ) : (
     <Form className="fermenter-management" onSubmit={formik.handleSubmit}>
       <Form.Group controlId="formName">
         <Form.Label>Gyle name</Form.Label>
@@ -240,7 +245,7 @@ const FermenterManagement = () => {
           </Button>
         </Col>
         <Col>
-          <Form.Text className={statusClass}>{status}</Form.Text>
+          <Form.Text className={statusClass}>{statusText}</Form.Text>
         </Col>
       </Row>
     </Form>

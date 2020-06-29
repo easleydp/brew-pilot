@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useAppState, Auth } from './state';
 import { useHistory } from 'react-router-dom';
 import Cookies from 'universal-cookie';
+import Loading from './Loading';
 
 const syntaxHighlight = (json: string) => {
   json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -37,6 +38,7 @@ const Status: React.FC = () => {
   }
 
   const history = useHistory();
+  const [loading, setLoading] = useState<boolean>(true);
   const [status, setStatus] = useState<IStatusReport | null>(null);
 
   const { state, dispatch } = useAppState();
@@ -46,6 +48,7 @@ const Status: React.FC = () => {
     const fetchData = async () => {
       try {
         const response = await axios('/tempctrl/guest/log-chart/status');
+        setLoading(false);
         setStatus(response.data);
         if (isAuth === Auth.Unknown) {
           dispatch({
@@ -77,7 +80,9 @@ const Status: React.FC = () => {
     }
   }, [dispatch, history]);
 
-  return (
+  return loading ? (
+    <Loading />
+  ) : (
     <div className="status-page">
       {!status ? (
         <p>Status unknown</p>

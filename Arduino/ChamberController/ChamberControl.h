@@ -21,12 +21,12 @@ static const char* logPrefixChamberControl = "CC";
 static const char* logPrefixPid = "PID";
 
 void forceFridge(ChamberData& cd, byte setting) {
-  uint8_t pin = cd.params.chamberId == 1 ? PIN__CH1_FRIDGE : PIN__CH2_FRIDGE;
+  uint8_t pin = cd.chamberId == 1 ? PIN__CH1_FRIDGE : PIN__CH2_FRIDGE;
   if (setting == ON) {
     // FRIDGE ON
     digitalWrite(pin, LOW);
     if (!cd.fridgeOn) {
-      logMsg(LOG_INFO, logPrefixChamberControl, 'F', cd.params.chamberId, cd.fridgeStateChangeMins/* uint8_t */);
+      logMsg(LOG_INFO, logPrefixChamberControl, 'F', cd.chamberId, cd.fridgeStateChangeMins/* uint8_t */);
       cd.fridgeStateChangeMins = 0;
       cd.fridgeOn = true;
     }
@@ -34,7 +34,7 @@ void forceFridge(ChamberData& cd, byte setting) {
     // FRIDGE OFF
     digitalWrite(pin, HIGH);
     if (cd.fridgeOn) {
-      logMsg(LOG_INFO, logPrefixChamberControl, 'f', cd.params.chamberId, cd.fridgeStateChangeMins/* uint8_t */);
+      logMsg(LOG_INFO, logPrefixChamberControl, 'f', cd.chamberId, cd.fridgeStateChangeMins/* uint8_t */);
       cd.fridgeStateChangeMins = 0;
       cd.fridgeOn = false;
     }
@@ -90,7 +90,7 @@ void heater(ChamberData& cd, uint8_t outputLevel) {
   // We always set the heat level (just in case) but only log if (i) level appears to have changed and (ii) hit an extreme.
   if (outputLevel == 0  ||  outputLevel == 100)
     if (cd.heaterOutput != outputLevel)
-      logMsg(LOG_INFO, logPrefixChamberControl, 'H', cd.params.chamberId, outputLevel/* uint8_t */);
+      logMsg(LOG_INFO, logPrefixChamberControl, 'H', cd.chamberId, outputLevel/* uint8_t */);
 
   cd.heaterOutput = outputLevel; // The setting will take effect courtesy of maintainHeaters()
 
@@ -124,7 +124,7 @@ void maintainHeaters() {
 
 void controlChamber(ChamberData& cd) {
   ChamberParams& params = cd.params;
-  uint8_t chamberId = params.chamberId;
+  uint8_t chamberId = cd.chamberId;
 
   // Defaults, in case we should fall through the following logic without making
   // a deliberate decision.
@@ -132,70 +132,69 @@ void controlChamber(ChamberData& cd) {
   byte fSetting = OFF;
   byte hSetting = 0;
   boolean heatPidWise = false;
-  // See if a local mode has been set (via the panel switch), fall-back to the value set by the RPi
-  const char mode = cd.mode != MODE_UNSET ? cd.mode : params.mode;
+  const char mode = cd.params.mode;
+  const int16_t tTarget = cd.mParams.tTarget;
 
-  const int16_t tError = cd.tTarget - cd.tBeer; // +ve - beer too cool; -ve beer too warm
+  int16_t tError = tTarget - cd.tBeer; // +ve - beer too cool; -ve beer too warm
+
+  // First temperature readings can be way out. Paper over this.
+  const boolean justStarted = uptimeMins < 2;
+  if (justStarted) {
+    tError = 0;
+    tExternal = tTarget;
+  }
 
   // Assume exothermic if not beer fridge and gyle age is between 12h and 4 days.
   // Note: gyleAgeHours is -1 for beer fridge.
-  const boolean exothermic = 12 < cd.gyleAgeHours && cd.gyleAgeHours < (4 * 24);
+  const boolean exothermic = 12 < cd.mParams.gyleAgeHours && cd.mParams.gyleAgeHours < (4 * 24);
 
   // +ve - in our favour for heating the beer; -ve - in our favour for cooling the beer
   int16_t tExternalBoost = tExternal - cd.tBeer;
 
-  if (mode == MODE_NONE) {
-    // Just monitoring
-  } else if (mode == MODE_HEAT) {
-    hSetting = cd.tBeer < params.tMax ? 75/* 75% rather than full on */ : 0;
-  } else if (mode == MODE_COOL) {
-    fSetting = cd.tBeer > params.tMin ? ON : OFF;
-  } else if (mode == MODE_AUTO  ||  mode == MODE_HOLD) {
-    if (tError == 0) {  // Zero error (rare!)
-      if (cd.fridgeOn) {
-        // Fridge is on. Keep it on only if hot outside and beer temp is rising.
-        if (tExternal > cd.tTarget  &&  cd.tBeerLastDelta > 0) {
-          // ... but NOT if temp profile is about to turn upwards in next hour
-          if (cd.tTargetNext <= cd.tTarget)
-            fSetting = ON;
-        }
-      } else {
-        // Continue to 'heatPidWise' if tExternal < target. In this condition we want the
-        // integral component to maintain the target temperature with a steady heater output.
-        if (tExternal < cd.tTarget)
-          heatPidWise = true;
+  if (tError == 0) {  // Zero error (rare!)
+    if (cd.fridgeOn) {
+      // Fridge is on. Keep it on only if hot outside and beer temp is rising.
+      if (tExternal > tTarget  &&  cd.tBeerLastDelta > 0) {
+        // ... but NOT if temp profile is about to turn upwards in next hour
+        if (cd.mParams.tTargetNext <= tTarget)
+          fSetting = ON;
       }
-    } else if (tError > 0) {  // beer too cool, needs heating
-      if (exothermic) {
-        // Assuming our tBeer sensor is near the outside of the fermentation vessel, exothermic means the
-        // beer will actually be warmer internally than our tBeer reading suggests. Compensate for this
-        // by adding a couple of degrees to tExternalBoost, i.e. so we're less eager to apply heating.
-        tExternalBoost += 20;
-      }
-      if ((tExternalBoost - T_EXTERNAL_BOOST_THRESHOLD) > tError) {  // Outside temp is markedly in our favour
-        // Needs heating but we can leave it to tExternal
-      } else {  // Outside temp is not sufficiently in our favour
+    } else {
+      // Continue to 'heatPidWise' if tExternal < target. In this condition we want the
+      // integral component to maintain the target temperature with a steady heater output.
+      if (tExternal < tTarget)
         heatPidWise = true;
-      }
-    } else { // (tError < 0)  beer too warm, needs cooling
-      const int16_t tErrorAdjustedForSawtooth = tError + COOLING_SAWTOOTH_MIDPOINT; // or maybe not
-      logMsg(LOG_DEBUG, logPrefixPid, 'X', chamberId, tErrorAdjustedForSawtooth, tExternalBoost);
-      if (tErrorAdjustedForSawtooth < 0) {
-        if ((tExternalBoost + T_EXTERNAL_BOOST_THRESHOLD) < tErrorAdjustedForSawtooth) {  // Outside temp is markedly in our favour
-          // Beer needs cooling but we can leave it to tExternal
-          // UNLESS exothermic, in which case we'll need to actively cool.
-          if (exothermic) {
+    }
+  } else if (tError > 0) {  // beer too cool, needs heating
+    if (exothermic) {
+      // Assuming our tBeer sensor is near the outside of the fermentation vessel, exothermic means the
+      // beer will actually be warmer internally than our tBeer reading suggests. Compensate for this
+      // by adding a couple of degrees to tExternalBoost, i.e. so we're less eager to apply heating.
+      tExternalBoost += 20;
+    }
+    if ((tExternalBoost - T_EXTERNAL_BOOST_THRESHOLD) > tError) {  // Outside temp is markedly in our favour
+      // Needs heating but we can leave it to tExternal
+    } else {  // Outside temp is not sufficiently in our favour
+      heatPidWise = true;
+    }
+  } else { // (tError < 0)  beer too warm, needs cooling
+    const int16_t tErrorAdjustedForSawtooth = tError + COOLING_SAWTOOTH_MIDPOINT; // or maybe not
+    logMsg(LOG_DEBUG, logPrefixPid, 'X', chamberId, tErrorAdjustedForSawtooth, tExternalBoost);
+    if (tErrorAdjustedForSawtooth < 0) {
+      if ((tExternalBoost + T_EXTERNAL_BOOST_THRESHOLD) < tErrorAdjustedForSawtooth) {  // Outside temp is markedly in our favour
+        // Beer needs cooling but we can leave it to tExternal
+        // UNLESS exothermic, in which case we'll need to actively cool.
+        if (exothermic) {
+          fSetting = ON;
+        }
+      } else {  // Outside temp is not sufficiently in our favour
+        if (!cd.fridgeOn) {
+          fSetting = ON;
+        } else {
+          // Fridge is already on. Leave it on unless we're approaching the target temp (i.e. within 1 degree)
+          // AND we've been cooling for 10 mins or longer in which case switch off (min on time permitting, of course).
+          if (tErrorAdjustedForSawtooth <= -10  ||  cd.fridgeStateChangeMins < 10)
             fSetting = ON;
-          }
-        } else {  // Outside temp is not sufficiently in our favour
-          if (!cd.fridgeOn) {
-            fSetting = ON;
-          } else {
-            // Fridge is already on. Leave it on unless we're approaching the target temp (i.e. within 1 degree)
-            // AND we've been cooling for 10 mins or longer in which case switch off (min on time permitting, of course).
-            if (tErrorAdjustedForSawtooth <= -10  ||  cd.fridgeStateChangeMins < 10)
-              fSetting = ON;
-          }
         }
       }
     }
@@ -255,13 +254,23 @@ void controlChamber(ChamberData& cd) {
 
   cd.priorError = tError;
 
-  /* Do it! */
+  /*** Check any vetoes ***/
 
   // fForce may have been set above but ensure it's set to true if we're about to turn the heater on.
-  if (hSetting > 0) {
+  if (hSetting > 0
+      // `mode` vetoing fridge?
+      ||  mode == MODE_MONITOR_ONLY  ||  mode == MODE_DISABLE_FRIDGE
+      ||  justStarted) {
     fForce = true;
     fSetting = OFF; // This should be in sympathy already, but just in case.
   }
+
+  // `mode` vetoing heater?
+  if (mode == MODE_MONITOR_ONLY  ||  mode == MODE_DISABLE_HEATER  ||  justStarted) {
+    hSetting = 0;
+  }
+
+  /*** Apply ***/
 
   if (fForce)
     forceFridge(cd, fSetting);
@@ -280,8 +289,8 @@ void chambersMinuteTick() {
     // gyleAgeHours also gets set from the RPi. We update it here just in case we're
     // offline. If we're not offline it'll get reset from RPi soon enough - no biggy.
     if (uptimeMins % 60 == 0)
-      if (cd.gyleAgeHours != -1) // Not beer fridge
-        cd.gyleAgeHours++;
+      if (cd.mParams.gyleAgeHours != -1) // Not beer fridge
+        cd.mParams.gyleAgeHours++;
   }
   memoMinFreeRam(3);
 }

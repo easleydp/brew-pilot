@@ -141,7 +141,7 @@ public class Gyle extends GyleDto
                 chamber.gettMin(), chamber.gettMax(), chamber.isHasHeater(),
                 chamber.getFridgeMinOnTimeMins(), chamber.getFridgeMinOffTimeMins(), chamber.getFridgeSwitchOnLagMins(),
                 chamber.getKp(), chamber.getKi(), chamber.getKd(),
-                isActive() ? Mode.AUTO : Mode.NONE);
+                isActive() ? getMode() : Mode.MONITOR_ONLY);
     }
 
     /**
@@ -257,7 +257,7 @@ public class Gyle extends GyleDto
 	}
 
 	public GyleDto toDto() {
-		return new GyleDto(getName(), getTemperatureProfile(), getDtStarted(), getDtEnded());
+		return new GyleDto(getName(), getTemperatureProfile(), getDtStarted(), getDtEnded(), getMode());
 	}
 
     private class LogAnalysis
@@ -302,10 +302,16 @@ public class Gyle extends GyleDto
                         @Override
                         public int compare(LogFileDescriptor fd1, LogFileDescriptor fd2)
                         {
-                            int diff = fd1.dtStart - fd2.dtStart;
+                            int diff = fd1.dtStart - fd2.dtStart;  // i.e. earliest dtStart first
+                            // If we have a tie, put the highest gen first so the following
+                            // redundant files can be conveniently removed (see "Purge any files ...").
                             if (diff == 0)
-                                diff = fd2.generation - fd1.generation;
+                                diff = fd2.generation - fd1.generation;  // latest gen first
+                            // If we still have a tie, put the highest dtEnded first so the following
+                            // redundant files can be conveniently removed (see "Purge any files ...").
                             if (diff == 0)
+                                diff = fd2.dtEnd - fd1.dtEnd;  // i.e. latest dtEnd first
+                            if (diff == 0)  // Same filename twice can't happen!
                                 throw new IllegalStateException(fd1.getFilename() + ", " + fd2.getFilename());
                             return diff;
                         }
@@ -314,9 +320,11 @@ public class Gyle extends GyleDto
                     // Purge any files that seem to have been consolidated. (They must have just
                     // missed being purged before the app last terminated.)
                     int lastDtEnd = Integer.MIN_VALUE;
+                    int lastGeneration = Integer.MAX_VALUE;
                     for (Iterator<LogFileDescriptor> iter = logFileDescriptors.iterator(); iter.hasNext();)
                     {
                         LogFileDescriptor fd = iter.next();
+
                         if (fd.dtEnd <= lastDtEnd)
                         {
                             logger.warn("Purging redundant log file on start-up: " + fd.getFilename());
@@ -326,6 +334,17 @@ public class Gyle extends GyleDto
                         else
                         {
                             lastDtEnd = fd.dtEnd;
+
+                            // This would be inexplicable but let's check anyway: Having sorted by dtStart ASC,
+                            // generations should implicitly be sorted DESC.
+                            if (fd.generation > lastGeneration)
+                            {
+                                logger.error("Detected inexplicable log file on start-up: " + fd.getFilename());
+                            }
+                            else
+                            {
+                                lastGeneration = fd.generation;
+                            }
                         }
                     }
                 }

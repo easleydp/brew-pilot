@@ -129,14 +129,12 @@ int16_t getTemperatureX10(uint8_t sensorIndex) {
 }
 
 void readTBeer(ChamberData& cd) {
-  const uint8_t chamberId = cd.params.chamberId;
-  int16_t t = getTemperatureX10(chamberId == 1 ? CH1_T_BEER : CH2_T_BEER);
-  cd.tBeer = t != SHRT_MIN ? t : cd.tTarget;
+  int16_t t = getTemperatureX10(cd.chamberId == 1 ? CH1_T_BEER : CH2_T_BEER);
+  cd.tBeer = t != SHRT_MIN ? t : cd.mParams.tTarget;
 }
 void readTChamber(ChamberData& cd) {
-  const uint8_t chamberId = cd.params.chamberId;
-  int16_t t = getTemperatureX10(chamberId == 1 ? CH1_T_CHAMBER : CH2_T_CHAMBER);
-  cd.tChamber = t != SHRT_MIN ? t : cd.tTarget;
+  int16_t t = getTemperatureX10(cd.chamberId == 1 ? CH1_T_CHAMBER : CH2_T_CHAMBER);
+  cd.tChamber = t != SHRT_MIN ? t : cd.mParams.tTarget;
 }
 void readTExternal() {
   int16_t t = getTemperatureX10(T_EXTERNAL);

@@ -11,42 +11,40 @@
 // Aim for the target temp specified in the ChamberParameters, if any. Otherwise, operate as per `HOLD`.
 #define MODE_AUTO 'A'
 // Aim to maintain tBeer as it was when this mode was engaged (reflected in tTarget).
-#define MODE_HOLD 'O'
-// Force cool (while < tMin). No heating.
-#define MODE_COOL 'C'
-// Force heat (while < tMax). No cooling.
-#define MODE_HEAT 'H'
+#define MODE_HOLD 'H'
+// As AUTO but disable heater.
+#define MODE_DISABLE_HEATER '*'
+// As AUTO but disable fridge.
+#define MODE_DISABLE_FRIDGE '~'
 // No heating, no cooling, just monitoring.
-#define MODE_NONE 'N'
-// Unset. Only applicable to ChamberData.mode (ChamberParams,mode should always be set).
-#define MODE_UNSET '-'
+#define MODE_MONITOR_ONLY 'M'
 
 
 /**
- * Chamber Parameters that seldom change.
+ * Chamber Parameters that change infrequently.
  * We have defaults for these in the program code but aim to override from
  * manager AND then save/restore the manager supplied values to/from EEPROM.
- * Saved in EEPROM in case of restart with no Pi.
+ *
+ * Saved in EEPROM in case of restart with no Pi. Note: we can afford to flush
+ * to EEPROM regularly knowing that the EEPROM library will filter if no change.
  */
 typedef struct {
-  uint8_t chamberId;  // 1, 2, etc.
-
-  int16_t tMin, tMax;
+  char mode;
   boolean hasHeater;
   uint8_t fridgeMinOnTimeMins, fridgeMinOffTimeMins, fridgeSwitchOnLagMins;
+  int16_t tMin, tMax;
   // Heater PID parameters
   float Kp, Ki, Kd;
-  char mode;  // This is the mode set by the RPi. May be overridden locally (by the panel switch).
 
   uint16_t checksum;
-} ChamberParams; // 20 bytes
+} ChamberParams;
 
 /**
- * Chamber Parameters that change more regularly.
+ * Chamber Parameters that change frequently. Therefore only saved to EEPROM once in a while.
  */
 typedef struct {
-  uint8_t chamberId;
   int16_t tTarget;
+  int16_t tTargetNext;
   int16_t gyleAgeHours;
   uint16_t checksum;
 } MovingChamberParams;
@@ -56,13 +54,13 @@ int16_t tExternal;
 int16_t tPi;
 
 typedef struct {
+  uint8_t chamberId;  // 1, 2, etc.
+
   // Parameters that seldom change
   ChamberParams params;
 
-  // These are updated more regularly from the RPi
-  int16_t gyleAgeHours; // -1 for beer fridge
-  int16_t tTarget;  // We store tTarget in EEPROM on change but not more than once an hour
-  int16_t tTargetNext;
+  // These are updated frequently by the RPi
+  MovingChamberParams mParams;
 
   /*
    * Working data and readings
@@ -74,7 +72,6 @@ typedef struct {
   uint8_t heaterOutput; // 0..100
   boolean heaterElementOn; // Although heaterOutput is supposedly 0..100, in reality the heater element is either ON or OFF at any given point in time.
   boolean fridgeOn;
-  char mode;  // `UNSET` unless locally overridden (by the panel switch)
 
   // PID state
   float priorError; // tTarget - tBeer, so -ve for cooling, +ve for heating
@@ -103,29 +100,29 @@ template<typename T> uint16_t generateChecksum(const T &t) {
  * EEPROM helpers.
  * Memory map: One MovingChamberParams per chamber, followed by one ChamberParams per chamber.
  */
-void getEepromMovingChamberParams(uint8_t chamberId, MovingChamberParams &mcp) {
+void getEepromMovingChamberParams(uint8_t chamberId, MovingChamberParams &mParams) {
   int addr = (chamberId - 1) * sizeof(MovingChamberParams);
-  EEPROM.get(addr, mcp);
+  EEPROM.get(addr, mParams);
 }
-void putEepromMovingChamberParams(MovingChamberParams &mcp) {
-  int addr = (mcp.chamberId - 1) * sizeof(MovingChamberParams);
-  EEPROM.put(addr, mcp);
+void putEepromMovingChamberParams(uint8_t chamberId, MovingChamberParams &mParams) {
+  int addr = (chamberId - 1) * sizeof(MovingChamberParams);
+  EEPROM.put(addr, mParams);
 }
 void getEepromChamberParams(uint8_t chamberId, ChamberParams &params) {
   int base = CHAMBER_COUNT * sizeof(MovingChamberParams);
   int addr = base + (chamberId - 1) * sizeof(ChamberParams);
   EEPROM.get(addr, params);
 }
-void putEepromChamberParams(ChamberParams &params) {
+void putEepromChamberParams(uint8_t chamberId, ChamberParams &params) {
   int base = CHAMBER_COUNT * sizeof(MovingChamberParams);
-  int addr = base + (params.chamberId - 1) * sizeof(ChamberParams);
+  int addr = base + (chamberId - 1) * sizeof(ChamberParams);
   EEPROM.put(addr, params);
 }
 
 ChamberData* findChamber(byte chamberId) {
   for (byte i = 0; i < CHAMBER_COUNT; i++) {
     ChamberData* cd = &chamberDataArray[i];
-    if (cd->params.chamberId == chamberId)
+    if (cd->chamberId == chamberId)
       return cd;
   }
   return NULL;
@@ -134,7 +131,7 @@ ChamberData* findChamber(byte chamberId) {
 void saveMovingChamberParams(uint8_t chamberId, int16_t tTarget, int16_t gyleAgeHours) {
   MovingChamberParams movingChamberParams = { chamberId, tTarget, gyleAgeHours, 0 };
   movingChamberParams.checksum = generateChecksum(movingChamberParams);
-  putEepromMovingChamberParams(movingChamberParams);
+  putEepromMovingChamberParams(chamberId, movingChamberParams);
   memoMinFreeRam(20);
 }
 
@@ -145,7 +142,7 @@ void saveMovingChamberParamsOnceInAWhile(uint8_t chamberId, int16_t tTarget, int
   if (TIME_UP(prevMillisTTargetSave[chamberId - 1], uptimeMillis, saveMovingChamberParamsInterval)) {
     millisSinceLastTTargetSave[chamberId - 1] = 0;
     saveMovingChamberParams(chamberId, tTarget, gyleAgeHours);
-    logMsg(LOG_DEBUG, logPrefixChamberData, '2', chamberId, tTarget/* int16_t */, gyleAgeHours/* int16_t */);
+    logMsg(LOG_DEBUG, logPrefixChamberData, '2', chamberId);
 
     prevMillisTTargetSave[chamberId - 1] = uptimeMillis;
     memoMinFreeRam(21);
@@ -153,19 +150,20 @@ void saveMovingChamberParamsOnceInAWhile(uint8_t chamberId, int16_t tTarget, int
 }
 
 boolean movingChamberParamsSaved[CHAMBER_COUNT] = {false, false};
-void updateChamberParams(
+void setChamberParams(
   ChamberData& cd, int16_t gyleAgeHours, int16_t tTarget, int16_t tTargetNext, int16_t tMin, int16_t tMax, boolean hasHeater,
-  uint8_t fridgeMinOnTimeMins, uint8_t fridgeMinOffTimeMins, uint8_t fridgeSwitchOnLagMins,
-  float Kp, float Ki, float Kd, char mode) {
+  uint8_t fridgeMinOnTimeMins, uint8_t fridgeMinOffTimeMins, uint8_t fridgeSwitchOnLagMins, float Kp, float Ki, float Kd, char mode) {
 
-  uint8_t chamberId = cd.params.chamberId;
+  uint8_t chamberId = cd.chamberId;
 
   logMsg(LOG_DEBUG, logPrefixChamberData, '0', chamberId, tTarget/* int16_t */, mode/* char */);
 
-  cd.gyleAgeHours = gyleAgeHours;
-  cd.tTarget = tTarget;
-  cd.tTargetNext = tTargetNext;
+  cd.mParams.tTarget = tTarget;
+  cd.mParams.tTargetNext = tTargetNext;
+  cd.mParams.gyleAgeHours = gyleAgeHours;
+  cd.mParams.checksum = generateChecksum(cd.mParams);
 
+  cd.params.mode = mode;
   cd.params.tMin = tMin;
   cd.params.tMax = tMax;
   cd.params.hasHeater = hasHeater;
@@ -175,14 +173,13 @@ void updateChamberParams(
   cd.params.Kp = Kp;
   cd.params.Ki = Ki;
   cd.params.Kd = Kd;
-  cd.params.mode = mode;
   cd.params.checksum = generateChecksum(cd.params);
-  putEepromChamberParams(cd.params);
+  putEepromChamberParams(cd.chamberId, cd.params);
 
   if (!movingChamberParamsSaved[chamberId - 1]) {
     saveMovingChamberParams(chamberId, tTarget, gyleAgeHours);
     movingChamberParamsSaved[chamberId - 1] = true;
-    logMsg(LOG_DEBUG, logPrefixChamberData, '1', chamberId, tTarget/* int16_t */, gyleAgeHours/* int16_t */);
+    logMsg(LOG_DEBUG, logPrefixChamberData, '1', chamberId);
   } else {
     saveMovingChamberParamsOnceInAWhile(chamberId, tTarget, gyleAgeHours);
   }
@@ -193,11 +190,11 @@ void initChamberData() {
   for (byte i = 0; i < CHAMBER_COUNT; i++) {
     ChamberData& cd = chamberDataArray[i];
     memset(&cd, 0, sizeof(ChamberData));
+    uint8_t chamberId = cd.chamberId = i + 1;
     cd.fridgeStateChangeMins = 255;
     cd.heaterElementStateChangeSecs = 255;
-    cd.mode = MODE_UNSET;  // If this becomes set it will override params.mode
     ChamberParams& params = cd.params;
-    params.chamberId = i + 1;
+    MovingChamberParams& mParams = cd.mParams;
 
     // Default params & tTarget, before we check EEPROM
     params.tMin = -10;
@@ -209,34 +206,30 @@ void initChamberData() {
     params.Kp = 16.0f;
     params.Ki = 0.32f;
     params.Kd = 20.0f;
-    params.mode = MODE_HOLD;
+    params.mode = MODE_MONITOR_ONLY;  // This value will typically be replaced by the value from EEPROM then by a value from RPi
     params.checksum = generateChecksum(params);
-    cd.tTarget = cd.tTargetNext = 160;
+    mParams.tTarget = mParams.tTargetNext = 160;
+    mParams.gyleAgeHours = -1;
 
-    ChamberParams eepromParams = {};
-    getEepromChamberParams(params.chamberId, eepromParams);
-    if (eepromParams.chamberId == params.chamberId) {
+    {
+      ChamberParams eepromParams = {};
+      getEepromChamberParams(chamberId, eepromParams);
       if (eepromParams.checksum == generateChecksum(eepromParams)) {
         memcpy(&params, &eepromParams, sizeof(ChamberParams));
-        logMsg(LOG_DEBUG, logPrefixChamberData, 'p', params.chamberId);
+        logMsg(LOG_DEBUG, logPrefixChamberData, 'p', chamberId);
       } else {
-        logMsg(LOG_ERROR, logPrefixChamberData, 'P', params.chamberId);
+        logMsg(LOG_ERROR, logPrefixChamberData, 'P', chamberId);
       }
-    } else {
-      logMsg(LOG_ERROR, logPrefixChamberData, 'Q', params.chamberId, eepromParams.chamberId/* uint8_t */);
     }
-
-    MovingChamberParams mcp = {};
-    getEepromMovingChamberParams(params.chamberId, mcp);
-    if (mcp.chamberId == params.chamberId) {
-      if (mcp.checksum == generateChecksum(mcp)) {
-        cd.tTarget = cd.tTargetNext = mcp.tTarget;
-        logMsg(LOG_DEBUG, logPrefixChamberData, 't', params.chamberId, mcp.tTarget/* int16_t */, mcp.gyleAgeHours/* int16_t */);
+    {
+      MovingChamberParams eepromMParams = {};
+      getEepromMovingChamberParams(chamberId, eepromMParams);
+      if (mParams.checksum == generateChecksum(eepromMParams)) {
+        memcpy(&mParams, &eepromMParams, sizeof(MovingChamberParams));
+        logMsg(LOG_DEBUG, logPrefixChamberData, 't', chamberId);
       } else {
-        logMsg(LOG_ERROR, logPrefixChamberData, 'T', params.chamberId, mcp.tTarget/* int16_t */, mcp.gyleAgeHours/* int16_t */);
+        logMsg(LOG_ERROR, logPrefixChamberData, 'T', chamberId);
       }
-    } else {
-      logMsg(LOG_ERROR, logPrefixChamberData, 'U', params.chamberId, mcp.chamberId/* uint8_t */);
     }
   }
 }

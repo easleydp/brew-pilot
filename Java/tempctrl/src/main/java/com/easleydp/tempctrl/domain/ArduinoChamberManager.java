@@ -65,7 +65,7 @@ public class ArduinoChamberManager implements ChamberManager
                 params.Kp, params.Ki, params.Kd, params.mode));
         // Examples for console test:
         //  ^setChParams:1,12,171,172,-10,400,1,10,10,5,2.1,0.01,20.5,A$
-        //  ^setChParams:2,-1,100,100,-10,150,0,10,10,5,1.9,0.015,19.5,O$
+        //  ^setChParams:2,-1,100,100,-10,150,0,10,10,5,1.9,0.015,19.5,H$
         getMessenger().expectResponse("ack");
     }
 
@@ -77,10 +77,11 @@ public class ArduinoChamberManager implements ChamberManager
         logger.debug("Raw chRds:" + response);
         String[] values = response.split(",");
         // Expecting:
-        // gyleAgeHours,tTarget,tTargetNext,tMin,tMax,hasHeater,fridgeMinOnTimeMins,fridgeMinOffTimeMins,fridgeSwitchOnLagMins,Kp,Ki,Kd,tBeer,tChamber,tExternal,tPi,heaterOutput,fridgeOn,mode
-        if (values.length != 20)
+        // gyleAgeHours,tTarget,tTargetNext,tMin,tMax,hasHeater,fridgeMinOnTimeMins,fridgeMinOffTimeMins,fridgeSwitchOnLagMins,Kp,Ki,Kd,mode,tBeer,tChamber,tExternal,tPi,heaterOutput,fridgeOn
+        final int expectedValueCount = 19;
+        if (values.length != expectedValueCount)
         {
-            throw new IOException("Unexpected 'chRds' response: " + response);
+            throw new IOException("Unexpected 'chRds' response (" + values.length + " values): " + response);
         }
         int i = 0;
 
@@ -97,7 +98,7 @@ public class ArduinoChamberManager implements ChamberManager
         double Kp = parseDouble(values[i++]);
         double Ki = parseDouble(values[i++]);
         double Kd = parseDouble(values[i++]);
-        Mode modeParam = Mode.get(values[i++]);
+        Mode mode = Mode.get(values[i++]);
 
         // Readings
         int tBeer = parseInt(values[i++]);
@@ -106,7 +107,11 @@ public class ArduinoChamberManager implements ChamberManager
         int tPi = parseInt(values[i++]);
         int heaterOutput = parseInt(values[i++]);
         boolean fridgeOn = parseBool(values[i++]);
-        Mode modeActual = Mode.get(values[i++]); // may be null
+
+        if (i != expectedValueCount)
+        {
+            throw new IllegalStateException("Should have read " + expectedValueCount + " values, actually read " + i);
+        }
 
         // Check consistency of params
         {
@@ -133,13 +138,15 @@ public class ArduinoChamberManager implements ChamberManager
                 logChamberParamMismatchError(chamberId, "fridgeMinOffTimeMins", params.fridgeMinOffTimeMins, fridgeMinOffTimeMins);
             if (params.fridgeSwitchOnLagMins != fridgeSwitchOnLagMins)
                 logChamberParamMismatchError(chamberId, "fridgeSwitchOnLagMins", params.fridgeSwitchOnLagMins, fridgeSwitchOnLagMins);
+              if (params.mode != mode)
+                logChamberParamMismatchError(chamberId, "mode", params.mode, mode);
             // Deliberately not consistency checking the floating point values due to likelihood of rounding errors.
         }
 
         return new ChamberReadings(timeNow, tTarget, tBeer, tExternal, tChamber, tPi,
-                heaterOutput, fridgeOn, modeActual,
+                heaterOutput, fridgeOn, mode,
                 new ChamberParameters(gyleAgeHours, tTarget, tTargetNext, tMin, tMax, hasHeater,
-                    fridgeMinOnTimeMins, fridgeMinOffTimeMins, fridgeSwitchOnLagMins, Kp, Ki, Kd, modeParam));
+                    fridgeMinOnTimeMins, fridgeMinOffTimeMins, fridgeSwitchOnLagMins, Kp, Ki, Kd, mode));
     }
 
     @Override
@@ -332,36 +339,21 @@ public class ArduinoChamberManager implements ChamberManager
                             return "{error: \"Expected 0 bytes\"}";
 
                         return "getEepromChamberParams " + (id == 'p' ? "good" : "bad");
+                    case 't': case 'T':
+                        if (buffer.length != 0)
+                            return "{error: \"Expected 0 bytes\"}";
+
+                        return "getEepromMovingChamberParams " + (id == 't' ? "good" : "bad");
                     case '0':
                         // tTarget/* int16_t */, mode/* char */
                         if (buffer.length != 3)
                             return "{error: \"Expected 3 bytes\"}";
 
-                        char ch = (char) buffer[2];
-                        if (!isPrintableChar(ch))
-                        {
-                            logger.warn("CD:0 Arduino logMsg, bad mode char: " + buffer[2]);
-                            ch = '!';
-                        }
-                        return String.format("updateChamberParams {tTarget: %d, mode: \"%c\"}",
-                                bytesToInt16(buffer[0], buffer[1]), ch);
-                    case '1': case '2': case 'T': case 't':
-                        // tTarget/* int16_t */, gyleAgeHours/* int16_t */
-                        if (buffer.length != 4)
-                            return "{error: \"Expected 4 bytes\"}";
-
+                        return String.format("setChamberParams {tTarget: %d, mode: %c}",
+                                bytesToInt16(buffer[0], buffer[1]), buffer[2]);
+                    case '1': case '2':
                         return String.format("%s {tTarget: %d, gyleAgeHours: %d}",
-                                id == '1' ? "saveMovingChamberParams" : id == '2' ? "saveMovingChamberParamsOnceInAWhile" : id == 'T' ? "getEepromMovingChamberParams error" : "getEepromMovingChamberParams good",
-                                bytesToInt16(buffer[0], buffer[1]),
-                                bytesToInt16(buffer[2], buffer[3]));
-                    case 'Q': case 'U':
-                        // chamberId/* uint8_t */
-                        if (buffer.length != 1)
-                            return "{error: \"Expected 1 byte\"}";
-
-                        return String.format("%s {chamberId: %d}",
-                                id == 'Q' ? "getEepromChamberParams bad chamberId: " : "getEepromMovingChamberParams bad chamberId",
-                                buffer[0]);
+                                id == '1' ? "saveMovingChamberParams" : "saveMovingChamberParamsOnceInAWhile");
                     default:
                         break;
                 }

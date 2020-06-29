@@ -20,9 +20,9 @@ const GyleChart = () => {
   enum Mode {
     AUTO, // Aim for the target temp specified in the ChamberParameters, if any. Otherwise, operate as per `HOLD`.
     HOLD, // Aim to maintain tBeer as it was when this mode was engaged (reflected in tTarget).
-    COOL, // Force cool (while < tMin). No heating.
-    HEAT, // Force heat (while < tMax). No cooling.
-    NONE, // No heating, no cooling, just monitoring.
+    DISABLE_HEATER, // As AUTO but disable heater.
+    DISABLE_FRIDGE, // As AUTO but disable fridge.
+    MONITOR_ONLY, // No heating, no cooling, just monitoring.
   }
 
   interface IReadings {

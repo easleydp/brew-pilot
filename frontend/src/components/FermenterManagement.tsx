@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useHistory } from 'react-router-dom';
 import { useAppState, Auth } from './state';
 import IGyle from '../api/IGyle';
+import { Mode } from '../api/Mode';
 import axios from 'axios';
 import { Form, Button, Row, Col } from 'react-bootstrap';
 import { useFormik, yupToFormErrors } from 'formik';
@@ -17,6 +18,7 @@ interface IValues {
   formName?: string;
   formDtStarted?: string;
   formDtEnded?: string;
+  formMode: Mode;
 }
 
 // const validate = (values: IValues) => {
@@ -93,6 +95,7 @@ const FermenterManagement = () => {
     formik.setFieldValue('formName', gyle.name);
     formik.setFieldValue('formDtStarted', gyle.dtStarted || '');
     formik.setFieldValue('formDtEnded', gyle.dtEnded || '');
+    formik.setFieldValue('formMode', gyle.mode || Mode.Auto);
   };
 
   const formik = useFormik({
@@ -100,6 +103,7 @@ const FermenterManagement = () => {
       formName: '',
       formDtStarted: '',
       formDtEnded: '',
+      formMode: Mode.Auto,
     },
     // validate,
     validationSchema: Yup.object({
@@ -130,6 +134,7 @@ const FermenterManagement = () => {
         name: values.formName,
         dtStarted: values.formDtStarted ? parseInt(values.formDtStarted) : undefined,
         dtEnded: values.formDtEnded ? parseInt(values.formDtEnded) : undefined,
+        mode: values.formMode,
       };
       setStatus(null);
       axios
@@ -180,7 +185,10 @@ const FermenterManagement = () => {
             {formik.errors.formDtStarted ? (
               <Form.Text className="text-error">{formik.errors.formDtStarted}</Form.Text>
             ) : null}
-            <Form.Text className="text-muted">Leave blank until yeast pitched.</Form.Text>
+            <Form.Text className="text-muted">
+              When temperature control should start.<br></br>Typically reset when yeast pitched or
+              when signs of fermentation first detected.
+            </Form.Text>
           </Col>
           <Col>
             <Button variant="secondary" type="button" onClick={handleDtStartedNow}>
@@ -203,7 +211,7 @@ const FermenterManagement = () => {
               <Form.Text className="text-error">{formik.errors.formDtEnded}</Form.Text>
             ) : null}
             <Form.Text className="text-muted">
-              Leave blank until temperature control no longer required.
+              When temperature control no longer required.
             </Form.Text>
           </Col>
           <Col>
@@ -212,6 +220,17 @@ const FermenterManagement = () => {
             </Button>
           </Col>
         </Row>
+      </Form.Group>
+
+      <Form.Group controlId="formMode">
+        <Form.Label>Mode</Form.Label>
+        <Form.Control as="select" {...formik.getFieldProps('formMode')}>
+          <option value={Mode.Auto}>Auto</option>
+          <option value={Mode.Hold}>Hold</option>
+          <option value={Mode.DisableHeater}>Disable heater</option>
+          <option value={Mode.DisableFridge}>Disable fridge</option>
+          <option value={Mode.MonitorOnly}>Monitor only</option>
+        </Form.Control>
       </Form.Group>
 
       <Row>

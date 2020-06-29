@@ -225,6 +225,7 @@ public class ChamberController
         latestGyle.setName(name);
         latestGyle.setDtStarted(gyle.getDtStarted());
         latestGyle.setDtEnded(gyle.getDtEnded());
+        latestGyle.setMode(gyle.getMode());
 
         // FE may not supply temperatureProfile
         TemperatureProfileDto tp = gyle.getTemperatureProfile();

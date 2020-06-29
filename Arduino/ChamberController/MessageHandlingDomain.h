@@ -66,7 +66,7 @@ void handleSetChamberParams(char* cmd) {
   if (cdPtr == NULL) {
     return respondWithError("chamberId,", itoa(chamberId));
   }
-  updateChamberParams(*cdPtr, gyleAgeHours, tTarget, tTargetNext, tMin, tMax, hasHeater,
+  setChamberParams(*cdPtr, gyleAgeHours, tTarget, tTargetNext, tMin, tMax, hasHeater,
     fridgeMinOnTimeMins, fridgeMinOffTimeMins, fridgeSwitchOnLagMins, Kp, Ki, Kd, mode);
   sendAck();
 }
@@ -81,11 +81,11 @@ void handleGetChamberReadings(const char* cmd) {
   }
   sendToMasterStart();
   Serial.print(F("chRds:"));
-  Serial.print(cdPtr->gyleAgeHours);
+  Serial.print(cdPtr->mParams.gyleAgeHours);
   printComma();
-  Serial.print(cdPtr->tTarget);
+  Serial.print(cdPtr->mParams.tTarget);
   printComma();
-  Serial.print(cdPtr->tTargetNext);
+  Serial.print(cdPtr->mParams.tTargetNext);
   printComma();
   Serial.print(cdPtr->params.tMin);
   printComma();
@@ -118,8 +118,6 @@ void handleGetChamberReadings(const char* cmd) {
   Serial.print(cdPtr->heaterOutput);
   printComma();
   Serial.print(cdPtr->fridgeOn);
-  printComma();
-  Serial.print(cdPtr->mode);
   sendToMasterEnd();
 }
 

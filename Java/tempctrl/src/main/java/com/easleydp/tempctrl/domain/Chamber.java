@@ -163,7 +163,7 @@ public class Chamber extends ChamberDto
         return new ChamberParameters(0, 0, 0,
                 this.gettMin(), this.gettMax(), this.isHasHeater(),
                 this.getFridgeMinOnTimeMins(), this.getFridgeMinOffTimeMins(), this.getFridgeSwitchOnLagMins(),
-                this.getKp(), this.getKi(), this.getKd(), Mode.NONE);
+                this.getKp(), this.getKi(), this.getKd(), Mode.MONITOR_ONLY);
     }
 
 }

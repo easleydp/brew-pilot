@@ -84,10 +84,10 @@ public class ChamberReadings
     private Boolean fridgeOn;
 
     /**
-     * The state of the chamber manager hardware's "mode" switch.
+     * Current mode for the chamber / active gyle.
      *
-     * `null` signifies that the mode hasn't been overridden by the chamber manager
-     * hardware's "mode" switch.
+     * `null` signifies same value as the previous reading. In readings fresh from the
+     * chamber it will never be null.
      */
     private Mode mode;
 

@@ -8,7 +8,11 @@
       "type": "java",
       "name": "Debug (Launch) - Current File",
       "request": "launch",
-      "mainClass": "${file}"
+      "mainClass": "${file}",
+      "env": {
+        "spring.profiles.active": "local",
+        "ea": true
+      }
     },
     {
       "type": "java",

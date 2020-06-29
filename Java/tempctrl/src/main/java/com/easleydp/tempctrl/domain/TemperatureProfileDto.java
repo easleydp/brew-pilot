@@ -17,7 +17,7 @@ public class TemperatureProfileDto
     public TemperatureProfileDto() {}
 
     public TemperatureProfileDto(List<PointDto> points) {
-        this.points = points;
+        setPoints(points);
 	}
 
 	public List<PointDto> getPoints()
@@ -27,7 +27,25 @@ public class TemperatureProfileDto
 
     public void setPoints(List<PointDto> points)
     {
+        if (points == null)
+            throw new IllegalArgumentException("points is required");
+        if (points.isEmpty())
+            throw new IllegalArgumentException("points cannot be empty");
+        int lastHoursSinceStart = Integer.MIN_VALUE;
+        for (PointDto point : points) {
+            if (point.getHoursSinceStart() < lastHoursSinceStart)
+                throw new IllegalArgumentException("Each point must have hoursSinceStart > the previous point");
+            lastHoursSinceStart = point.getHoursSinceStart();
+        }
+
         this.points = new ArrayList<>(points);
+    }
+
+    @Override
+    public String toString() {
+        return "{" +
+            " points=" + getPoints() +
+            "}";
     }
 
     public static class PointDto
@@ -39,8 +57,8 @@ public class TemperatureProfileDto
 
         public PointDto(int hoursSinceStart, int targetTemp)
         {
-            this.hoursSinceStart = hoursSinceStart;
-            this.targetTemp = targetTemp;
+            setHoursSinceStart(hoursSinceStart);
+            setTargetTemp(targetTemp);
         }
 
         public PointDto()
@@ -53,6 +71,8 @@ public class TemperatureProfileDto
         }
         public void setHoursSinceStart(int hoursSinceStart)
         {
+            if (hoursSinceStart < 0)
+                throw new IllegalArgumentException("hoursSinceStart must be +ve");
             this.hoursSinceStart = hoursSinceStart;
         }
         public int getTargetTemp()
@@ -61,7 +81,10 @@ public class TemperatureProfileDto
         }
         public void setTargetTemp(int targetTemp)
         {
-            this.targetTemp = targetTemp;
+            if (-500 < targetTemp  &&  targetTemp < 500)
+                this.targetTemp = targetTemp;
+            else
+                throw new IllegalArgumentException("targetTemp is out of range: " + targetTemp);
         }
 
         /** Convenience */
@@ -70,12 +93,13 @@ public class TemperatureProfileDto
         {
             return ((long) hoursSinceStart) * 1000 * 60 * 60;
         }
-    }
 
-    @Override
-    public String toString() {
-        return "{" +
-            " points=" + getPoints() +
-            "}";
+        @Override
+        public String toString() {
+            return "{" +
+                " hoursSinceStart=" + hoursSinceStart +
+                ", targetTemp=" + targetTemp +
+                "}";
+        }
     }
 }

@@ -49,6 +49,7 @@ const FermenterManagement = () => {
   const isAuth = state && state.isAuth;
 
   const [loading, setLoading] = useState<boolean>(true);
+  const [gyle, setGyle] = useState<IGyle | null>(null);
   const [statusText, setStatusText] = useState<string | null>(null);
   const [statusClass, setStatusClass] = useState<string>('text-body');
 
@@ -67,6 +68,7 @@ const FermenterManagement = () => {
     } else {
       getGyle().then((gyle) => {
         setLoading(false);
+        setGyle(gyle);
         buildForm(gyle);
       });
     }
@@ -129,19 +131,14 @@ const FermenterManagement = () => {
         }),
     }),
     onSubmit: (values, { setSubmitting }) => {
-      // setTimeout(() => {
-      //   console.log(1, formik.isSubmitting, JSON.stringify(values, null, 2));
-      //   setSubmitting(false);
-      // }, 1000);
-      const gyle: IGyle = {
-        name: values.formName,
-        dtStarted: values.formDtStarted ? parseInt(values.formDtStarted) : undefined,
-        dtEnded: values.formDtEnded ? parseInt(values.formDtEnded) : undefined,
-        mode: values.formMode,
-      };
+      gyle!.name = values.formName;
+      gyle!.dtStarted = values.formDtStarted ? parseInt(values.formDtStarted) : undefined;
+      gyle!.dtEnded = values.formDtEnded ? parseInt(values.formDtEnded) : undefined;
+      gyle!.mode = values.formMode;
+      // gyle.temperatureProfile is returned as we received it
       setStatusText(null);
       axios
-        .post('/tempctrl/admin/chamber/1/update-gyle', gyle)
+        .post('/tempctrl/admin/chamber/1/latest-gyle', gyle)
         .then((response) => {
           setSubmitting(false);
           setStatusText('Updated successfully');

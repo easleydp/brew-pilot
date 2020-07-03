@@ -17,6 +17,7 @@ import com.easleydp.tempctrl.domain.TemperatureProfileDto;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.Assert;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -212,26 +213,14 @@ public class ChamberController
         return latestGyle.toDto();
     }
 
-    @PostMapping("/admin/chamber/{chamberId}/update-gyle")
-    public void updateGyle(@PathVariable("chamberId") int chamberId, @RequestBody GyleDto gyle)
+    @PostMapping("/admin/chamber/{chamberId}/latest-gyle")
+    public void updateLatestGyle(@PathVariable("chamberId") int chamberId, @RequestBody GyleDto gyle)
     {
-        logger.info("update-gyle, " + chamberId + ", " + gyle);
+        logger.info("POST latest-gyle, " + chamberId + ", " + gyle);
         Chamber chamber = chamberRepository.getChamberById(chamberId); // throws if not found
         Gyle latestGyle = chamber.getLatestGyle();
         Assert.state(latestGyle != null, "No latest gyle for chamber " + chamberId);
-
-        String name = gyle.getName();
-        Assert.state(name != null  &&  name.length() > 0, "name is required");
-        latestGyle.setName(name);
-        latestGyle.setDtStarted(gyle.getDtStarted());
-        latestGyle.setDtEnded(gyle.getDtEnded());
-        latestGyle.setMode(gyle.getMode());
-
-        // FE may not supply temperatureProfile
-        TemperatureProfileDto tp = gyle.getTemperatureProfile();
-        if (tp != null && tp.getPoints().size() > 0) {
-            latestGyle.setTemperatureProfile(tp);
-        }
+        BeanUtils.copyProperties(gyle, latestGyle);
 
         try {
 			latestGyle.persist();

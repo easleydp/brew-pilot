@@ -222,7 +222,8 @@ void controlChamber(ChamberData& cd) {
       logMsg(LOG_ERROR, logPrefixPid, '!', chamberId, pidOutput/* float */);
       hSetting = 0;
     } else if (pidOutput > 100.0) {
-      logMsg(LOG_WARN, logPrefixPid, '+', chamberId, pidOutput/* float */);
+      // This isn't unusual if there's no heater since the beer may get significantly cooler than the target.
+      logMsg(params.hasHeater ? LOG_WARN : LOG_DEBUG, logPrefixPid, '+', chamberId, pidOutput/* float */);
       hSetting = 100;
     } else {
       logMsg(LOG_DEBUG, logPrefixPid, '-', chamberId, pidOutput/* float */);

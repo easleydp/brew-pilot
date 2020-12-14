@@ -22,30 +22,37 @@
 #include "ChamberData.h"
 #include "Temperature.h"
 #include "ChamberControl.h"
-#include "Led.h"
 #include "MessageHandlingGen.h"
+#include "Led.h"
 #include "MessageHandlingDomain.h"
 #include "TimeKeeping.h"
 
 
 static const char* mainLogPrefix = "MN";
 
+void initLowLevelTriggerRelayPin(uint8_t pin) {
+  pinMode(pin, OUTPUT);     // Configure the PIN and
+  digitalWrite(pin, HIGH);  // immediately switch it OFF!
+}
+
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
-  pinMode(PIN__CH1_FRIDGE, OUTPUT);
-  pinMode(PIN__CH2_FRIDGE, OUTPUT);
-  pinMode(PIN__CH1_HEATER, OUTPUT);
-  //buzzLed();
+  buzzLed(500);  // Useful visual indication that we've (re-)started
 
-  // Since all the relays are 'low level trigger', switch them all OFF
-  digitalWrite(PIN__CH1_FRIDGE, HIGH);
-  digitalWrite(PIN__CH2_FRIDGE, HIGH);
-  digitalWrite(PIN__CH1_HEATER, HIGH);
+  // Since all the relays are 'low level trigger', switch them all OFF. IMPORTANT to do this
+  // immediately after the PIN is configured to avoid 'blipping' fridge compressors.
+  initLowLevelTriggerRelayPin(PIN__CH1_FRIDGE);
+  initLowLevelTriggerRelayPin(PIN__CH2_FRIDGE);
+  initLowLevelTriggerRelayPin(PIN__CH1_HEATER);
 
   Serial.begin(57600);
   while (!Serial) {
-    ; // wait for serial port to connect. Needed for ATmega32u4-based boards and Arduino 101
+    ; // Wait for serial port to connect. (Only really needed for ATmega32u4-based boards and Arduino 101)
   }
+
+  // Experience has shown that, when bugs arise on this side, master may never get to receive log messages.
+  // There's a greater likelihood it will receive this. (This is the only unsolicited message we ever send.)
+  sendToMaster("MCU-0");  // Signifies MCU has (re-)started
 
   initTemperatureSensors();
   initLoggingData();
@@ -61,11 +68,12 @@ void loop() {
     initTemperatureSensors();
   }
   if (/* still bad */badSensorCount) {
-    setFlipLedPeriod(200);
+    flipLedPeriod = 200;
   } else {
-    setFlipLedPeriod(1000);
+    flipLedPeriod = 1000;
     //testTemperatureSensors();
   }
+  maybeFlipLed();
   // Note: Even in the face of bad sensors we (conservatively) control chambers.
   controlChambers();
 }

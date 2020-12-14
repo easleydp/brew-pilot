@@ -17,21 +17,35 @@ import com.fazecast.jSerialComm.SerialPortTimeoutException;
 /**
  * NOTE: Although this class implements AutoCloseable this should not be taken as a hint to
  * wrap each message exchange with a 'try with resource' construct. Opening the port afresh
- * for each message exchange makes it about 100 times slower (e.g. 600 vs 6ms)! So, best to
- * use close() only when absolutely needed.
+ * for each message exchange makes it about 100 times slower (e.g. 600 vs 6ms)! And besides,
+ * re-opening the Arduino serial port is liable o restart the MCU!! So, best to use close()
+ * only when absolutely needed.
  */
 public class ArduinoMessenger implements AutoCloseable
 {
     private static final Logger logger = LoggerFactory.getLogger(ArduinoMessenger.class);
 
     private SerialPort comPort;
-
-    private static final String preferredPortName = "ttyACM0";
+    private int requestCount = 0;
 
     private static final char CHAR_START = '^';
     private static final char CHAR_END = '$';
     private static final byte BYTE_START = ("" + CHAR_START).getBytes(US_ASCII)[0];
     private static final byte BYTE_END = ("" + CHAR_END).getBytes(US_ASCII)[0];
+
+    // We'll go for any of these common Arduino USB serial port names (first one we find). Differs from board to board.
+    // (If find none of them, we'll fall back to the first described as "USB-to-Serial".)
+    private static final String[] PREFERRED_PORT_NAMES = {
+        "ttyACM0", // First serial port on standard Arduino
+        "ttyUSB0"  // Equivalent of ttyACM0 on Chinese Arduino clone?
+    };
+    private static boolean isPreferredPortName(String portName) {
+        for (String preferredPortName : PREFERRED_PORT_NAMES)
+            if (portName.equals(preferredPortName))
+                return true;
+		return false;
+	}
+
 
     public ArduinoMessenger() throws IOException
     {
@@ -47,36 +61,48 @@ public class ArduinoMessenger implements AutoCloseable
     private static SerialPort findUsbSerialPort()
     {
         SerialPort[] serialPorts = SerialPort.getCommPorts();
-        if (serialPorts != null  &&  serialPorts.length > 0)
+        if (serialPorts == null  ||  serialPorts.length == 0)
         {
-            // If there's only one that mentions "USB", go for that.
+            logger.warn("No serial comm ports!");
+        }
+        else
+        {
+            for (SerialPort sp : serialPorts)
+            {
+                logger.debug("Found serial comm port: " + sp.getPortDescription() + ", " + sp.getDescriptivePortName() + ", " + sp.getSystemPortName());
+            }
+            // If there's only one that mentions "USB-to-Serial", go for that.
             // If more than one, look for the preferred port name otherwise go with first.
             List<SerialPort> usbPorts = Arrays.asList(serialPorts).stream()
-                    .filter(sp -> sp.getPortDescription().indexOf("USB") != -1)
+                    .filter(sp -> sp.getPortDescription().indexOf("USB-to-Serial") != -1)
                     .collect(Collectors.toList());
-            if (usbPorts.size() > 0)
+            if (usbPorts.isEmpty())
+            {
+                logger.warn("No serial comm ports described as \"USB-to-Serial\"!");
+            }
+            else
             {
                 if (usbPorts.size() == 1)
                     return usbPorts.get(0);
 
                 SerialPort preferredPort = usbPorts.stream()
-                        .filter(sp -> preferredPortName.equals(sp.getSystemPortName()))
+                        .filter(sp -> isPreferredPortName(sp.getSystemPortName()))
                         .findFirst()
                         .orElse(null);
                 if (preferredPort != null)
                     return preferredPort;
 
-                String usbsJoined = usbPorts.stream()
+                String usbPortDescsJoined = usbPorts.stream()
                         .map(SerialPort::getPortDescription)
                         .collect( Collectors.joining("; ") );
-                logger.warn("Failed to choose between the following USB ports (going with first): " + usbsJoined);
+                logger.warn("Failed to choose between the following unrecognised USB-to-Serial ports (going with first): " + usbPortDescsJoined);
                 return usbPorts.get(0);
             }
         }
         return null;
     }
 
-    /**
+	/**
      * Sends the specified request.
      * Takes care of topping & tailing the request with `CHAR_START` and `CHAR_END`.
      */
@@ -88,6 +114,8 @@ public class ArduinoMessenger implements AutoCloseable
 
         byte[] bytes = (CHAR_START + request + CHAR_END).getBytes(US_ASCII);
         comPort.writeBytes(bytes, bytes.length);
+
+        requestCount++;
     }
 
     private void purgeReadBuffer() throws IOException
@@ -205,49 +233,50 @@ public class ArduinoMessenger implements AutoCloseable
 
     /**
      * Convenience wrapper of `getResponse()` for use when a fixed response is expected.
-     * @throws IllegalStateException, IOException
+     * @throws IOException
      */
     public void expectResponse(String expectedResponse) throws IOException
     {
-        String response = getResponse();
-        if (!expectedResponse.equals(response))
-        {
-            throw new IllegalStateException("Expected [" + expectedResponse + "] but received [" + response + "]");
+        while (true) {
+            String response = getResponse();  // SerialPortTimeoutException may also end the loop
+            if (expectedResponse.equals(response))
+                return;
+            logger.error("Expected response [" + expectedResponse + "] but received [" + response + "]");
         }
     }
 
     /**
      * @return the response minus the prefix.
-     * @throws IllegalStateException, IOException
+     * @throws IOException
      */
     public String getResponse(String expectedPrefix) throws IOException
     {
-        String response = getResponse();
-        int i = response.indexOf(expectedPrefix);
-        if (i != 0)
-        {
-            throw new IllegalStateException("Expected [" + expectedPrefix + "...] but received [" + response + "]");
+        while (true) {
+            String response = getResponse();  // SerialPortTimeoutException may also end the loop
+            int i = response.indexOf(expectedPrefix);
+            if (i == 0)
+                return response.substring(expectedPrefix.length());
+            logger.error("Expected prefix [" + expectedPrefix + "...] but received [" + response + "]");
         }
-        return response.substring(expectedPrefix.length());
     }
 
     /**
      * As `String getResponse(String expectedPrefix)` but expects EITHER a message beginning with `expectedPrefix`
      * OR a message equal to `endResponse`.
      * @return the response minus the prefix or null if the endResponse was received.
-     * @throws IllegalStateException, IOException
+     * @throws IOException
      */
     public String getResponse(String expectedPrefix, String endResponse) throws IOException
     {
-        String response = getResponse();
-        if (endResponse.equals(response))
-            return null;
-        int i = response.indexOf(expectedPrefix);
-        if (i != 0)
-        {
-            throw new IllegalStateException("Expected [" + expectedPrefix + "...] but received [" + response + "]");
+        while (true) {
+            String response = getResponse();  // SerialPortTimeoutException may also end the loop
+            if (endResponse.equals(response))
+                return null;
+            int i = response.indexOf(expectedPrefix);
+            if (i == 0)
+                return response.substring(expectedPrefix.length());
+            logger.error("Expected prefix [" + expectedPrefix + "...] but received [" + response + "]");
         }
-        return response.substring(expectedPrefix.length());
     }
 
     @Override
@@ -255,5 +284,9 @@ public class ArduinoMessenger implements AutoCloseable
     {
         comPort.closePort();
     }
+
+	public int getRequestCount() {
+		return requestCount;
+	}
 
 }

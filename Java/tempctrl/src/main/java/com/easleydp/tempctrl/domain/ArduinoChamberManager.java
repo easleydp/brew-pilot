@@ -9,10 +9,11 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.fazecast.jSerialComm.SerialPortTimeoutException;
+import com.google.common.base.Joiner;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Joiner;
 
 /**
  * Interfaces to an Arduino microcontroller
@@ -152,12 +153,13 @@ public class ArduinoChamberManager implements ChamberManager
     @Override
     public void slurpLogMessages() throws IOException
     {
+        ArduinoMessenger messenger = getMessenger();
         try
         {
-            getMessenger().sendRequest("getLogMsgs");
+            messenger.sendRequest("getLogMsgs");
             while (true)
             {
-                String logMessage = getMessenger().getResponse("logMsg:", "ack");
+                String logMessage = messenger.getResponse("logMsg:", "ack");
                 if (logMessage == null)
                     break;
                 logLogMessage(logMessage);
@@ -165,18 +167,18 @@ public class ArduinoChamberManager implements ChamberManager
         }
         catch (Throwable t)
         {
-            if (firstSlurp && "The read operation timed out before any data was returned.".equals(t.getMessage()))
+            if (messenger.getRequestCount() == 1  &&  t instanceof SerialPortTimeoutException)
             {
+                // Read timeout seems to happen on first slurp. Allowing the exception to propagate would cause serial connection to MCU to
+                // be closed. MCU would then restart when next opened, which would put us back to where we started (kind of an infinite loop).
                 logger.debug("First read operation timed out in slurpLogMessages()");
             }
-            throw t;
-        }
-        finally
-        {
-            firstSlurp = false;
+            else
+            {
+                throw t;
+            }
         }
     }
-    private static boolean firstSlurp = true;
 
     @Override
     public void handleIOException(IOException e)

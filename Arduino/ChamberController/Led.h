@@ -1,40 +1,27 @@
-int ledState = LOW;
+uint8_t ledState = LOW;
 void flipLed() {
   ledState = ledState == HIGH ? LOW : HIGH;
   digitalWrite(LED_BUILTIN, ledState);
 }
 
-//// NOTE: Blocking. Only for use at startup.
-//void buzzLed() {
-//  for (int i = 0; i < 25; i++) {
-//    digitalWrite(LED_BUILTIN, HIGH);
-//    delay(20);
-//    digitalWrite(LED_BUILTIN, LOW);
-//    delay(20);
-//  }
-//}
+//// Buzz LED for the specified duration. NOTE: Blocking (typically only used at startup)
+#define LED_BUZZ_PERIOD  40  // ON + OFF time in milliseconds
+void buzzLed(uint16_t ms) {
+  const uint16_t cycles = ms / LED_BUZZ_PERIOD;
+  for (uint16_t i = 0; i < cycles; i++) {
+    digitalWrite(LED_BUILTIN, HIGH);
+    delay(LED_BUZZ_PERIOD / 2);
+    digitalWrite(LED_BUILTIN, LOW);
+    delay(LED_BUZZ_PERIOD / 2);
+  }
+}
 
-//int onMs = 50;
-//int offMs = 950;
-//unsigned long prevMillisLedFlip = 0;
-//void maybeFlipLed() {
-//  if (ledState == LOW) {
-//    if (uptimeMillis - prevMillisLedFlip >= offMs) {
-//      flipLed();
-//      prevMillisLedFLip = uptimeMillis;
-//    }
-//  } else {
-//    if (uptimeMillis - prevMillisLedFlip >= onMs) {
-//      flipLed();
-//      prevMillisLedFLip = uptimeMillis;
-//    }
-//  }
-//}
 
+uint16_t flipLedPeriod = 100;
 uint32_t millisSinceLastFlipLed = 0;
 uint32_t prevMillisFlipLed = 0;
-void setFlipLedPeriod(uint16_t ledFlashPeriodMillis) {
-  if (TIME_UP(prevMillisFlipLed, uptimeMillis, ledFlashPeriodMillis)) {
+void maybeFlipLed() {
+  if (TIME_UP(prevMillisFlipLed, uptimeMillis, flipLedPeriod)) {
     millisSinceLastFlipLed = 0;
     flipLed();
 

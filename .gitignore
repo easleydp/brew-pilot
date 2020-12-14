@@ -26,5 +26,6 @@ hs_err_pid*
 /staticContent
 /pi-staticContent
 /Highcharts
+/rpi-full-backup
 .dockerignore
 Dockerfile

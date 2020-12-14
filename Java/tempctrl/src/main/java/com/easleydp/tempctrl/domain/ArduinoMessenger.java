@@ -241,7 +241,7 @@ public class ArduinoMessenger implements AutoCloseable
             String response = getResponse();  // SerialPortTimeoutException may also end the loop
             if (expectedResponse.equals(response))
                 return;
-            logger.error("Expected response [" + expectedResponse + "] but received [" + response + "]");
+            logger.warn("Expected response [" + expectedResponse + "] but received [" + response + "]");
         }
     }
 
@@ -256,7 +256,7 @@ public class ArduinoMessenger implements AutoCloseable
             int i = response.indexOf(expectedPrefix);
             if (i == 0)
                 return response.substring(expectedPrefix.length());
-            logger.error("Expected prefix [" + expectedPrefix + "...] but received [" + response + "]");
+            logger.warn("Expected prefix [" + expectedPrefix + "...] but received [" + response + "]");
         }
     }
 
@@ -275,7 +275,7 @@ public class ArduinoMessenger implements AutoCloseable
             int i = response.indexOf(expectedPrefix);
             if (i == 0)
                 return response.substring(expectedPrefix.length());
-            logger.error("Expected prefix [" + expectedPrefix + "...] but received [" + response + "]");
+            logger.warn("Expected prefix [" + expectedPrefix + "...] but received [" + response + "]");
         }
     }
 

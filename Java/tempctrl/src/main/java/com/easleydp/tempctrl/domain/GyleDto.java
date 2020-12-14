@@ -7,7 +7,7 @@ public class GyleDto
 {
     private String name;
     private TemperatureProfileDto temperatureProfile;
-    private Long dtStarted;  // Null if not started
+    private Long dtStarted;  // Null if not started. -ve value (typically -1) indicates beer fridge.
     private Long dtEnded;  // Null if not ended
     private Mode mode;
 

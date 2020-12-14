@@ -133,7 +133,7 @@ public class Gyle extends GyleDto
     {
     	Long dtStarted = getDtStarted();
         long timeNowMs = timeNow.getTime();
-        long millisSinceStart = dtStarted == null ? 0 : timeNowMs - dtStarted;
+        long millisSinceStart = dtStarted == null || dtStarted < 0 ? 0 : timeNowMs - dtStarted;
         logger.debug("millisSinceStart: " + millisSinceStart + "(timeNowMs=" + timeNowMs + ", dtStarted=" + dtStarted + ")");
         TemperatureProfile tp = getTemperatureProfile();
         int gyleAgeHours = dtStarted == null ? -1 : (int) (millisSinceStart / (1000L * 60 * 60));

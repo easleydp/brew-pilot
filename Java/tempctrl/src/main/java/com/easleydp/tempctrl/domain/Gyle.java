@@ -254,6 +254,7 @@ public class Gyle extends GyleDto
         ObjectMapper mapper = new ObjectMapper();
         ObjectWriter writer = mapper.writer(new DefaultPrettyPrinter());
         writer.writeValue(jsonFile.toFile(), this.toDto());
+        // We don't need to do anything special having updated the JSON file; CollectReadingsScheduler will detect.
 	}
 
 	public GyleDto toDto() {

@@ -62,8 +62,9 @@ public class TemperatureProfile extends TemperatureProfileDto
         if (points.isEmpty())
             throw new IllegalStateException("Profile has no points");
 
-        if (points.get(0).getHoursSinceStart() != 0)
-            throw new IllegalStateException("First profile point isn't at t0");
+        int p0HoursSinceStart = points.get(0).getHoursSinceStart();
+        if (p0HoursSinceStart != 0)
+            throw new IllegalStateException("First profile point isn't at t0: " + p0HoursSinceStart);
 
         PointDto prevPoint = null;
         PointDto point = null;

@@ -55,7 +55,7 @@ const Nested = () => {
         }
       } catch (error) {
         console.debug(error);
-        const status = error.response && error.response.status;
+        const status = error?.response?.status;
         if (status === 403 || status === 401) {
           console.debug(status, 'Redirecting to signin');
           dispatch({ type: 'LOGOUT' });

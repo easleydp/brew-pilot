@@ -85,7 +85,7 @@ const FermenterManagement = () => {
         })
         .catch((error) => {
           console.debug(url + ' ERROR', error);
-          const status = error.response && error.response.status;
+          const status = error?.response?.status;
           if (status === 403 || status === 401) {
             console.debug(status, 'Redirecting to signin');
             dispatch({ type: 'LOGOUT' });

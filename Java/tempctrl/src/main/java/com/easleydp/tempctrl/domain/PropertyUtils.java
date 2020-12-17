@@ -106,4 +106,12 @@ public class PropertyUtils
         return getInteger("readings.periodMillis", 60 * 1000);
     }
 
+
+    public static boolean isDebugMode()
+    {
+        // Based on <https://stackoverflow.com/a/44631241/65555>
+        String value = env.getProperty("debug");
+        return value != null && !value.equals("false");
+    }
+
 }

@@ -175,6 +175,15 @@ public class ChamberController
 
     }
 
+    // Helper
+    private Gyle getLatestGyleForChamber(int chamberId)
+    {
+        Chamber chamber = chamberRepository.getChamberById(chamberId); // throws if not found
+        Gyle latestGyle = chamber.getLatestGyle();
+        Assert.state(latestGyle != null, "No latest gyle for chamber " + chamberId);
+        return latestGyle;
+    }
+
     /**
      * Polled by 'Gyle Chart' view to get all readings for the specified chamber's latest gyle
      * since the specified time.
@@ -184,9 +193,7 @@ public class ChamberController
             @PathVariable("chamberId") int chamberId,
             @RequestParam(value="sinceDt", required=true) int sinceDt)
     {
-        Chamber chamber = chamberRepository.getChamberById(chamberId); // throws if not found
-        Gyle latestGyle = chamber.getLatestGyle();
-        Assert.state(latestGyle != null, "No latest gyle for chamber " + chamberId);
+        Gyle latestGyle = getLatestGyleForChamber(chamberId);
         return latestGyle.getRecentReadings().stream()
                 .filter(cr -> cr.getDt() > sinceDt)
                 .collect(Collectors.toList());
@@ -198,28 +205,38 @@ public class ChamberController
     @GetMapping("/guest/chamber/{chamberId}/latest-gyle-profile")
     public TemperatureProfileDto getLatestGyleProfile(@PathVariable("chamberId") int chamberId)
     {
-        Chamber chamber = chamberRepository.getChamberById(chamberId); // throws if not found
-        Gyle latestGyle = chamber.getLatestGyle();
-        Assert.state(latestGyle != null, "No latest gyle for chamber " + chamberId);
-        return latestGyle.getTemperatureProfile().toDto();
+        return getLatestGyleForChamber(chamberId).getTemperatureProfile().toDto();
+    }
+    @PostMapping("/admin/chamber/{chamberId}/latest-gyle-profile")
+    public void updateLatestGyleProfile(@PathVariable("chamberId") int chamberId, @RequestBody TemperatureProfileDto profile)
+    {
+        logger.info("POST latest-gyle-profile, " + chamberId + ",\n\t" + profile);
+        Gyle latestGyle = getLatestGyleForChamber(chamberId);
+        TemperatureProfileDto currentProfile = latestGyle.getTemperatureProfile();
+        if (currentProfile.equals(profile)) {  // optimisation
+            logger.info(" ... no change.");
+            return;
+        }
+        logger.info(" ... was:\n\t" + currentProfile);
+        latestGyle.setTemperatureProfile(profile);
+
+        try {
+            latestGyle.persist();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @GetMapping("/guest/chamber/{chamberId}/latest-gyle")
     public GyleDto getLatestGyle(@PathVariable("chamberId") int chamberId)
     {
-        Chamber chamber = chamberRepository.getChamberById(chamberId); // throws if not found
-        Gyle latestGyle = chamber.getLatestGyle();
-        Assert.state(latestGyle != null, "No latest gyle for chamber " + chamberId);
-        return latestGyle.toDto();
+        return getLatestGyleForChamber(chamberId).toDto();
     }
-
     @PostMapping("/admin/chamber/{chamberId}/latest-gyle")
     public void updateLatestGyle(@PathVariable("chamberId") int chamberId, @RequestBody GyleDto gyle)
     {
         logger.info("POST latest-gyle, " + chamberId + ", " + gyle);
-        Chamber chamber = chamberRepository.getChamberById(chamberId); // throws if not found
-        Gyle latestGyle = chamber.getLatestGyle();
-        Assert.state(latestGyle != null, "No latest gyle for chamber " + chamberId);
+        Gyle latestGyle = getLatestGyleForChamber(chamberId);
         BeanUtils.copyProperties(gyle, latestGyle);
 
         try {

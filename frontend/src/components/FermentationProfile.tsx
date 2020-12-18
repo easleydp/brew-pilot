@@ -37,7 +37,7 @@ const FermentationProfile = () => {
 
   const [loading, setLoading] = useState<boolean>(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [saveDisabled, setSaveDisabled] = useState(false);
+  const [buttonsDisabled, setButtonsDisabled] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState(false);
 
@@ -45,7 +45,7 @@ const FermentationProfile = () => {
   const backedUpProfileRef = useRef<ITemperatureProfile | null>(null);
 
   const onCloseErrorToast = () => {
-    setSaveDisabled(false);
+    setButtonsDisabled(false);
     setShowError(false);
     setErrorMessage(null);
   };
@@ -476,9 +476,8 @@ const FermentationProfile = () => {
       throw Error('Should have a Chart at this stage.');
     }
     const profile = chart.get('tProfile') as Series;
-    const points = profile.getValidPoints();
     const temperatureProfile: ITemperatureProfile = {
-      points: points.map((pt) => {
+      points: profile.data.map((pt) => {
         return {
           hoursSinceStart: pt.x / (1000 * 60 * 60),
           targetTemp: pt.y! * 10,
@@ -486,12 +485,13 @@ const FermentationProfile = () => {
       }),
     };
 
-    setSaveDisabled(true);
+    setButtonsDisabled(true);
     const url = '/tempctrl/admin/chamber/1/latest-gyle-profile';
     try {
       await axios.post(url, temperatureProfile);
+      backedUpProfileRef.current = temperatureProfile;
       setShowSuccess(true);
-      setSaveDisabled(false);
+      setButtonsDisabled(false);
     } catch (error) {
       console.debug(url + ' ERROR', error);
       const status = error?.response?.status;
@@ -535,7 +535,7 @@ const FermentationProfile = () => {
       </Toast>
       <div className="header">
         <div className="item button left">
-          <Button variant="secondary" onClick={handleReset}>
+          <Button variant="secondary" disabled={buttonsDisabled} onClick={handleReset}>
             Reset
           </Button>
         </div>
@@ -544,7 +544,7 @@ const FermentationProfile = () => {
           <p>{instruction}</p>
         </div>
         <div className="item button right">
-          <Button variant="primary" disabled={!isAdmin || saveDisabled} onClick={handleSave}>
+          <Button variant="primary" disabled={!isAdmin || buttonsDisabled} onClick={handleSave}>
             Save
           </Button>
         </div>

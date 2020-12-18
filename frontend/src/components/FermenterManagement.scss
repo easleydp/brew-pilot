@@ -3,4 +3,24 @@
   .text-error {
     color: rgb(199, 0, 0);
   }
+
+  // Standard placeholder colour isn't much lighter than our input text colour. Lighten a tad.
+  // TODO: Move to site wide SCSS file.
+  ::placeholder {
+    /* Chrome, Firefox, Opera, Safari 10.1+ */
+    color: #b7b7b7;
+    opacity: 1; /* Firefox */
+  }
+  ::-webkit-input-placeholder {
+    /* Chrome/Opera/Safari */
+    color: #b7b7b7;
+  }
+  :-ms-input-placeholder {
+    /* Internet Explorer 10-11 */
+    color: #b7b7b7;
+  }
+  ::-ms-input-placeholder {
+    /* Microsoft Edge */
+    color: #b7b7b7;
+  }
 }

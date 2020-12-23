@@ -10,7 +10,7 @@ import Utils from '../api/Utils';
 import axios from 'axios';
 import { Button } from 'react-bootstrap';
 import Toast from 'react-bootstrap/Toast';
-import Highcharts, { Chart, Series } from 'highcharts/highstock';
+import Highcharts, { Chart, Series, SeriesLineOptions } from 'highcharts/highstock';
 // import * as Highcharts from 'highcharts/highstock';
 import DraggablePoints from 'highcharts/modules/draggable-points';
 import Loading from './Loading';
@@ -475,15 +475,38 @@ const FermentationProfile = () => {
     if (!chart) {
       throw Error('Should have a Chart at this stage.');
     }
-    const profile = chart.get('tProfile') as Series;
+    const profileSeries = chart.get('tProfile') as Series;
+    // Beware:
+    // * Using Series.getValidPoints() (or raw Series.points) omits non-visible points;
+    // * Using raw Series.data omits never displayed points.
+    // * Series.options.data works as long as we account for the following quirks:
+    //   - Each point is an Array<number> of len 2 unless moved in which case an object {x, y};
+    //   - First point, which should always have x of zero, will have x of 5e-324 if moved.
+    const options = profileSeries.options as SeriesLineOptions;
+    const optionsData = options.data as Array<Array<number> | { x: number; y: number }>;
     const temperatureProfile: ITemperatureProfile = {
-      points: profile.data.map((pt) => {
+      points: optionsData.map((pt, i) => {
+        let x, y;
+        if (Array.isArray(pt)) {
+          x = pt[0];
+          y = pt[1];
+        } else {
+          x = pt.x;
+          y = pt.y;
+        }
+        if (i === 0 && x < 1) {
+          x = 0;
+        }
         return {
-          hoursSinceStart: pt.x / (1000 * 60 * 60),
-          targetTemp: pt.y! * 10,
+          hoursSinceStart: x / (1000 * 60 * 60),
+          targetTemp: y * 10,
         };
       }),
     };
+
+    console.debug(0, backedUpProfileRef.current?.points);
+    console.debug(1, optionsData);
+    console.debug(2, temperatureProfile.points);
 
     setButtonsDisabled(true);
     const url = '/tempctrl/admin/chamber/1/latest-gyle-profile';

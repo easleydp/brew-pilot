@@ -188,8 +188,8 @@ const FermenterManagement = () => {
               <Form.Text className="text-error">{formik.errors.formDtStarted}</Form.Text>
             ) : null}
             <Form.Text className="text-muted">
-              When temperature control should start.<br></br>Typically reset when yeast pitched or
-              when signs of fermentation first detected.
+              When temperature control should start.<br></br>Typically reset (to 'now') when yeast
+              pitched or when signs of fermentation first detected.
             </Form.Text>
           </Col>
           <Col>
@@ -213,7 +213,7 @@ const FermenterManagement = () => {
               <Form.Text className="text-error">{formik.errors.formDtEnded}</Form.Text>
             ) : null}
             <Form.Text className="text-muted">
-              When temperature control no longer required.
+              When temperature control no longer required.<br></br>Can be left blank until known.
             </Form.Text>
           </Col>
           <Col>

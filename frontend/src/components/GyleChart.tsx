@@ -146,9 +146,13 @@ const GyleChart = () => {
       readingsList.forEach((readings, index) => {
         // Sanity check. Each successive readings record should occur later in time.
         if (prevReadings !== null && prevReadings.dt >= readings.dt) {
-          throw Error(
+          // Used to throw here but it seems that, after a power outage, the first recentReadings record
+          // can appear to be earlier than the last few records of the last ndjson file. (Haven't yet
+          // worked out how this can happen; maybe a time server issue?). So now we log, skip and continue.
+          console.warn(
             `readingsList not ascending in time. Prev: ${prevReadings.dt}; Current: ${readings.dt}`
           );
+          return; // skip
         }
         prevReadings = readings;
 

@@ -128,7 +128,6 @@ const Nested = () => {
                 Temperature profiles
               </Nav.Link>
             )} */}
-            {/* {isAdmin && ( */}
             {isAdmin && (
               <Nav.Link as={NavLink} to="/fermenter-management" onMouseDown={closeNav}>
                 Fermenter management

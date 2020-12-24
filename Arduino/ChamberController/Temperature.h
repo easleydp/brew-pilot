@@ -90,7 +90,7 @@ void initTemperatureSensors() {
   // Edit this in sympathy with SENSOR_COUNT, having established the device errors using calibrateTemperatureSensors()
   initSensorData(CH1_T_BEER,    0x3A11, 19);
   initSensorData(CH1_T_CHAMBER, 0x3606, 7);
-  initSensorData(CH2_T_BEER,    0x3EE1, 6);
+  initSensorData(CH2_T_BEER,    0x3EE1, 11);
   initSensorData(CH2_T_CHAMBER, 0x79BA, -6);
   initSensorData(T_EXTERNAL,    0xBD96, -9);
   initSensorData(T_PI,          0x3B79, -13);

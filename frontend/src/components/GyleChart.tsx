@@ -703,16 +703,29 @@ const GyleChart = () => {
             });
             aggregatedReadings.push(...gyleDetails.recentReadings);
 
-            // Drop any readings earlier than the gyle's start time
+            // Drop any readings earlier than the gyle's start time.
+            // Or for beer fridge, drop any readings more than N weeks old.
             const earliestReading = aggregatedReadings[0];
             const dtStarted = gyleDetails.dtStarted;
-            if (earliestReading && restoreUtcMillisPrecision(earliestReading.dt) < dtStarted) {
+            if (earliestReading) {
               const totalCount = aggregatedReadings.length;
-              aggregatedReadings = aggregatedReadings.filter((reading) => {
-                return restoreUtcMillisPrecision(reading.dt) >= dtStarted;
-              });
-              const droppedCount = totalCount - aggregatedReadings.length;
-              console.debug(`Dropped ${droppedCount} readings earlier than the gyle's start time`);
+              if (isBeerFridge) {
+                const nWeeks = 4;
+                const nWeeksAgo = Date.now() - nWeeks * 7 * 24 * 60 * 60 * 1000;
+                aggregatedReadings = aggregatedReadings.filter((reading) => {
+                  return restoreUtcMillisPrecision(reading.dt) >= nWeeksAgo;
+                });
+                const droppedCount = totalCount - aggregatedReadings.length;
+                console.debug(`Dropped ${droppedCount} readings more than ${nWeeks} weeks old`);
+              } else if (restoreUtcMillisPrecision(earliestReading.dt) < dtStarted) {
+                aggregatedReadings = aggregatedReadings.filter((reading) => {
+                  return restoreUtcMillisPrecision(reading.dt) >= dtStarted;
+                });
+                const droppedCount = totalCount - aggregatedReadings.length;
+                console.debug(
+                  `Dropped ${droppedCount} readings earlier than the gyle's start time`
+                );
+              }
             }
 
             resolve(aggregatedReadings);

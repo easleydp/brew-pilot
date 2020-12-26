@@ -4,6 +4,7 @@ import { useHistory } from 'react-router-dom';
 import { useAppState, Auth } from './state';
 import { Link } from 'react-router-dom';
 import { isMobile } from 'react-device-detect';
+import Loading from './Loading';
 
 import Gauge from './Gauge';
 import IChamberSummary from '../api/IChamberSummary';
@@ -16,8 +17,14 @@ type HomeProps = {
 //const Home: React.FC = () => {
 const Home = ({ chamberSummaries, chamberSummariesError }: HomeProps) => {
   const history = useHistory();
-  const { state } = useAppState();
+  const { state, dispatch } = useAppState();
   const isAuth = state && state.isAuth;
+
+  const handleAuthError = () => {
+    console.debug('Redirecting to signin');
+    dispatch({ type: 'LOGOUT' });
+    history.push('/signin', { from: '/' });
+  };
 
   useEffect(() => {
     console.info(
@@ -38,31 +45,32 @@ const Home = ({ chamberSummaries, chamberSummariesError }: HomeProps) => {
       <div className="gauge-card">
         <div className="inner">
           <h3>{title}</h3>
-          <Gauge chamberId={cs.id} tTarget={cs.tTarget} />
+          <Gauge chamberId={cs.id} tTarget={cs.tTarget} handleAuthError={handleAuthError} />
           <div className="instruction">{instruction}</div>
         </div>
       </div>
     );
   }
 
-  return chamberSummaries && chamberSummaries.length ? (
-    <div className="home container-fluid">
-      <div className="row">
-        {chamberSummaries.map((cs) => {
-          return (
-            <div key={cs.id} className="col-sm-6">
-              <Link to={`/gyle-chart/${cs.id}`}>{gaugeCard(cs)}</Link>
-            </div>
-          );
-        })}
+  if (chamberSummariesError) {
+    return <div>{chamberSummariesError}</div>;
+  }
+  if (chamberSummaries && chamberSummaries.length) {
+    return (
+      <div className="home container-fluid">
+        <div className="row">
+          {chamberSummaries.map((cs) => {
+            return (
+              <div key={cs.id} className="col-sm-6">
+                <Link to={`/gyle-chart/${cs.id}`}>{gaugeCard(cs)}</Link>
+              </div>
+            );
+          })}
+        </div>
       </div>
-    </div>
-  ) : (
-    <div className="home none-found">
-      <div>None found.</div>
-      {chamberSummariesError && <div>{chamberSummariesError}</div>}
-    </div>
-  );
+    );
+  }
+  return <Loading />;
 };
 
 export default Home;

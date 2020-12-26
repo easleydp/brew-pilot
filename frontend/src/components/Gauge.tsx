@@ -10,9 +10,10 @@ import * as Highcharts from 'highcharts';
 type GaugeProps = {
   chamberId: number;
   tTarget: number | null; // null signifying inactive
+  handleAuthError: Function;
 };
 
-const Gauge = ({ chamberId, tTarget }: GaugeProps) => {
+const Gauge = ({ chamberId, tTarget, handleAuthError }: GaugeProps) => {
   interface ISummaryStatus {
     tTarget: number | null;
     tBeer: number | null;
@@ -147,21 +148,27 @@ const Gauge = ({ chamberId, tTarget }: GaugeProps) => {
         tooltip: { enabled: false },
       },
 
-      function(chart: any) {
+      function (chart: any) {
         const point = chart.series[0].points[0];
         function getReadings() {
+          const url = `/tempctrl/guest/chamber/${chamberId}/summary-status`;
           axios
-            .get(`/tempctrl/guest/chamber/${chamberId}/summary-status`)
-            .then(function(response) {
+            .get(url)
+            .then(function (response) {
               const status: ISummaryStatus = response.data;
               const tBeer = (status.tBeer || 0) / 10;
               // console.debug(chamberId, response, tBeer);
 
               point.update(tBeer);
             })
-            .catch(function(error) {
-              console.log(-1 * chamberId, error);
+            .catch(function (error) {
+              console.debug(-1 * chamberId, url + ' ERROR', error);
               point.update(0);
+              const status = error?.response?.status;
+              if (status === 403 || status === 401) {
+                // Since this is just a child component, parent view must take care of the redirect.
+                handleAuthError();
+              }
             });
         }
 

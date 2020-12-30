@@ -420,7 +420,7 @@ const GyleChart = () => {
           showInNavigator: true,
         } as Highcharts.SeriesSplineOptions,
         {
-          name: 'Chamber temp.',
+          name: isBeerFridge ? 'Fridge temp.' : 'Chamber temp.',
           id: 'tChamber',
           selected: false,
           type: 'spline',
@@ -716,7 +716,8 @@ const GyleChart = () => {
                   return restoreUtcMillisPrecision(reading.dt) >= nWeeksAgo;
                 });
                 const droppedCount = totalCount - aggregatedReadings.length;
-                console.debug(`Dropped ${droppedCount} readings more than ${nWeeks} weeks old`);
+                droppedCount &&
+                  console.debug(`Dropped ${droppedCount} readings more than ${nWeeks} weeks old`);
               } else if (restoreUtcMillisPrecision(earliestReading.dt) < dtStarted) {
                 aggregatedReadings = aggregatedReadings.filter((reading) => {
                   return restoreUtcMillisPrecision(reading.dt) >= dtStarted;

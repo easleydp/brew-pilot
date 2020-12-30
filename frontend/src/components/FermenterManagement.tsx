@@ -4,6 +4,7 @@ import { useHistory } from 'react-router-dom';
 import { useAppState, Auth } from './state';
 import IGyle from '../api/IGyle';
 import { Mode } from '../api/Mode';
+import NowPattern from '../util/NowPattern';
 import axios from 'axios';
 import { Form, Button, Row, Col } from 'react-bootstrap';
 import { useFormik, yupToFormErrors } from 'formik';
@@ -152,6 +153,9 @@ const FermenterManagement = () => {
         });
     },
   });
+  const roundMsToNearestSecond = (ms: number) => {
+    return Math.round(ms / 1000) * 1000;
+  };
   const handleDtStartedNow = () => {
     setFieldNow('formDtStarted');
   };
@@ -159,14 +163,28 @@ const FermenterManagement = () => {
     setFieldNow('formDtEnded');
   };
   const setFieldNow = (field: string) => {
-    const now = Math.round(Date.now() / 1000) * 1000; // Nearest second
-    formik.setFieldValue(field, now);
+    formik.setFieldValue(field, roundMsToNearestSecond(Date.now()));
+  };
+  const handleFormBlur = () => {
+    // If either of the two time input fields looks like a 'now' pattern, convert to ms
+    checkForNowPattern('formDtStarted');
+    checkForNowPattern('formDtEnded');
+  };
+  const checkForNowPattern = (field: string) => {
+    let value = formik.getFieldProps(field).value;
+    if (value) {
+      value = '' + value; // Could be integer; normalise to string
+      if (NowPattern.isNowPattern(value)) {
+        const t = NowPattern.evaluateNowPattern(value).getTime();
+        formik.setFieldValue(field, roundMsToNearestSecond(t));
+      }
+    }
   };
 
   return loading ? (
     <Loading />
   ) : (
-    <Form className="fermenter-management" onSubmit={formik.handleSubmit}>
+    <Form className="fermenter-management" onBlur={handleFormBlur} onSubmit={formik.handleSubmit}>
       <Form.Group controlId="formName">
         <Form.Label>Gyle name</Form.Label>
         <Form.Control type="text" {...formik.getFieldProps('formName')} />

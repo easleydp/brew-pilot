@@ -5,7 +5,7 @@ import axios from 'axios';
 // https://www.npmjs.com/package/highcharts
 import * as HighchartsMore from 'highcharts/highcharts-more';
 import * as Highcharts from 'highcharts';
-(HighchartsMore as any)(Highcharts);
+HighchartsMore.default(Highcharts);
 
 type GaugeProps = {
   chamberId: number;

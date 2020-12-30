@@ -6,7 +6,7 @@ import { useAppState, Auth } from './state';
 import { useParams } from 'react-router-dom';
 import ITemperatureProfile from '../api/ITemperatureProfile';
 import applyPatchRangeDefaultLeft from '../api/RangeDefaultLeftPatch.js';
-import Utils from '../api/Utils';
+import Utils from '../util/Utils';
 import axios from 'axios';
 import { Button } from 'react-bootstrap';
 import Toast from 'react-bootstrap/Toast';

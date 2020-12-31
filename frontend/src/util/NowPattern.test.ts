@@ -1,4 +1,3 @@
-import React from 'react';
 import NowPattern from './NowPattern';
 import DateUtils from './DateUtils';
 

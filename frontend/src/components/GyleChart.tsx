@@ -5,6 +5,7 @@ import { useAppState, Auth } from './state';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import useInterval from '../api/useInterval';
+import SpikeDetector from '../util/SpikeDetector';
 import ITemperatureProfile from '../api/ITemperatureProfile';
 import applyPatchRangeDefaultLeft from '../api/RangeDefaultLeftPatch.js';
 
@@ -15,7 +16,7 @@ const GyleChart = () => {
   const { state, dispatch } = useAppState();
   const isAuth = state && state.isAuth;
 
-  const { chamberId } = useParams();
+  const { chamberId } = useParams<{ chamberId: string }>();
 
   enum Mode {
     AUTO, // Aim for the target temp specified in the ChamberParameters, if any. Otherwise, operate as per `HOLD`.
@@ -50,9 +51,12 @@ const GyleChart = () => {
     readingsLogs: string[];
   }
 
-  interface SeriesPlus extends Series {
-    // We need access to these private properties since Series.points isn't 'live' while adding points.
-    // (Actually, we could do without this if we kept the last added point for each series as some local state.)
+  // We need access to the private properties xData & yData since Series.points isn't 'live' while adding points.
+  interface SeriesContinuous extends Series {
+    xData: number[]; // Time axis - never null;
+    yData: number[]; // Property axis - never null.
+  }
+  interface SeriesDiscontinuous extends Series {
     xData: number[]; // Time axis - never null;
     yData: (number | null)[]; // Property axis - can be null for discontinuous properties such as fridgeOn.
   }
@@ -127,12 +131,12 @@ const GyleChart = () => {
       let prevReadings: IReadings | null = null;
       const chart = getCurrentChart();
 
-      let tTargetSeries: SeriesPlus,
-        tBeerSeries: SeriesPlus,
-        tExternalSeries: SeriesPlus,
-        tChamberSeries: SeriesPlus,
-        fridgeSeries: SeriesPlus,
-        heaterSeries: SeriesPlus;
+      let tTargetSeries: SeriesContinuous,
+        tBeerSeries: SeriesContinuous,
+        tExternalSeries: SeriesContinuous,
+        tChamberSeries: SeriesContinuous,
+        fridgeSeries: SeriesDiscontinuous,
+        heaterSeries: SeriesDiscontinuous;
       [
         // NOTE: These must be kept in same order as the series definitions
         tTargetSeries,
@@ -141,7 +145,7 @@ const GyleChart = () => {
         tExternalSeries,
         fridgeSeries,
         heaterSeries,
-      ] = chart.series as SeriesPlus[];
+      ] = chart.series as SeriesContinuous[];
 
       readingsList.forEach((readings, index) => {
         // Sanity check. Each successive readings record should occur later in time.
@@ -173,7 +177,7 @@ const GyleChart = () => {
         // reading's dt > P.
 
         // Sanity check: confirm the supplied dt is later than anything we already have.
-        const oldestDt = (chart.series as SeriesPlus[]).reduce<number>((dt, series) => {
+        const oldestDt = (chart.series as SeriesContinuous[]).reduce<number>((dt, series) => {
           const len = series.xData.length;
           if (len) {
             const lastX = series.xData[len - 1];
@@ -198,6 +202,8 @@ const GyleChart = () => {
         heaterSeries && maybeAddHeaterPoint(dt, heaterOutput, heaterSeries);
       });
 
+      // Because of the sparse nature of the readings some series might need a final synthetic point adding
+      // or they would appear to end prematurely, i.e. before the time of the last readings record.
       const dt = restoreUtcMillisPrecision(readingsList[readingsList.length - 1].dt);
       maybeBackfillAFinalPoint(dt, tTargetSeries);
       maybeBackfillAFinalPoint(dt, tBeerSeries);
@@ -206,12 +212,20 @@ const GyleChart = () => {
       maybeBackfillAFinalPoint(dt, fridgeSeries);
       heaterSeries && maybeBackfillAFinalPoint(dt, heaterSeries);
 
+      removeRogueTemperatureSpikes(tBeerSeries, 'tBeerSeries');
+      removeRogueTemperatureSpikes(tExternalSeries, 'tExternalSeries');
+      removeRogueTemperatureSpikes(tChamberSeries, 'tChamberSeries');
+
       chart.redraw();
     },
     [restoreUtcMillisPrecision]
   );
 
-  const maybeAddTemperaturePoint = (dt: number, value: number | undefined, series: SeriesPlus) => {
+  const maybeAddTemperaturePoint = (
+    dt: number,
+    value: number | undefined,
+    series: SeriesContinuous
+  ) => {
     if (value !== undefined) {
       value = value / 10;
       const valuesLen = series.yData ? series.yData.length : 0;
@@ -235,7 +249,11 @@ const GyleChart = () => {
     }
   };
 
-  const maybeAddFridgePoint = (dt: number, fridgeOn: boolean | undefined, series: SeriesPlus) => {
+  const maybeAddFridgePoint = (
+    dt: number,
+    fridgeOn: boolean | undefined,
+    series: SeriesDiscontinuous
+  ) => {
     if (fridgeOn !== undefined) {
       const value = fridgeOn ? 10 : null;
       const valuesLen = series.yData ? series.yData.length : 0;
@@ -276,7 +294,7 @@ const GyleChart = () => {
   const maybeAddHeaterPoint = (
     dt: number,
     heaterOutput: number | undefined,
-    series: SeriesPlus
+    series: SeriesDiscontinuous
   ) => {
     if (heaterOutput !== undefined) {
       const value = heaterOutput > 0 ? heaterOutput / 10 : null;
@@ -284,7 +302,6 @@ const GyleChart = () => {
       // const value = heaterOutput > 0 ? 10 : null;
       const valuesLen = series.yData ? series.yData.length : 0;
       // Only add if it's a different value than previous.
-      //                debugger;
       if (valuesLen === 0) {
         // First point
         series.addPoint([dt, value] as any, false);
@@ -326,12 +343,35 @@ const GyleChart = () => {
     }
   };
 
-  const maybeBackfillAFinalPoint = (dt: number, series: SeriesPlus) => {
+  const maybeBackfillAFinalPoint = (dt: number, series: SeriesContinuous | SeriesDiscontinuous) => {
     const valuesLen = series.yData.length;
     const lastX = series.xData[valuesLen - 1];
     const lastY = series.yData[valuesLen - 1];
     if (lastX < dt && lastY !== null) {
       series.addPoint([dt, lastY], false);
+    }
+  };
+
+  // Whiz through the temperature sensor series and remove any rogue spikes, i.e. where the temp
+  // suddenly jumps by more than (say) 1°C before returning to (near to) the prior prevailing value. We've seen
+  // spikes consisting of 3 consecutive rogue y values, usually but not always the same rogue value.
+  //
+  // We abstract the spike detection logic into a (unit testable) helper class.
+  const spikeDetector = new SpikeDetector({
+    spikeDetectionThreshold: 1.0, // °C
+    spikeReturnToPriorTolerance: 0.2, // °C
+    readingsPeriod: readingsPeriodMillisRef.current,
+    spikeMaxPeriods: 3,
+  });
+  const removeRogueTemperatureSpikes = (series: SeriesContinuous, seriesName: string) => {
+    const spikes = spikeDetector.detectSpikes(series);
+    if (spikes.length) {
+      console.log(`Removing ${spikes.length} rogue spike(s) from series ${seriesName}`);
+      spikes.forEach((spike) => {
+        spike.forEach((iPoint) => {
+          series.removePoint(iPoint);
+        });
+      });
     }
   };
 

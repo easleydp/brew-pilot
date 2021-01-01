@@ -89,7 +89,7 @@ const GyleChart = () => {
     getLatestReadings().then((latestReadings) => {
       if (latestReadings.length) {
         lastDtRef.current = latestReadings[latestReadings.length - 1].dt;
-        addBunchOfReadings(latestReadings);
+        addBunchOfReadings(latestReadings, false);
       }
     });
   };
@@ -123,29 +123,24 @@ const GyleChart = () => {
 
   /** Adds the supplied readings to the chart then redraws. */
   const addBunchOfReadings = useCallback(
-    (readingsList: IReadings[]) => {
-      if (!readingsList || readingsList.length === 0) {
+    (readingsList: IReadings[], initialLoad: boolean) => {
+      const len = readingsList ? readingsList.length : 0;
+      if (len === 0) {
         return;
       }
+      const dt0 = readingsList[0].dt,
+        dtN = readingsList[len - 1].dt;
+      console.log(`Adding ${len} reading record(s) ranging from dt ${dt0} to ${dtN}`);
 
       let prevReadings: IReadings | null = null;
       const chart = getCurrentChart();
 
-      let tTargetSeries: SeriesContinuous,
-        tBeerSeries: SeriesContinuous,
-        tExternalSeries: SeriesContinuous,
-        tChamberSeries: SeriesContinuous,
-        fridgeSeries: SeriesDiscontinuous,
-        heaterSeries: SeriesDiscontinuous;
-      [
-        // NOTE: These must be kept in same order as the series definitions
-        tTargetSeries,
-        tBeerSeries,
-        tChamberSeries,
-        tExternalSeries,
-        fridgeSeries,
-        heaterSeries,
-      ] = chart.series as SeriesContinuous[];
+      const tTargetSeries: SeriesContinuous = chart.get('tTarget') as SeriesContinuous,
+        tBeerSeries: SeriesContinuous = chart.get('tBeer') as SeriesContinuous,
+        tExternalSeries: SeriesContinuous = chart.get('tExternal') as SeriesContinuous,
+        tChamberSeries: SeriesContinuous = chart.get('tChamber') as SeriesContinuous,
+        fridgeSeries: SeriesDiscontinuous = chart.get('fridgeOn') as SeriesDiscontinuous,
+        heaterSeries: SeriesDiscontinuous = chart.get('heaterOutput') as SeriesDiscontinuous;
 
       readingsList.forEach((readings, index) => {
         // Sanity check. Each successive readings record should occur later in time.
@@ -154,7 +149,7 @@ const GyleChart = () => {
           // can appear to be earlier than the last few records of the last ndjson file. (Haven't yet
           // worked out how this can happen; maybe a time server issue?). So now we log, skip and continue.
           console.warn(
-            `readingsList not ascending in time. Prev: ${prevReadings.dt}; Current: ${readings.dt}`
+            `Skipping out of order readings with dt ${readings.dt} (prev was ${prevReadings.dt})`
           );
           return; // skip
         }
@@ -212,14 +207,51 @@ const GyleChart = () => {
       maybeBackfillAFinalPoint(dt, fridgeSeries);
       heaterSeries && maybeBackfillAFinalPoint(dt, heaterSeries);
 
-      removeRogueTemperatureSpikes(tBeerSeries, 'tBeerSeries');
-      removeRogueTemperatureSpikes(tExternalSeries, 'tExternalSeries');
-      removeRogueTemperatureSpikes(tChamberSeries, 'tChamberSeries');
+      // TODO: Remove this debug code:
+      debugCheckSeriesXOrder(tTargetSeries, 'tTargetSeries');
+      debugCheckSeriesXOrder(tBeerSeries, 'tBeerSeries');
+      debugCheckSeriesXOrder(tExternalSeries, 'tExternalSeries');
+      debugCheckSeriesXOrder(tChamberSeries, 'tChamberSeries');
+      debugCheckSeriesXOrder(fridgeSeries, 'fridgeSeries');
+      heaterSeries && debugCheckSeriesXOrder(heaterSeries, 'heaterSeries');
+
+      // Too expensive to repeat spike detection across the whole of each series for every minor update.
+      if (initialLoad) {
+        removeRogueTemperatureSpikes(tBeerSeries, 'tBeerSeries');
+        removeRogueTemperatureSpikes(tExternalSeries, 'tExternalSeries');
+        removeRogueTemperatureSpikes(tChamberSeries, 'tChamberSeries');
+
+        // TODO: Remove this debug code:
+        debugCheckSeriesXOrder(tBeerSeries, 'tBeerSeries');
+        debugCheckSeriesXOrder(tExternalSeries, 'tExternalSeries');
+        debugCheckSeriesXOrder(tChamberSeries, 'tChamberSeries');
+      }
 
       chart.redraw();
     },
     [restoreUtcMillisPrecision]
   );
+
+  // TODO: Remove this debug code:
+  const debugCheckSeriesXOrder = (
+    series: SeriesContinuous | SeriesDiscontinuous,
+    seriesName: string
+  ) => {
+    let prevX: number = -1;
+    let prevY: number | null = -1;
+    series.xData.forEach((x, i) => {
+      let y = series.yData[i];
+      if (x <= prevX) {
+        console.error(
+          `!!! ${seriesName}, i-1=${i - 1}:[${prevX / 30000}, ${y}], i=${i}:[${
+            x / 30000
+          }, ${prevY}]`
+        );
+      }
+      prevX = x;
+      prevY = y;
+    });
+  };
 
   const maybeAddTemperaturePoint = (
     dt: number,
@@ -354,22 +386,37 @@ const GyleChart = () => {
 
   // Whiz through the temperature sensor series and remove any rogue spikes, i.e. where the temp
   // suddenly jumps by more than (say) 1°C before returning to (near to) the prior prevailing value. We've seen
-  // spikes consisting of 3 consecutive rogue y values, usually but not always the same rogue value.
+  // spikes consisting of 4 consecutive rogue y readings, usually but not always the same rogue value.
   //
   // We abstract the spike detection logic into a (unit testable) helper class.
   const spikeDetector = new SpikeDetector({
     spikeDetectionThreshold: 1.0, // °C
     spikeReturnToPriorTolerance: 0.2, // °C
     readingsPeriod: readingsPeriodMillisRef.current,
-    spikeMaxPeriods: 3,
+    spikeMaxPeriods: 4,
   });
   const removeRogueTemperatureSpikes = (series: SeriesContinuous, seriesName: string) => {
     const spikes = spikeDetector.detectSpikes(series);
+    // Note: detectSpikes returns indices in reverse order for our convenience when it comes to removing.
     if (spikes.length) {
-      console.log(`Removing ${spikes.length} rogue spike(s) from series ${seriesName}`);
+      const pointCount = spikes.reduce<number>((pointCount, spike) => {
+        pointCount += spike.length;
+        return pointCount;
+      }, 0);
+      console.log(
+        `Removing ${spikes.length} rogue sensor reading spike(s) (consisting ${pointCount} points) from ${seriesName}`
+      );
       spikes.forEach((spike) => {
+        //TODO: Delete:
+        // if (seriesName === 'tExternalSeries') {
+        //   const tempSummary = spike.reduce<string>((str, iPoint) => {
+        //     str += ', ' + series.yData[iPoint];
+        //     return str;
+        //   }, '');
+        //   console.log('tempSummary for spike:', tempSummary);
+        // }
         spike.forEach((iPoint) => {
-          series.removePoint(iPoint);
+          series.removePoint(iPoint, false);
         });
       });
     }
@@ -794,7 +841,7 @@ const GyleChart = () => {
           return getAggregatedReadings(gyleDetails);
         })
         .then((aggregatedReadings) => {
-          addBunchOfReadings(aggregatedReadings);
+          addBunchOfReadings(aggregatedReadings, true);
           getCurrentChart().hideLoading();
         });
     }

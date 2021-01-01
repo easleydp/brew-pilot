@@ -37,6 +37,8 @@ export default class SpikeDetector {
 
   /**
    * @returns array of spikes, where each spike element is an array of the constituent point indices.
+   * Note, the outer array and inner arrays are in REVERSE order (for the convenience of the caller
+   * when it comes to removing points).
    */
   detectSpikes({ xData, yData }: { xData: number[]; yData: number[] }): number[][] {
     const len = xData.length;
@@ -54,19 +56,19 @@ export default class SpikeDetector {
     const seekNextSpike = (): number[] | null => {
       let potentialSpike: number[] | null = null;
       let currY = yData[i];
-      while (++i < len && !potentialSpike) {
+      while (++i < len) {
         // Note, loop quits from inside if spike detected.
         let prevY = currY;
         currY = yData[i];
         const jumpDirection = this.detectJump(prevY, currY);
         if (jumpDirection) {
-          // Potentially the start of a spike.
+          // Jump detected - possibly the start of a spike.
           potentialSpike = [i];
           const xSpikeStart = xData[i];
-          // Prospectively push points until either we exceed spikeMaxPeriods (in which case we back up a bit then resume
+          // Prospectively collect points until either we exceed spikeMaxDuration (in which case we back up a bit then resume
           // onset detection) or y reverts to (roughly) the prior value (in which case we've found a spike and we're done).
           while (++i < len) {
-            // Note: Deliberately not updating prevY here. It needs to retain the 'spike prior' value.
+            // Note: Deliberately not updating prevY here; it retains the 'spike prior' value.
             currY = yData[i];
             if (xData[i] - xSpikeStart > this.spikeMaxDuration) {
               // Too wide for a spike. Back up before resuming jump detection.
@@ -76,7 +78,7 @@ export default class SpikeDetector {
               break;
             }
             if (this.detectReversionToPrior(jumpDirection, prevY, currY)) {
-              return potentialSpike;
+              return potentialSpike.reverse();
             }
             potentialSpike.push(i);
           }
@@ -88,14 +90,9 @@ export default class SpikeDetector {
     // Main loop
     while (i < len) {
       const spike = seekNextSpike(); // `i` will get incremented here
-      if (spike) {
-        if (spike.length === 0) {
-          throw Error('Spike should consist of at least one point');
-        }
-        spikes.push(spike);
-      }
+      spike && spikes.push(spike);
     }
-    return spikes;
+    return spikes.reverse();
   }
 
   private detectJump(prevVal: number, currVal: number): JumpDirection | null {
@@ -110,7 +107,7 @@ export default class SpikeDetector {
     if (Math.abs(priorVal - currVal) <= this.spikeReturnToPriorTolerance) {
       return true;
     }
-    // Alternatively, a reverting spike might completely leap-frogged the prior value.
+    // Alternatively, a reverting spike might completely leap-frog the prior value.
     return jumpDirection === JumpDirection.ASC ? currVal < priorVal : currVal > priorVal;
   }
 }

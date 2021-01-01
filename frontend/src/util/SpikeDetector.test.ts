@@ -88,7 +88,7 @@ test('flat top spike', () => {
     xData: mapMinutesToMillis([1, 2, 3, 4]),
     yData: [5.0, 20.0, 20.0, 5.1],
   };
-  expect(spikeDetector.detectSpikes(series)).toEqual([[1, 2]]);
+  expect(spikeDetector.detectSpikes(series)).toEqual([[2, 1]]);
 });
 
 test('flat top non-spike, too wide', () => {
@@ -112,7 +112,17 @@ test('multiple spikes', () => {
     xData: mapMinutesToMillis([1, 2, 3, 4, 5]),
     yData: [5.0, 20.0, 4.9, -20.0, 5.1],
   };
-  expect(spikeDetector.detectSpikes(series)).toEqual([[1], [3]]);
+  expect(spikeDetector.detectSpikes(series)).toEqual([[3], [1]]);
+});
+
+test('detect spike after backing up', () => {
+  const series = {
+    xData: mapMinutesToMillis([1, 2, 3, 4, 5]),
+    // The initial jump (to 20) turns out to be too wide but, after backing up the
+    // cursor the start of that fat spike, a narrow spike (to 30) should be found.
+    yData: [5.0, 20.0, 30.0, 20.0, 5.0],
+  };
+  expect(spikeDetector.detectSpikes(series)).toEqual([[2]]);
 });
 
 test('initial half spike not detected', () => {

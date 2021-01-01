@@ -139,13 +139,13 @@ public class ArduinoChamberManager implements ChamberManager
                 logChamberParamMismatchError(chamberId, "fridgeMinOffTimeMins", params.fridgeMinOffTimeMins, fridgeMinOffTimeMins);
             if (params.fridgeSwitchOnLagMins != fridgeSwitchOnLagMins)
                 logChamberParamMismatchError(chamberId, "fridgeSwitchOnLagMins", params.fridgeSwitchOnLagMins, fridgeSwitchOnLagMins);
-              if (params.mode != mode)
+            if (params.mode != mode)
                 logChamberParamMismatchError(chamberId, "mode", params.mode, mode);
             // Deliberately not consistency checking the floating point values due to likelihood of rounding errors.
         }
 
         return new ChamberReadings(timeNow, tTarget, tBeer, tExternal, tChamber, tPi,
-                heaterOutput, fridgeOn, mode,
+                hasHeater ? heaterOutput : null, fridgeOn, mode,
                 new ChamberParameters(gyleAgeHours, tTarget, tTargetNext, tMin, tMax, hasHeater,
                     fridgeMinOnTimeMins, fridgeMinOffTimeMins, fridgeSwitchOnLagMins, Kp, Ki, Kd, mode));
     }

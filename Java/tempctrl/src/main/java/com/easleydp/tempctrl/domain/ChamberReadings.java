@@ -19,7 +19,7 @@ public class ChamberReadings
 
     public ChamberReadings(
             Date timeNow, int tTarget, int tBeer, int tExternal, int tChamber, int tPi,
-            int heaterOutput, boolean fridgeOn, Mode mode,
+            Integer heaterOutput, boolean fridgeOn, Mode mode,
             ChamberParameters chamberParameters)
     {
         Assert.isTrue(timeNow != null, "timeNow is required");
@@ -71,7 +71,8 @@ public class ChamberReadings
      * Percentage of heater power x 100 (i.e. 0 <= value <= 100), 0 signifying heater off.
      *
      * `Integer` only because it may be nulled-out to signify same value as the previous
-     * reading. In readings fresh from the chamber it will never be null.
+     * reading, or when no heater. In readings fresh from a chamber equipped with a heater
+     * it will never be null.
      */
     private Integer heaterOutput;
 

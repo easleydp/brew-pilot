@@ -65,7 +65,7 @@ public class MockChamberManager implements ChamberManager
         int heaterOutput = getDayOfMonthFromDate(nowTime) % 2 == 0 ? randomInt(1, 100) : 0;
         boolean fridgeOn = heaterOutput == 0;
         return new ChamberReadings(timeNow,
-                tTarget, tBeer, tExternal, tChamber, tPi, heaterOutput, fridgeOn, Mode.AUTO, params);
+                tTarget, tBeer, tExternal, tChamber, tPi, params.hasHeater ? heaterOutput : null, fridgeOn, Mode.AUTO, params);
     }
     private Integer lastTExternal = null;
 

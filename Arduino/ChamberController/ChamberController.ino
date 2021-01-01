@@ -58,6 +58,8 @@ void setup() {
   initLoggingData();
   initChamberData();
 
+  // Logging of π etc. is just to test the various data types, to prove the backend can correctly
+  // deserialise each.
   logMsg(LOG_INFO, mainLogPrefix, '0', 1, 3.14159274101F, (uint32_t) 0xFEDC, (int16_t) -12345);
 }
 

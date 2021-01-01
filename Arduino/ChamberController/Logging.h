@@ -195,7 +195,11 @@ void logMsg(uint8_t logLevel, const char* prefix, char id) {
   logMsg(logLevel, prefix, id, 1, _dummyLogParam, _dummyLogParam, _dummyLogParam);
 }
 
-void serialiseLogMessage(const LogRecord* lrPtr) {
+/**
+ * Serialises then deallocates a log record.
+ * Called while RPi is slurping log messages.
+ */
+void slurpLogMessage(LogRecord* lrPtr) {
   const uint8_t packed = lrPtr->packed;
 
   Serial.print(lrPtr->sequenceNum);
@@ -219,8 +223,8 @@ void serialiseLogMessage(const LogRecord* lrPtr) {
     Serial.print(b64String);
   }
   memoMinFreeRam(11);
-}
-void deallocateLogRecord(LogRecord* lrPtr) {
+
+  // Deallocate the record
   lrPtr->id = 0;
 }
 

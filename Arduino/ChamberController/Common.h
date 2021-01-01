@@ -50,12 +50,12 @@ int freeRam() {
 int minFreeRam = 32767;
 uint8_t minFreeRamLocation = 0;
 // Call this to record lowest minFreeRam from whereever you suspect stack may be deep.
-// The minFreeRam is then available for reporting.
+// The minFreeRam & minFreeRamLocation are then available for reporting.
 void memoMinFreeRam(uint8_t location) {
-  int fr = freeRam();
-  if (minFreeRam > fr) {
-    minFreeRam = fr;
-    location = 0;
+  int latestMinFreeRam = freeRam();
+  if (minFreeRam > latestMinFreeRam) {
+    minFreeRam = latestMinFreeRam;
+    minFreeRamLocation = location;
   }
 }
 

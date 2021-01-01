@@ -147,8 +147,7 @@ void handleGetLogMessages() {
   while (LogRecord* lrPtr = findOldestLogMessage()) {
     sendToMasterStart();
     Serial.print(F("logMsg:"));
-    serialiseLogMessage(lrPtr);
-    deallocateLogRecord(lrPtr);
+    slurpLogMessage(lrPtr);
     sendToMasterEnd();
   }
   sendAck();
@@ -158,8 +157,10 @@ void handleStatus() {
   sendToMasterStart();
   Serial.print(F("status:")); Serial.print(uptimeMins);
   printComma(); Serial.print(minFreeRam);
+  printComma(); Serial.print(minFreeRamLocation);
   printComma(); Serial.print(badSensorCount);
   printComma(); Serial.print(logDataEjected);
+  logDataEjected = false; // reset, now that we've notified
   sendToMasterEnd();
 }
 

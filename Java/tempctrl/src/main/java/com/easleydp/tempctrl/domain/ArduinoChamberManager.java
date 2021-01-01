@@ -44,11 +44,12 @@ public class ArduinoChamberManager implements ChamberManager
         String response = getMessenger().getResponse("status:");
         String[] values = response.split(",");
         // Expecting:
-        // uptimeMins,minFreeRam,badSensorCount,logDataEjected
-        if (values.length != 4)
+        // uptimeMins,minFreeRam,minFreeRamLocation,badSensorCount,logDataEjected
+        if (values.length != 5)
             throw new IOException("Unexpected 'status' response: " + response);
         int i = 0;
         return new ChamberManagerStatus(
+                parseInt(values[i++]),
                 parseInt(values[i++]),
                 parseInt(values[i++]),
                 parseInt(values[i++]),

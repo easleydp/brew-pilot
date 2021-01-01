@@ -13,11 +13,13 @@ import com.easleydp.tempctrl.domain.ChamberManagerStatus;
 import com.easleydp.tempctrl.domain.JvmStatus;
 import com.easleydp.tempctrl.util.OsCommandExecuter;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -25,6 +27,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class StatusController
 {
+    private static final Logger logger = LoggerFactory.getLogger(StatusController.class);
+
     @Autowired
     private ChamberManager chamberManager;
 
@@ -42,6 +46,7 @@ public class StatusController
                         }
                         catch (IOException e)
                         {
+                            logger.error(e.getMessage(), e);
                             return null;
                         }
                     }
@@ -110,7 +115,6 @@ public class StatusController
 
         public PiStats()
         {
-
             this(
                 OsCommandExecuter.execute("uptime", "-p"),
                 new FileSystem(File.listRoots()[0]),

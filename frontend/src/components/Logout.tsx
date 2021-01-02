@@ -1,10 +1,12 @@
+import './Logout.scss';
 import React, { useState, useEffect } from 'react';
 import { useHistory } from 'react-router-dom';
 import axios from 'axios';
 import { useAppState } from './state';
+import Loading from './Loading';
 
 const Logout: React.FC = () => {
-  const [helperText, setHelperText] = useState('Logging out...');
+  const [errorText, setErrorText] = useState('');
   const history = useHistory();
 
   const { dispatch } = useAppState();
@@ -12,18 +14,17 @@ const Logout: React.FC = () => {
   useEffect(() => {
     axios
       .get('/tempctrl/logout')
-      .then(function(response) {
-        console.log(response);
+      .then((response) => {
         dispatch({ type: 'LOGOUT' });
         history.push('/signin');
       })
-      .catch(function(error) {
+      .catch((error) => {
         console.log(error);
-        setHelperText('Failed to logout: ' + error);
+        setErrorText('Failed to logout: ' + error);
       });
   }, [dispatch, history]);
 
-  return <div className="signout">{helperText}</div>;
+  return errorText ? <div className="signout">{errorText}</div> : <Loading />;
 };
 
 export default Logout;

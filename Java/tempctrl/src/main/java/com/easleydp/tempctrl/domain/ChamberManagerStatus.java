@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 /**
  * Value object representing the status reported from a chamber manager.
  */
-@JsonPropertyOrder({ "healthMessage", "uptime", "minFreeRam", "minFreeRamLocation", "badSensorCount", "logDataEjected" })
+@JsonPropertyOrder({ "uptime", "healthMessage", "minFreeRam", "minFreeRamLocation", "badSensorCount", "logDataEjected" })
 public class ChamberManagerStatus
 {
     public ChamberManagerStatus(

@@ -34,9 +34,9 @@ public class ChamberManagerStatus
     public String getHealthMessage()
     {
         if (badSensorCount > 0)
-            return "🤕 Bad sensor(s)";
+            return "🥵 Bad sensor(s)";
         if (logDataEjected)
-            return "🤕 Log data ejected";
+            return "😨 Log data ejected";
         return "🙂 All good";
     }
 }

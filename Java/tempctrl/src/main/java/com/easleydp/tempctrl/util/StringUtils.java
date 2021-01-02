@@ -44,7 +44,7 @@ public class StringUtils
 
         int weeks = days / 7;
         days -= weeks * 7;
-        return joinTimeParts(weeksPart(days), daysPart(days), hoursPart(hours), minutesPart(mins));
+        return joinTimeParts(weeksPart(weeks), daysPart(days), hoursPart(hours), minutesPart(mins));
     }
     private static String weeksPart(int weeks)
     {

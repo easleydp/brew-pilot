@@ -18,7 +18,7 @@ public interface ChamberManager
 
     default ChamberManagerStatus getChamberManagerStatus() throws IOException
     {
-        return new ChamberManagerStatus(-1, -1, -1, 0, false);
+        return new ChamberManagerStatus(9 * 24 * 60 + 3 * 60 + 4, 1, 2, 3, true);
     }
 
     void slurpLogMessages() throws IOException;

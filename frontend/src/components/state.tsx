@@ -40,9 +40,11 @@ export type Actions = Login | Logout;
 export const reducer = (state: AppState, action: Actions) => {
   switch (action.type) {
     case 'LOGOUT':
+      console.debug('LOGOUT action executing');
       removeIsAdminCookie();
       return { ...state, isAuth: Auth.NotLoggedIn, isAdmin: false };
     case 'LOGIN':
+      console.debug('LOGIN action executing');
       setIsAdminCookie(action.isAdmin);
       return { ...state, isAuth: Auth.LoggedIn, isAdmin: action.isAdmin };
   }

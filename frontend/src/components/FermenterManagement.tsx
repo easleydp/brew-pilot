@@ -1,6 +1,7 @@
 import './FermenterManagement.scss';
 import React, { useEffect, useState } from 'react';
 import { useHistory } from 'react-router-dom';
+import ILocationState from '../api/ILocationState';
 import { useAppState, Auth } from './state';
 import IGyle from '../api/IGyle';
 import { Mode } from '../api/Mode';
@@ -45,7 +46,7 @@ interface IValues {
 // };
 
 const FermenterManagement = () => {
-  const history = useHistory();
+  const history = useHistory<ILocationState>();
   const { state, dispatch } = useAppState();
   const isAuth = state && state.isAuth;
 
@@ -62,10 +63,10 @@ const FermenterManagement = () => {
 
     if (isAuth === Auth.NotLoggedIn) {
       // The user is definitely not logged in. Go straight to signin form.
-      history.push('/signin', { from: '/fermentation-management' });
+      history.push({ pathname: '/signin', state: { from: '/fermenter-management' } });
     } else if (isAuth === Auth.Unknown) {
       // The user has hit F5? Go to the home page where we can check if they're logged in.
-      history.push('/fermentation-management');
+      history.push({ pathname: '/', state: { from: '/fermenter-management' } });
     } else {
       getGyle().then((gyle) => {
         setLoading(false);
@@ -88,9 +89,9 @@ const FermenterManagement = () => {
           console.debug(url + ' ERROR', error);
           const status = error?.response?.status;
           if (status === 403 || status === 401) {
-            console.debug(status, 'Redirecting to signin');
+            console.debug(`Redirecting to signin after ${status}`);
+            history.push({ pathname: '/signin', state: { from: '/fermenter-management' } });
             dispatch({ type: 'LOGOUT' });
-            history.push('/signin', { from: '/fermentation-management' });
           }
           reject(error);
         });

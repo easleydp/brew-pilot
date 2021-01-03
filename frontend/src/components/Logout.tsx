@@ -1,13 +1,14 @@
 import './Logout.scss';
 import React, { useState, useEffect } from 'react';
 import { useHistory } from 'react-router-dom';
+import ILocationState from '../api/ILocationState';
 import axios from 'axios';
 import { useAppState } from './state';
 import Loading from './Loading';
 
 const Logout: React.FC = () => {
   const [errorText, setErrorText] = useState('');
-  const history = useHistory();
+  const history = useHistory<ILocationState>();
 
   const { dispatch } = useAppState();
 
@@ -15,8 +16,8 @@ const Logout: React.FC = () => {
     axios
       .get('/tempctrl/logout')
       .then((response) => {
+        history.push({ pathname: '/signin', state: { from: '/' } });
         dispatch({ type: 'LOGOUT' });
-        history.push('/signin');
       })
       .catch((error) => {
         console.log(error);

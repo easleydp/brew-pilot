@@ -1,6 +1,7 @@
 import './Home.scss';
 import React, { useEffect } from 'react';
 import { useHistory } from 'react-router-dom';
+import ILocationState from '../api/ILocationState';
 import { useAppState, Auth } from './state';
 import { Link } from 'react-router-dom';
 import { isMobile } from 'react-device-detect';
@@ -16,14 +17,14 @@ type HomeProps = {
 
 //const Home: React.FC = () => {
 const Home = ({ chamberSummaries, chamberSummariesError }: HomeProps) => {
-  const history = useHistory();
+  const history = useHistory<ILocationState>();
   const { state, dispatch } = useAppState();
   const isAuth = state && state.isAuth;
 
   const handleAuthError = () => {
     console.debug('Redirecting to signin');
+    history.push({ pathname: '/signin', state: { from: '/' } });
     dispatch({ type: 'LOGOUT' });
-    history.push('/signin', { from: '/' });
   };
 
   useEffect(() => {
@@ -34,7 +35,7 @@ const Home = ({ chamberSummaries, chamberSummariesError }: HomeProps) => {
     );
     // If we know the user is definitely not logged in, go straight to signin form.
     if (isAuth === Auth.NotLoggedIn) {
-      history.push('/signin', { from: '/' });
+      history.push({ pathname: '/signin', state: { from: '/' } });
     }
   }, [chamberSummaries, history, isAuth]);
 

@@ -1,6 +1,7 @@
 import './GyleChart.scss';
 import React, { useEffect, useRef, useCallback } from 'react';
-import { useHistory } from 'react-router-dom';
+import { useHistory, useLocation } from 'react-router-dom';
+import ILocationState from '../api/ILocationState';
 import { useAppState, Auth } from './state';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
@@ -12,7 +13,8 @@ import applyPatchRangeDefaultLeft from '../api/RangeDefaultLeftPatch.js';
 import Highcharts, { Chart, Series } from 'highcharts/highstock';
 
 const GyleChart = () => {
-  const history = useHistory();
+  const history = useHistory<ILocationState>();
+  const location = useLocation<ILocationState>();
   const { state, dispatch } = useAppState();
   const isAuth = state && state.isAuth;
 
@@ -107,9 +109,9 @@ const GyleChart = () => {
           console.debug(url + ' ERROR', error);
           const status = error?.response?.status;
           if (status === 403 || status === 401) {
-            console.debug(status, 'Redirecting to signin');
+            console.debug(`Redirecting to signin after ${status}`);
+            history.push({ pathname: '/signin', state: { from: location.pathname } });
             dispatch({ type: 'LOGOUT' });
-            history.push('/signin', { from: '/' });
           }
           reject(error);
         });
@@ -451,9 +453,9 @@ const GyleChart = () => {
             console.debug(url + ' ERROR', error);
             const status = error?.response?.status;
             if (status === 403 || status === 401) {
-              console.debug(status, 'Redirecting to signin');
+              console.debug(`Redirecting to signin after ${status}`);
+              history.push({ pathname: '/signin', state: { from: location.pathname } });
               dispatch({ type: 'LOGOUT' });
-              history.push('/signin', { from: '/' });
             }
             reject(error);
           });
@@ -824,10 +826,12 @@ const GyleChart = () => {
 
     if (isAuth === Auth.NotLoggedIn) {
       // The user is definitely not logged in. Go straight to signin form.
-      history.push('/signin', { from: '/' });
+      console.debug('user definitely not logged in');
+      history.push({ pathname: '/signin', state: { from: location.pathname } });
     } else if (isAuth === Auth.Unknown) {
       // The user has hit F5? Go to the home page where we can check if they're logged in.
-      history.push('/');
+      console.debug('user has hit F5?');
+      history.push({ pathname: '/', state: { from: location.pathname } });
     } else {
       getLatestGyleDetails()
         .then((gyleDetails) => {

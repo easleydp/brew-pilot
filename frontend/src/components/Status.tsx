@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAppState, Auth } from './state';
 import { useHistory } from 'react-router-dom';
+import ILocationState from '../api/ILocationState';
 import Cookies from 'universal-cookie';
 import Loading from './Loading';
 
@@ -37,7 +38,7 @@ const Status: React.FC = () => {
     desc: string;
   }
 
-  const history = useHistory();
+  const history = useHistory<ILocationState>();
   const [loading, setLoading] = useState<boolean>(true);
   const [status, setStatus] = useState<IStatusReport | null>(null);
 
@@ -46,8 +47,9 @@ const Status: React.FC = () => {
 
   useEffect(() => {
     const fetchData = async () => {
+      const url = '/tempctrl/guest/log-chart/status';
       try {
-        const response = await axios('/tempctrl/guest/log-chart/status');
+        const response = await axios(url);
         setLoading(false);
         setStatus(response.data);
         if (isAuth === Auth.Unknown) {
@@ -57,12 +59,12 @@ const Status: React.FC = () => {
           });
         }
       } catch (error) {
-        console.debug('/admin/log-chart/status ERROR', error);
+        console.debug(url + ' ERROR', error);
         const status = error?.response?.status;
         if (status === 403 || status === 401) {
-          console.debug(status, 'Redirecting to signin');
+          console.debug(`Redirecting to signin after ${status}`);
+          history.push({ pathname: '/signin', state: { from: '/status' } });
           dispatch({ type: 'LOGOUT' });
-          history.push('/signin', { from: '/status' });
         }
       }
     };
@@ -74,7 +76,7 @@ const Status: React.FC = () => {
 
     // If we know the user is definitely not logged in, go straight to signin form.
     if (isAuth === Auth.NotLoggedIn) {
-      history.push('/signin', { from: '/status' });
+      history.push({ pathname: '/signin', state: { from: '/status' } });
     } else {
       fetchData();
     }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { StateProvider, Auth, useAppState } from './state';
-import { useHistory } from 'react-router-dom';
+import { useHistory, useLocation } from 'react-router-dom';
+import ILocationState from '../api/ILocationState';
 //import logo from '../logo.svg';
 import './App.scss';
 import axios from 'axios';
@@ -29,7 +30,8 @@ const Nested = () => {
   const isLoggedIn = isAuth === Auth.LoggedIn;
   const isAdmin = isLoggedIn && state.isAdmin;
 
-  const history = useHistory();
+  const history = useHistory<ILocationState>();
+  const location = useLocation<ILocationState>();
   const prevIsAuthRef = useRef<Auth | null>(null);
 
   useEffect(() => {
@@ -57,10 +59,15 @@ const Nested = () => {
         console.debug(error);
         const status = error?.response?.status;
         if (status === 403 || status === 401) {
-          console.debug(status, 'Redirecting to signin');
-          dispatch({ type: 'LOGOUT' });
+          console.debug(
+            `Redirecting to signin after ${status}. location.state.from is "${location?.state?.from}", location.pathname is "${location.pathname}"`
+          );
+          history.push({
+            pathname: '/signin',
+            state: { from: location?.state?.from || location.pathname || '/' },
+          });
           setChamberSummaries([]);
-          history.push('/signin', { from: '/' });
+          dispatch({ type: 'LOGOUT' });
         } else {
           setChamberSummariesError('' + error);
         }
@@ -70,8 +77,16 @@ const Nested = () => {
     // If we know the user is definitely not logged in, go straight to signin form.
     if (isAuth === Auth.NotLoggedIn) {
       setChamberSummaries([]);
-      history.push('/signin', { from: '/' });
+      console.debug(
+        `Redirecting to signin because NotLoggedIn. location.state.from is "${location?.state?.from}", location.pathname is "${location.pathname}"`
+      );
+      history.push({
+        pathname: '/signin',
+        state: { from: location?.state?.from || location.pathname || '/' },
+      });
     } else {
+      isAuth === Auth.Unknown &&
+        console.log('Calling fetchData() though unclear whether user is logged-in.');
       fetchData();
     }
   }, [isAuth, history, dispatch]);

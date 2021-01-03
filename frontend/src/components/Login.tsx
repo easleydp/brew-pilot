@@ -1,12 +1,13 @@
 import './Login.scss';
 import React, { useState, useEffect } from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
+import ILocationState from '../api/ILocationState';
 import axios from 'axios';
 import { useAppState } from './state';
 
 const Login: React.FC = () => {
-  let history = useHistory();
-  let location = useLocation();
+  const history = useHistory<ILocationState>();
+  const location = useLocation<ILocationState>();
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -17,6 +18,8 @@ const Login: React.FC = () => {
   const { dispatch } = useAppState();
 
   useEffect(() => {
+    console.info('=================== Login useEffect invoked ======================');
+
     if (username.trim() && password.trim()) {
       setIsButtonDisabled(false);
     } else {
@@ -49,9 +52,8 @@ const Login: React.FC = () => {
           isAdmin: response.data.isAdmin,
         });
 
-        console.log('After successful login, location.state is:', location.state);
-        let { from } = location.state || { from: { pathname: '/' } };
-        history.replace(from);
+        console.log(`After successful login, location.state.from is "${location?.state?.from}"`);
+        history.replace(location?.state?.from || '/');
       })
       .catch((error) => {
         console.debug(error);
@@ -74,13 +76,6 @@ const Login: React.FC = () => {
     event.stopPropagation();
     return false;
   };
-
-  // let { from } = location.state || { from: { pathname: '/' } };
-  // let signin = () => {
-  //   fakeAuth.authenticate(() => {
-  //     history.replace(from);
-  //   });
-  // };
 
   return (
     <div className="signin wrapper fadeInDown">

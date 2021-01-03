@@ -2,6 +2,7 @@ import './FermentationProfile.scss';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { isMobile } from 'react-device-detect';
 import { useHistory } from 'react-router-dom';
+import ILocationState from '../api/ILocationState';
 import { useAppState, Auth } from './state';
 import { useParams } from 'react-router-dom';
 import ITemperatureProfile from '../api/ITemperatureProfile';
@@ -29,7 +30,7 @@ const FermentationProfile = () => {
     index: number;
   }
 
-  const history = useHistory();
+  const history = useHistory<ILocationState>();
   const { state, dispatch } = useAppState();
   const isAuth = state && state.isAuth;
   const isLoggedIn = isAuth === Auth.LoggedIn;
@@ -442,9 +443,9 @@ const FermentationProfile = () => {
             console.debug(url + ' ERROR', error);
             const status = error?.response?.status;
             if (status === 403 || status === 401) {
-              console.debug(status, 'Redirecting to signin');
+              console.debug(`Redirecting to signin after ${status}`);
+              history.push({ pathname: '/signin', state: { from: '/fermentation-profile' } });
               dispatch({ type: 'LOGOUT' });
-              history.push('/signin', { from: '/fermentation-profile' });
             }
             reject(error);
           });
@@ -453,10 +454,10 @@ const FermentationProfile = () => {
 
     if (isAuth === Auth.NotLoggedIn) {
       // The user is definitely not logged in. Go straight to signin form.
-      history.push('/signin', { from: '/fermentation-profile' });
+      history.push({ pathname: '/signin', state: { from: '/fermentation-profile' } });
     } else if (isAuth === Auth.Unknown) {
       // The user has hit F5? Go to the home page where we can check if they're logged in.
-      history.push('/fermentation-profile');
+      history.push({ pathname: '/', state: { from: '/fermentation-profile' } });
     } else {
       getTemperatureProfile().then((profile) => {
         setLoading(false);
@@ -519,9 +520,9 @@ const FermentationProfile = () => {
       console.debug(url + ' ERROR', error);
       const status = error?.response?.status;
       if (status === 403 || status === 401) {
-        console.debug(status, 'Redirecting to signin');
+        console.debug(`Redirecting to signin after ${status}`);
+        history.push({ pathname: '/signin', state: { from: '/fermentation-profile' } });
         dispatch({ type: 'LOGOUT' });
-        history.push('/signin', { from: '/fermentation-profile' });
       } else {
         setErrorMessage(Utils.getErrorMessage(error));
         setShowError(true);

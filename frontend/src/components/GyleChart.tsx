@@ -290,7 +290,7 @@ const GyleChart = () => {
   ) => {
     if (fridgeOn !== undefined) {
       const value = fridgeOn ? 10 : null;
-      const valuesLen = series.yData ? series.yData.length : 0;
+      let valuesLen = series.yData ? series.yData.length : 0;
       // Only add if it's a different value than previous.
       if (valuesLen === 0) {
         // First point
@@ -307,6 +307,13 @@ const GyleChart = () => {
             if (timeSinceLastPoint > readingsPeriodMillis) {
               series.addPoint([dt - readingsPeriodMillis, null] as any, false);
               series.addPoint([dt - readingsPeriodMillis, 0], false);
+            } else {
+              // There isn't room to backfill a null and a 0.
+              // Edge case: If the preceding yValue is null we need to remove it because we need to start rising
+              // immediately for the current rising 'on' value. (The zero before the null should remain though.)
+              if (series.yData[valuesLen - 1] === null) {
+                series.removePoint(--valuesLen, false);
+              }
             }
             series.addPoint([dt, value], false);
           } else {
@@ -334,7 +341,7 @@ const GyleChart = () => {
       const value = heaterOutput > 0 ? heaterOutput / 10 : null;
       // const value = heaterOutput > 0 ? Math.floor(Math.random() * 20) + 1 : null;
       // const value = heaterOutput > 0 ? 10 : null;
-      const valuesLen = series.yData ? series.yData.length : 0;
+      let valuesLen = series.yData ? series.yData.length : 0;
       // Only add if it's a different value than previous.
       if (valuesLen === 0) {
         // First point
@@ -359,6 +366,13 @@ const GyleChart = () => {
             if (timeSinceLastPoint > readingsPeriodMillis) {
               series.addPoint([dt - readingsPeriodMillis, null] as any, false);
               series.addPoint([dt - readingsPeriodMillis, 0], false);
+            } else {
+              // There isn't room to backfill a null and a 0.
+              // Edge case: If the preceding yValue is null we need to remove it because we need to start rising
+              // immediately for the current rising 'on' value. (The zero before the null should remain though.)
+              if (series.yData[valuesLen - 1] === null) {
+                series.removePoint(--valuesLen, false);
+              }
             }
             series.addPoint([dt, value], false);
           } else {

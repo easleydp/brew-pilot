@@ -95,7 +95,7 @@ const FermentationProfile = () => {
           {
             color: '#eaa',
             dashStyle: 'Dash',
-            zIndex: 999,
+            zIndex: 6, // Above plot lines but below tool-tips
             width: 2,
             value: startTimeOffset,
             label: { text: 'Now', rotation: 0, x: -12, y: -3, style: { color: '#c00' } },

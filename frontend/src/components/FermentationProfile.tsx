@@ -5,13 +5,19 @@ import { useHistory } from 'react-router-dom';
 import ILocationState from '../api/ILocationState';
 import { useAppState, Auth } from './state';
 import { useParams } from 'react-router-dom';
+import IGyle from '../api/IGyle';
 import ITemperatureProfile from '../api/ITemperatureProfile';
 import applyPatchRangeDefaultLeft from '../api/RangeDefaultLeftPatch.js';
 import Utils from '../util/Utils';
 import axios from 'axios';
 import { Button } from 'react-bootstrap';
 import Toast from 'react-bootstrap/Toast';
-import Highcharts, { Chart, Series, SeriesLineOptions } from 'highcharts/highstock';
+import Highcharts, {
+  Chart,
+  Series,
+  SeriesLineOptions,
+  XAxisPlotLinesOptions,
+} from 'highcharts/highstock';
 // import * as Highcharts from 'highcharts/highstock';
 import DraggablePoints from 'highcharts/modules/draggable-points';
 import Loading from './Loading';
@@ -42,8 +48,10 @@ const FermentationProfile = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState(false);
 
-  const chartRef = useRef<Chart | null>(null);
-  const backedUpProfileRef = useRef<ITemperatureProfile | null>(null);
+  const gyleRef = useRef<IGyle | undefined>(undefined);
+  const chartRef = useRef<Chart | undefined>(undefined);
+  const backedUpProfileRef = useRef<ITemperatureProfile | undefined>(undefined);
+  const startTimeOffsetRef = useRef<number | undefined>(undefined);
 
   const onCloseErrorToast = () => {
     setButtonsDisabled(false);
@@ -51,7 +59,7 @@ const FermentationProfile = () => {
     setErrorMessage(null);
   };
 
-  const buildChart = (profile: ITemperatureProfile): Highcharts.Chart => {
+  const buildChart = (profile: ITemperatureProfile, startTimeOffset?: number): Highcharts.Chart => {
     const utcMsFromDaysAndHours = function (days: number, hours: number) {
       return Date.UTC(1970, 0, days + 1, hours);
     };
@@ -80,6 +88,20 @@ const FermentationProfile = () => {
       n1x: number,
       n2x: number,
       isFirstPoint: boolean;
+
+    // If startTimeOffset has been supplied, plot a vertical line indicating time now.
+    const xAxisPlotLine: Array<XAxisPlotLinesOptions> | undefined = startTimeOffset
+      ? [
+          {
+            color: '#eaa',
+            dashStyle: 'Dash',
+            zIndex: 999,
+            width: 2,
+            value: startTimeOffset,
+            label: { text: 'Now', rotation: 0, x: -12, y: -3, style: { color: '#c00' } },
+          },
+        ]
+      : undefined;
 
     return Highcharts.stockChart({
       credits: {
@@ -272,6 +294,7 @@ const FermentationProfile = () => {
         minorTickInterval: 1 * hourMs,
         gridLineWidth: 2,
         maxPadding: 0.2,
+        plotLines: xAxisPlotLine,
       },
       yAxis: {
         softMin: 10,
@@ -430,9 +453,9 @@ const FermentationProfile = () => {
     // of the x-axis, i.e. to show earliest points by default.
     applyPatchRangeDefaultLeft(Highcharts, true);
 
-    // Returns promise for retrieving ITemperatureProfile
-    const getTemperatureProfile = (): Promise<ITemperatureProfile> => {
-      const url = '/tempctrl/guest/chamber/1/latest-gyle-profile';
+    // Returns promise for retrieving IGyle. (We retrieve the whole gyle since we need dtStarted/Ended as well as the profile.)
+    const getGyle = (): Promise<IGyle> => {
+      const url = '/tempctrl/guest/chamber/1/latest-gyle';
       return new Promise((resolve, reject) => {
         axios
           .get(url)
@@ -444,13 +467,35 @@ const FermentationProfile = () => {
             const status = error?.response?.status;
             if (status === 403 || status === 401) {
               console.debug(`Redirecting to signin after ${status}`);
-              history.push({ pathname: '/signin', state: { from: '/fermentation-profile' } });
+              history.push({ pathname: '/signin', state: { from: '/fermenter-profile' } });
               dispatch({ type: 'LOGOUT' });
             }
             reject(error);
           });
       });
     };
+
+    // // Returns promise for retrieving ITemperatureProfile
+    // const getTemperatureProfile = (): Promise<ITemperatureProfile> => {
+    //   const url = '/tempctrl/guest/chamber/1/latest-gyle-profile';
+    //   return new Promise((resolve, reject) => {
+    //     axios
+    //       .get(url)
+    //       .then((response) => {
+    //         return resolve(response.data);
+    //       })
+    //       .catch((error) => {
+    //         console.debug(url + ' ERROR', error);
+    //         const status = error?.response?.status;
+    //         if (status === 403 || status === 401) {
+    //           console.debug(`Redirecting to signin after ${status}`);
+    //           history.push({ pathname: '/signin', state: { from: '/fermentation-profile' } });
+    //           dispatch({ type: 'LOGOUT' });
+    //         }
+    //         reject(error);
+    //       });
+    //   });
+    // };
 
     if (isAuth === Auth.NotLoggedIn) {
       // The user is definitely not logged in. Go straight to signin form.
@@ -459,16 +504,22 @@ const FermentationProfile = () => {
       // The user has hit F5? Go to the home page where we can check if they're logged in.
       history.push({ pathname: '/', state: { from: '/fermentation-profile' } });
     } else {
-      getTemperatureProfile().then((profile) => {
+      getGyle().then((gyle) => {
         setLoading(false);
-        backedUpProfileRef.current = profile;
-        chartRef.current = buildChart(profile);
+        gyleRef.current = gyle;
+        backedUpProfileRef.current = gyle.temperatureProfile!;
+        // If the gyle is active (i.e. has dtStarted < now but no dtEnded) then pass the
+        // start time to buildChart so it may plot a "Now" indicator line.
+        const now = Date.now();
+        const dtStarted = !gyle.dtEnded ? gyle.dtStarted : undefined;
+        startTimeOffsetRef.current = dtStarted && dtStarted < now ? now - dtStarted : undefined;
+        chartRef.current = buildChart(backedUpProfileRef.current, startTimeOffsetRef.current);
       });
     }
   }, [dispatch, history, isAuth]);
 
   const handleReset = () => {
-    chartRef.current = buildChart(backedUpProfileRef.current!);
+    chartRef.current = buildChart(backedUpProfileRef.current!, startTimeOffsetRef.current);
   };
 
   const handleSave = async () => {

@@ -243,7 +243,7 @@ const GyleChart = () => {
     let prevY: number | null = -1;
     series.xData.forEach((x, i) => {
       let y = series.yData[i];
-      if (x <= prevX) {
+      if (x < prevX) {
         console.error(
           `!!! ${seriesName}, i-1=${i - 1}:[${prevX / 30000}, ${y}], i=${i}:[${
             x / 30000

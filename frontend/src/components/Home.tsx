@@ -54,7 +54,7 @@ const Home = ({ chamberSummaries, chamberSummariesError }: HomeProps) => {
   }
 
   if (chamberSummariesError) {
-    return <div>{chamberSummariesError}</div>;
+    return <div className="error">{chamberSummariesError}</div>;
   }
   if (chamberSummaries && chamberSummaries.length) {
     return (

@@ -2,7 +2,7 @@
 
 RaspberryPi and Arduino temperature controller for fermentation chambers and beer fridges.
 
-The front end currently assumes one fermenter and one beer fridge, though most of the internals are flexible in this regard, allowing any number of _chambers_ to be configured. Each chamber may have any number of associated _gyles_ (all but the latest historical). For a given chamber, the latest gyle is considered 'active' if it has a start time <= now AND either no end time or an end time > now.
+The front end currently assumes one fermenter and one beer fridge, though most of the internals are flexible in this regard, allowing any number of _chambers_ to be configured. Each chamber may have any number of associated _gyles_ (all but the latest being historical). For a given chamber, the latest gyle is considered 'active' if it has a start time <= now AND either no end time or an end time > now.
 
 Each chamber is assumed to have refrigeration but a heater is optional. A chamber without a heater is assumed to be a _beer fridge_.
 
@@ -11,7 +11,8 @@ Each chamber is assumed to have refrigeration but a heater is optional. A chambe
 - Frontend is a React SPA.
 - Backend is a Java Spring Boot app.
 - The Arduino microcontroller code is C++.
-- A Linux OS with a Java VM and a webserver such as nginx.
+
+In addition the RPi should be equipped with a Linux OS, a Java VM and a webserver such as nginx.
 
 Note there is no _database_. Rather, the last few minutes worth of readings are held in memory by the Java app before being dumped to disk (as a series of ndjson files). On request, the Java app simply provides the frontend with the names of the ndjson files (alongside any _latest readings_ from memory); the frontend then requests the data files directly (from the web server, without the Java app being further involved). Note: the ndjson files are aggregated once in a while so the frontend should never have to request too many.
 
@@ -37,7 +38,8 @@ These should be DS18B20 (the waterproof variety where the business end is housed
 
 Probes used:
 
-- All the chambers are assumed to be co-located, so a common probe is used to measure the external temperature (e.g. ambient temperature in your garage). - Each chamber uses two probes - one for the ambient temperature insider the chamber and a second for the beer. For a beer fridge this is perhaps overkill (and is something that should be made configurable); I wrap one beer bottle in a wine cooler sleeve and push the _beer_ probe between bottle and sleeve. The _chamber_ probe should just be dangled somewhere away from the beer (and obviously away from the heater and the internal sides of the fridge). For a fermenter without a thermowell it's sufficient to just strap the probe to the side of the vessel, under a wodge of insulation such as bubble wrap.
+- All the chambers are assumed to be co-located, so a common probe is used to measure the external temperature (e.g. ambient temperature in your garage).
+- Each chamber uses two probes - one for the ambient temperature insider the chamber and a second for the beer. For a beer fridge this is perhaps overkill (and is something that should be made configurable); I wrap one beer bottle in a wine cooler sleeve and push the _beer_ probe between bottle and sleeve. The _chamber_ probe should just be dangled somewhere away from the beer (and obviously away from the heater and the internal sides of the fridge). For a fermenter without a thermowell it's sufficient to just strap the probe to the side of the vessel, under a wodge of insulation such as bubble wrap.
 - Finally, a probe is dedicated to measuring the temperature inside the project box. Again, this is perhaps overkill (something that should be configurable).
 
 ## Demo

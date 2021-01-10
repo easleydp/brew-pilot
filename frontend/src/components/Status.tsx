@@ -10,8 +10,9 @@ import Loading from './Loading';
 const syntaxHighlight = (json: string) => {
   json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const html = json.replace(
-    /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g,
+    /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?|\,)/g,
     (match) => {
+      if (match === ',') return ''; // Since the input is pretty-printed we don't need the JSON commas
       let cls;
       if (/^"/.test(match)) {
         if (/:$/.test(match)) {
@@ -27,9 +28,6 @@ const syntaxHighlight = (json: string) => {
       } else {
         cls = 'number';
         match = (+match).toLocaleString();
-        // If formatting the number has inserted any commas, append a space to visually
-        // separate the number value from the JSON comma that may follow.
-        if (match.indexOf(',') !== -1) match += ' ';
       }
       return '<span class="' + cls + '">' + match + '</span>';
     }

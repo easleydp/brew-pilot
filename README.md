@@ -45,3 +45,7 @@ Probes used:
 ## Demo
 
 A live BrewPilot installation may be visible here: https://brewpilot.ml/ (username: `guest`; password: `BeerIsGood!`)
+
+## Contact
+
+Mail to: ![mailto](email-address-image.gif)

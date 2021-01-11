@@ -2,7 +2,9 @@
 
 RaspberryPi and Arduino temperature controller for fermentation chambers and beer fridges.
 
-The front end currently assumes one fermenter and one beer fridge, though most of the internals are flexible in this regard, allowing any number of _chambers_ to be configured. Each chamber may have any number of associated _gyles_ (all but the latest being historical). For a given chamber, the latest gyle is considered 'active' if it has a start time <= now AND either no end time or an end time > now.
+The Arduino is responsible for the actual temperature control while the RPi provides a web-based management user interface and passes control parameters to the Arduino.
+
+The front end currently assumes one fermenter and one beer fridge, though most of the internals are flexible in this regard, allowing any number of _chambers_ to be configured. Each chamber may have any number of associated _gyles_ (all but the latest being historical). For a given chamber, the latest gyle is considered _active_ if it has a start time earlier than now AND either no end time or an end time later than now.
 
 Each chamber is assumed to have refrigeration but a heater is optional. A chamber without a heater is assumed to be a _beer fridge_.
 
@@ -14,14 +16,14 @@ Each chamber is assumed to have refrigeration but a heater is optional. A chambe
 
 In addition the RPi should be equipped with a Linux OS, a Java VM and a webserver such as nginx.
 
-Note there is no _database_. Rather, the last few minutes worth of readings are held in memory by the Java app before being dumped to disk (as a series of ndjson files). On request, the Java app simply provides the frontend with the names of the ndjson files (alongside any _latest readings_ from memory); the frontend then requests the data files directly (from the web server, without the Java app being further involved). Note: the ndjson files are aggregated once in a while so the frontend should never have to request too many.
+Note there is no database server. Rather, the last few minutes worth of readings are held in memory by the Java app before being dumped to disk (as a series of JSON files). When the frontend requests data for plotting charts, the Java app simply returns the names of the relevant JSON files (alongside any _latest readings_ from memory); the frontend then requests the data files (directly from the web server, without the Java app being further involved). The JSON files are aggregated once in a while so the frontend never has to request too many.
 
 The only RPi model to have been proven is the "Pi 4 Model B", though "Pi 3 Model B" should be sufficient.<br>
-Arduino model is UNO.
+The Arduino model is UNO.
 
-## Rationale for Arduino
+## Rationale for Arduino microcontroller
 
-The reason for having an Arduino in addition to the RPi is robustness; the Arduino is relatively simple and therefore less likely to break. If the RPi goes down for any reason the Arduino will continue controlling the chambers according to the last set of parameters received from the RPi. The Arduino caches the last set of parameters received in EEPROM. So, if for some reason only the Arduino were to come back up after a power cut, it would still be able to maintain the last setpoint temperature.
+The reason for using a microcontroller in addition to the RPi is robustness; the Arduino (hardware and application code) is relatively simple and therefore less likely to fail. If the RPi goes down for any reason the Arduino will continue controlling the chambers according to the last set of parameters received from the RPi. The Arduino caches the last set of parameters received in EEPROM; so, if for some reason only the Arduino were to come back up after a power cut, it would still be able to maintain the last setpoint temperature for each chamber.
 
 It's also convenient that the Arduino, having 5v IO pins, can drive commonly available relays directly.
 
@@ -48,4 +50,4 @@ A live BrewPilot installation may be visible here: https://brewpilot.ml/ (userna
 
 ## Contact
 
-Mail to: ![mailto](email-address-image.gif)
+Mail to: ![mailto](README.resources/email-address-image.gif)

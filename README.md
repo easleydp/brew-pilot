@@ -18,7 +18,7 @@ In addition the RPi should be equipped with a Linux OS, a Java VM and a webserve
 
 Note there is no database server. Rather, the last few minutes worth of readings are held in memory by the Java app before being dumped to disk (as a series of JSON files). When the frontend requests data for plotting charts, the Java app simply returns the names of the relevant JSON files (alongside any _latest readings_ from memory); the frontend then requests the data files (directly from the web server, without the Java app being further involved). The JSON files are aggregated once in a while so the frontend never has to request too many.
 
-The only RPi model to have been proven is the "Pi 4 Model B", though "Pi 3 Model B" should be sufficient. It will need ethernet or WiFi networking. Best to equip the RPi with a heat sink and ensure the enclosing project box is well ventilated, but other than this a fan should not be necessary since the RPi isn't worked hard.
+The only RPi model to have been proven is the "Pi 4 Model B", though "Pi 3 Model B" should be sufficient. It will need ethernet or WiFi networking, of course. Best to equip the RPi with a heat sink and ensure the enclosing project box is well ventilated, but other than that a fan shouldn't be necessary since the RPi isn't worked hard.
 
 The Arduino model is Uno.
 
@@ -59,10 +59,12 @@ Strap them all together then, with the Arduino connected to your development PC,
 
 Home page (on mobile)<br>![home page](README.resources/home-page.png)
 
-Profile editor<br>![profile editor](README.resources/profile.png)
-
 Chart<br>![chart](README.resources/chart.png)
-<br>Note: Heater at 100% maps to 10°C on the y-axis (50% -> 5°C, etc.)
+<br>Note: Heater output of 100% maps to 10°C on the y-axis (50% -> 5°C, etc.)
+
+Fermentation temperature profile editor<br>![profile editor](README.resources/profile.png)
+
+Example project box<br>![project box](README.resources/project-box.png)
 
 ## Demo
 

@@ -27,7 +27,7 @@ typedef struct {
   // Actual hardware index, assigned by the Dallas library
   uint8_t dallasIndex;
 
-  // Error * 100. After being divided by 100, this value will be ADDED to the reading from the device.
+  // Error * 100. After being divided by 100 this value will be ADDED to the reading from the device.
   int8_t error;  // int8_t accommodates error range -1.28..+1.27
 
   int16_t prevReading;  // Used to apply a degree of averaging (noise smoothing)
@@ -87,7 +87,7 @@ void initTemperatureSensors() {
   dallas.begin();
   delay(1000);
   readTemperatures();
-  // Edit this in sympathy with SENSOR_COUNT, having established the device errors using calibrateTemperatureSensors()
+  // Edit this in sympathy with SENSOR_COUNT, having established each device's address and error using calibrateTemperatureSensors()
   initSensorData(CH1_T_BEER,    0x3A11, 19);
   initSensorData(CH1_T_CHAMBER, 0x3606, 7);
   initSensorData(CH2_T_BEER,    0x3EE1, 11);

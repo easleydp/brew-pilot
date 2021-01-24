@@ -36,7 +36,7 @@ LogRecord logRecords[LOG_RECORD_COUNT];
 // This will keep track of whether we had to resort to ejecting older messages (or whether we failed
 // to find a slot for an inferior message). This will be sent to RPi whenever it pulls some messages.
 // After the RPi pulls some messages thereby freeing records, we'll set it back to false.
-boolean logDataEjected = false;
+boolean logDataCannibalised = false;
 
 // Assuming LOG_RECORD_COUNT <= 255
 uint8_t nextLogRecordSequenceNum = 0;  // Modulo 255
@@ -59,7 +59,7 @@ uint8_t nextLogRecordSequenceNum = 0;  // Modulo 255
  *       oldestSoFar = N
  *   EndIf
  * EndFor
- * But note that this is all a bit dodgy given that messages may be ejected before slurped.
+ * But note that this is all a bit dodgy given that messages may be cannibalised before slurped.
  */
 LogRecord* findOldestLogMessage(boolean filterByLevel, uint8_t filterLevel) {
   uint8_t oldestSequenceNum;
@@ -118,7 +118,7 @@ LogRecord* findLogRecordForNewMessage(uint8_t logLevel) {
   }
   // Pass 2: Determine the oldest message with that log level.
   // (Note: We now know we'll find one. So we can set the following flag:)
-  logDataEjected = true;
+  logDataCannibalised = true;
   return findOldestLogMessage(true, lowestLogLevel);
 }
 
@@ -130,7 +130,7 @@ void logMsgBuffer(uint8_t logLevel, const char* prefix, char id, uint8_t chamber
   // Try and find an unused slot
   LogRecord* lrPtr = findLogRecordForNewMessage(logLevel);
   if (lrPtr == NULL) {
-    logDataEjected = true;
+    logDataCannibalised = true;
     return;
   }
 

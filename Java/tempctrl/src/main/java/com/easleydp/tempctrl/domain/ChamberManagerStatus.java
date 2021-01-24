@@ -6,24 +6,24 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 /**
  * Value object representing the status reported from a chamber manager.
  */
-@JsonPropertyOrder({ "uptime", "healthMessage", "minFreeRam", "minFreeRamLocation", "badSensorCount", "logDataEjected" })
+@JsonPropertyOrder({ "uptime", "healthMessage", "minFreeRam", "minFreeRamLocation", "badSensorCount", "logDataCannibalised" })
 public class ChamberManagerStatus
 {
     public ChamberManagerStatus(
-            int uptimeMins, int minFreeRam, int minFreeRamLocation, int badSensorCount, boolean logDataEjected)
+            int uptimeMins, int minFreeRam, int minFreeRamLocation, int badSensorCount, boolean logDataCannibalised)
     {
         this.uptimeMins = uptimeMins;
         this.minFreeRam = minFreeRam;
         this.minFreeRamLocation = minFreeRamLocation;
         this.badSensorCount = badSensorCount;
-        this.logDataEjected = logDataEjected;
+        this.logDataCannibalised = logDataCannibalised;
     }
 
     private final int uptimeMins;
     public final int minFreeRam;
     public final int minFreeRamLocation;
     public final int badSensorCount;
-    public final boolean logDataEjected;
+    public final boolean logDataCannibalised;
 
     /** @returns string such as "19 hours, 31 minutes" */
     public String getUptime()
@@ -35,8 +35,8 @@ public class ChamberManagerStatus
     {
         if (badSensorCount > 0)
             return "🥵 Bad sensor(s)";
-        if (logDataEjected)
-            return "😨 Log data ejected";
+        if (logDataCannibalised)
+            return "😨 Log data cannibalised";
         return "🙂 All good";
     }
 }

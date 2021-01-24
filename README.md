@@ -123,23 +123,27 @@ Seriously, unless you really know what you're doing it's a good idea to get an e
 
 ## Screenshots and photos
 
-Home page (on mobile)<br>![home page](README.resources/home-page.png)
+**Home page (on mobile)**:<br>![home page](README.resources/home-page.png)
 
-Chart<br>![chart](README.resources/chart.png)
+**Chart**:
+<br>![chart](README.resources/chart.png)
 <br>Note regarding the heater series (pink line): When the heater is outputting 100% this maps (arbitrarily) to 10°C on the y-axis (10% -> 1°C, etc.). (Didn't want to clutter the screen with two y-axes.) Likewise for the fridge series (though not shown here): 'fridge on' maps to 10°C on the y-axis; 'fridge off' maps to 0°C. (Unlike the heater, the fridge is either on or off, of course.)
 <br>Tip: 20 watts of heating is plenty for a small chamber. I use a short length of water pipe frost protection cable draped around the bottom of the chamber; takes up next to no space.
 
-Fermentation temperature profile editor<br>![profile editor](README.resources/profile.png)
+**Fermentation temperature profile editor**:
+<br>![profile editor](README.resources/profile.png)
 
-Example project box<br>![project box](README.resources/project-box.png)
+**Example project box**:
+<br>![project box](README.resources/project-box.png)
 <br>The three black cables leaving the bottom of the box are temperature sensor cables. The one in the middle just dangles, measuring the garage temperature. The other two black cables (left and right) go into each chamber, where each branches into two sensors. (Note: electrically, all the sensors are actually connected in parallel.) So five external sensors here in total. There is a sixth sensor inside the project box.
 <br>The two white cables entering the box bottom left are the 5v power for the electronics (all via the RPi's USB port) and the input mains power (which will be connected to the output sockets via the relays).
 
-Branched sensor cable<br>![chart](README.resources/branched-cable.png)
+**Branched sensor cable**:
+<br>![chart](README.resources/branched-cable.png)
 
 ## Demo
 
-A live BrewPilot installation may be visible here: https://brewpilot.ml/ (username: `guest`; password: `BeerIsGood!`)
+An actual BrewPilot installation may be live here: https://brewpilot.ml/ (username: `guest`; password: `BeerIsGood!`)
 
 ## Contact
 

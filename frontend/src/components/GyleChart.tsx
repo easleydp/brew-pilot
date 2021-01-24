@@ -859,6 +859,17 @@ const GyleChart = () => {
           return getAggregatedReadings(gyleDetails);
         })
         .then((aggregatedReadings) => {
+          // TODO: Remove this debug output after Jun 2021. Hoping by then to have got to the bottom of this:
+          //   Error: Reading at 1610248020000 is not later than our the oldest reading we already have (1611499230000).
+          //   .
+          //   1610248020000 = 53674934 found in first record of oldest ndson file (3-53674934-53680932)
+          //   1611499230000 = 53716641 found in 'recent readings'
+          //   .
+          //   Found nowhere else.
+          //   Over 14 days between these two! They look legit, just wrong order, as if the aggregated readings hadn't been pushed last.
+          //   But why the 53716641 recent readings when this wasn't first or last recent readings rec?
+          console.debug('aggregatedReadings', aggregatedReadings);
+
           addBunchOfReadings(aggregatedReadings, true);
           getCurrentChart().hideLoading();
         });

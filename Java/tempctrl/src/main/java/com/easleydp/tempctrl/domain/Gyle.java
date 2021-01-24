@@ -216,6 +216,7 @@ public class Gyle extends GyleDto
     {
         if (buffer != null && !buffer.readingsList.isEmpty())
         {
+            logger.debug("Force flushing " + buffer.readingsList.size() + " readings");
             buffer.flush(logsDir, logAnalysis);
             buffer = null;
             logAnalysis.maybeConsolidateLogFiles();
@@ -378,6 +379,7 @@ public class Gyle extends GyleDto
         }
         private void consolidateLogFiles(List<LogFileDescriptor> genNDescriptors, int gen)
         {
+            logger.debug("Consolidating " + genNDescriptors.size() + " log files for gen " + gen);
             LogFileDescriptor first = genNDescriptors.get(0);
             LogFileDescriptor last = genNDescriptors.get(genNDescriptors.size() - 1);
             Path newLogFile = logsDir.resolve(buildLogFilename(gen, first.dtStart, last.dtEnd));
@@ -407,6 +409,7 @@ public class Gyle extends GyleDto
             {
                 try
                 {
+                    logger.debug("Performing post-consolidation cleanup for " + awaitingCleanup.size() + " log files");
                     for (LogFileDescriptor desc : awaitingCleanup)
                     {
                         Files.delete(desc.logFile);

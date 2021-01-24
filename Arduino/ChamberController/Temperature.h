@@ -88,12 +88,13 @@ void initTemperatureSensors() {
   delay(1000);
   readTemperatures();
   // Edit this in sympathy with SENSOR_COUNT, having established each device's address and error using calibrateTemperatureSensors()
-  initSensorData(CH1_T_BEER,    0x3A11, 19);
-  initSensorData(CH1_T_CHAMBER, 0x3606, 7);
-  initSensorData(CH2_T_BEER,    0x3EE1, 11);
-  initSensorData(CH2_T_CHAMBER, 0x79BA, -6);
-  initSensorData(T_EXTERNAL,    0xBD96, -9);
-  initSensorData(T_PI,          0x3B79, -13);
+  // Note: the error offset is x100. This value divided by 100 will be ADDED to the reading from the device.
+  initSensorData(CH1_T_BEER,    0x3A11, 25);
+  initSensorData(CH1_T_CHAMBER, 0x3606, 11);
+  initSensorData(CH2_T_BEER,    0x3EE1, -4);
+  initSensorData(CH2_T_CHAMBER, 0x79BA, -8);
+  initSensorData(T_EXTERNAL,    0xBD96, -15);
+  initSensorData(T_PI,          0x3B79, -12);
 
   DeviceAddress address;
   for (uint8_t i = 0; i < SENSOR_COUNT; i++) {

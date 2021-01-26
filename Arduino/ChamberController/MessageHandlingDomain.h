@@ -159,8 +159,8 @@ void handleStatus() {
   printComma(); Serial.print(minFreeRam);
   printComma(); Serial.print(minFreeRamLocation);
   printComma(); Serial.print(badSensorCount);
-  printComma(); Serial.print(logDataCannibalised);
-  logDataCannibalised = false; // reset, now that we've notified
+  printComma(); Serial.print(logBufferCannibalised);
+  logBufferCannibalised = false; // reset, now that we've notified
   sendToMasterEnd();
 }
 

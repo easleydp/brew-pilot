@@ -44,7 +44,7 @@ const FermentationProfile = () => {
 
   const [loading, setLoading] = useState<boolean>(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [buttonsDisabled, setButtonsDisabled] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState(false);
 
@@ -54,7 +54,7 @@ const FermentationProfile = () => {
   const startTimeOffsetRef = useRef<number | undefined>(undefined);
 
   const onCloseErrorToast = () => {
-    setButtonsDisabled(false);
+    setSubmitting(false);
     setShowError(false);
     setErrorMessage(null);
   };
@@ -556,19 +556,15 @@ const FermentationProfile = () => {
       }),
     };
 
-    console.debug(0, backedUpProfileRef.current?.points);
-    console.debug(1, optionsData);
-    console.debug(2, temperatureProfile.points);
-
-    setButtonsDisabled(true);
+    setSubmitting(true);
     const url = '/tempctrl/admin/chamber/1/latest-gyle-profile';
     try {
       await axios.post(url, temperatureProfile);
       backedUpProfileRef.current = temperatureProfile;
       setShowSuccess(true);
-      setButtonsDisabled(false);
+      setSubmitting(false);
     } catch (error) {
-      console.debug(url + ' ERROR', error);
+      console.debug(url + ' ERROR', error, error.response.data);
       const status = error?.response?.status;
       if (status === 403 || status === 401) {
         console.debug(`Redirecting to signin after ${status}`);
@@ -577,6 +573,7 @@ const FermentationProfile = () => {
       } else {
         setErrorMessage(Utils.getErrorMessage(error));
         setShowError(true);
+        // Note, we deliberately don't `setSubmitting(false)` here; that only happens when the user acknowledges the error.
       }
     }
   };
@@ -610,7 +607,7 @@ const FermentationProfile = () => {
       </Toast>
       <div className="header">
         <div className="item button left">
-          <Button variant="secondary" disabled={buttonsDisabled} onClick={handleReset}>
+          <Button variant="secondary" disabled={submitting} onClick={handleReset}>
             Reset
           </Button>
         </div>
@@ -619,7 +616,7 @@ const FermentationProfile = () => {
           <p>{instruction}</p>
         </div>
         <div className="item button right">
-          <Button variant="primary" disabled={!isAdmin || buttonsDisabled} onClick={handleSave}>
+          <Button variant="primary" disabled={!isAdmin || submitting} onClick={handleSave}>
             Save
           </Button>
         </div>

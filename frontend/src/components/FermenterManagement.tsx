@@ -6,10 +6,12 @@ import { useAppState, Auth } from './state';
 import IGyle from '../api/IGyle';
 import { Mode } from '../api/Mode';
 import NowPattern from '../util/NowPattern';
+import Utils from '../util/Utils';
 import axios from 'axios';
 import { Form, Button, Row, Col } from 'react-bootstrap';
 import { useFormik, yupToFormErrors } from 'formik';
 import * as Yup from 'yup';
+import Toast from 'react-bootstrap/Toast';
 import Loading from './Loading';
 
 interface IErrors {
@@ -49,11 +51,20 @@ const FermenterManagement = () => {
   const history = useHistory<ILocationState>();
   const { state, dispatch } = useAppState();
   const isAuth = state && state.isAuth;
+  const isLoggedIn = isAuth === Auth.LoggedIn;
+  const isAdmin = isLoggedIn && state.isAdmin;
 
   const [loading, setLoading] = useState<boolean>(true);
   const [gyle, setGyle] = useState<IGyle | null>(null);
-  const [statusText, setStatusText] = useState<string | null>(null);
-  const [statusClass, setStatusClass] = useState<string>('text-body');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [showError, setShowError] = useState(false);
+
+  const onCloseErrorToast = () => {
+    setShowError(false);
+    setErrorMessage(null);
+    formik.setSubmitting(false);
+  };
 
   useEffect(() => {
     console.info(
@@ -138,19 +149,26 @@ const FermenterManagement = () => {
       gyle!.dtEnded = values.formDtEnded ? parseInt(values.formDtEnded) : undefined;
       gyle!.mode = values.formMode;
       // gyle.temperatureProfile is returned as we received it
-      setStatusText(null);
+      setSubmitting(true);
+      const url = '/tempctrl/admin/chamber/1/latest-gyle';
       axios
-        .post('/tempctrl/admin/chamber/1/latest-gyle', gyle)
+        .post(url, gyle)
         .then((response) => {
+          setShowSuccess(true);
           setSubmitting(false);
-          setStatusText('Updated successfully');
-          setStatusClass('text-body');
         })
         .catch((error) => {
-          setSubmitting(false);
-          console.warn(99, error, error.response.data);
-          setStatusText(JSON.stringify(error.response.data));
-          setStatusClass('text-error');
+          console.debug(url + ' ERROR', error, error.response.data);
+          const status = error?.response?.status;
+          if (status === 403 || status === 401) {
+            console.debug(`Redirecting to signin after ${status}`);
+            history.push({ pathname: '/signin', state: { from: '/fermenter-management' } });
+            dispatch({ type: 'LOGOUT' });
+          } else {
+            setErrorMessage(Utils.getErrorMessage(error));
+            setShowError(true);
+            // Note, we deliberately don't `setSubmitting(false)` here; that only happens when the user acknowledges the error.
+          }
         });
     },
   });
@@ -186,6 +204,25 @@ const FermenterManagement = () => {
     <Loading />
   ) : (
     <Form className="fermenter-management" onBlur={handleFormBlur} onSubmit={formik.handleSubmit}>
+      <Toast
+        className="success"
+        onClose={() => setShowSuccess(false)}
+        show={showSuccess}
+        delay={2000}
+        autohide
+      >
+        <Toast.Header closeButton={false}>
+          <strong className="mr-auto">Changes saved</strong>
+          <small></small>
+        </Toast.Header>
+      </Toast>
+      <Toast className="error" onClose={onCloseErrorToast} show={showError}>
+        <Toast.Header>
+          <strong className="mr-auto">Error</strong>
+          <small></small>
+        </Toast.Header>
+        <Toast.Body>{errorMessage}</Toast.Body>
+      </Toast>
       <Form.Group controlId="formName">
         <Form.Label>Gyle name</Form.Label>
         <Form.Control type="text" {...formik.getFieldProps('formName')} />
@@ -256,12 +293,9 @@ const FermenterManagement = () => {
 
       <Row>
         <Col>
-          <Button variant="primary" type="submit" disabled={formik.isSubmitting}>
+          <Button variant="primary" type="submit" disabled={!isAdmin || formik.isSubmitting}>
             Update
           </Button>
-        </Col>
-        <Col>
-          <Form.Text className={statusClass}>{statusText}</Form.Text>
         </Col>
       </Row>
     </Form>

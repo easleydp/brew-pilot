@@ -46,6 +46,7 @@ server {
         index index.html;
         server_name brewpilot.ml; # managed by Certbot
 
+        # Requests proxied to the Spring Boot app
         # was: location ~ ^/(login$|logout$|guest/|admin/) {
         location /tempctrl {
                 limit_req zone=default-xhr burst=4 nodelay;
@@ -67,7 +68,9 @@ server {
         }
 
         # FE app router based URLs
-        location / {
+        # was: `location / {` but that meant we served the index page when attackers probed for e.g. "/any-random-url",
+        # so now we itemise all the valid URLs.
+        location = ^/($|signin$|gyle-chart/|fermenter-management$|fermentation-profile$|status$) {
                 # First attempt to serve request as file, then as directory, then fall back to assuming React Router will handle.
                 try_files $uri $uri/ /index.html$is_args$args;
                 root /home/david/brew-pilot/frontend;

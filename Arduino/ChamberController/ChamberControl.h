@@ -314,7 +314,7 @@ void controlChambers() {
     readTemperatures();  // Seems to take about 120ms per sensor (~720ms for 6 sensors)
     logMsg(LOG_DEBUG, logPrefixChamberControl, 'j', 1, ((uint32_t) millis() - t)/* uint32_t */);
     readTExternal();
-    readTPi();
+    readTProjectBox();
     for (byte i = 0; i < CHAMBER_COUNT; i++) {
       ChamberData& cd = chamberDataArray[i];
       readTBeer(cd);

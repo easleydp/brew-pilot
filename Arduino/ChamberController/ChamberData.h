@@ -51,7 +51,7 @@ typedef struct {
 
 // Latest common readings
 int16_t tExternal;
-int16_t tPi;
+int16_t tProjectBox;
 
 typedef struct {
   uint8_t chamberId;  // 1, 2, etc.

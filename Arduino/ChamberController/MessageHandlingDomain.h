@@ -113,7 +113,7 @@ void handleGetChamberReadings(const char* cmd) {
   printComma();
   Serial.print(tExternal);
   printComma();
-  Serial.print(tPi);
+  Serial.print(tProjectBox);
   printComma();
   Serial.print(cdPtr->heaterOutput);
   printComma();
@@ -157,6 +157,7 @@ void handleStatus() {
   sendToMasterStart();
   Serial.print(F("status:")); Serial.print(uptimeMins);
   printComma(); Serial.print(minFreeRam);
+  printComma(); Serial.print(tProjectBox);
   printComma(); Serial.print(minFreeRamLocation);
   printComma(); Serial.print(badSensorCount);
   printComma(); Serial.print(logBufferCannibalised);

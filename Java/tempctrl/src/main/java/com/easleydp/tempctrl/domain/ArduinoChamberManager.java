@@ -44,16 +44,17 @@ public class ArduinoChamberManager implements ChamberManager
         String response = getMessenger().getResponse("status:");
         String[] values = response.split(",");
         // Expecting:
-        // uptimeMins,minFreeRam,minFreeRamLocation,badSensorCount,logBufferCannibalised
-        if (values.length != 5)
+        // uptimeMins,tProjectBox,minFreeRam,minFreeRamLocation,badSensorCount,logBufferCannibalised
+        if (values.length != 6)
             throw new IOException("Unexpected 'status' response: " + response);
         int i = 0;
         return new ChamberManagerStatus(
-                parseInt(values[i++]),
-                parseInt(values[i++]),
-                parseInt(values[i++]),
-                parseInt(values[i++]),
-                parseBool(values[i++]));
+            parseInt(values[i++]),
+            parseInt(values[i++]),
+            parseInt(values[i++]),
+            parseInt(values[i++]),
+            parseInt(values[i++]),
+            parseBool(values[i++]));
     }
 
     @Override
@@ -234,7 +235,7 @@ public class ArduinoChamberManager implements ChamberManager
             case 2: arduinoLogger.warn(sb.toString()); break;
             case 3: arduinoLogger.error(sb.toString()); break;
             default:
-                arduinoLogger.error("Unrecognise log level: " + logLevel);
+                arduinoLogger.error("Unrecognised log level: " + logLevel);
                 arduinoLogger.error(sb.toString());
                 break;
         }

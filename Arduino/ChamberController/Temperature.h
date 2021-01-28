@@ -1,7 +1,7 @@
 // Only used for test. Otherwise we read temperatures whenever requested.
 #define TEMP_READINGS_MILLIS 10000
 
-// Set this to your number of sensors, e.g. (tChamber + tBeer) * 2 chambers + tExternal + tPi = 6
+// Set this to your number of sensors, e.g. (tChamber + tBeer) * 2 chambers + tExternal + tProjectBox = 6
 #define SENSOR_COUNT 6
 
 // Setup a oneWire instance to communicate with any OneWire devices
@@ -40,7 +40,7 @@ Sensor sensorData[SENSOR_COUNT];
 #define CH2_T_BEER 2
 #define CH2_T_CHAMBER 3
 #define T_EXTERNAL 4
-#define T_PI 5
+#define T_PROJECT_BOX 5
 
 static const char* logPrefixTemperature = "T";
 
@@ -94,7 +94,7 @@ void initTemperatureSensors() {
   initSensorData(CH2_T_BEER,    0x3EE1, -4);
   initSensorData(CH2_T_CHAMBER, 0x79BA, -8);
   initSensorData(T_EXTERNAL,    0xBD96, -15);
-  initSensorData(T_PI,          0x3B79, -12);
+  initSensorData(T_PROJECT_BOX,          0x3B79, -12);
 
   DeviceAddress address;
   for (uint8_t i = 0; i < SENSOR_COUNT; i++) {
@@ -141,9 +141,9 @@ void readTExternal() {
   int16_t t = getTemperatureX10(T_EXTERNAL);
   tExternal = t != SHRT_MIN ? t : 0;
 }
-void readTPi() {
-  int16_t t = getTemperatureX10(T_PI);
-  tPi = t != SHRT_MIN ? t : 0;
+void readTProjectBox() {
+  int16_t t = getTemperatureX10(T_PROJECT_BOX);
+  tProjectBox = t != SHRT_MIN ? t : 0;
 }
 
 //unsigned long prevMillisReadTemperatures = 0;

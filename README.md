@@ -63,7 +63,7 @@ If you want to branch heat sensor cables (so that only one cable leaves the proj
 
 - **For heaters**: Solid State Relays (SSRs) are recommended because these are pulsed to give a pseudo variable heater output between 0-100%.
   (Pulse cycle time is 100 seconds; 1% output equates to 1s on, 99s off; 2% output equates to 2s on, 98s off; etc.)
-  Relatively cheap SSRs can be used because the power being switched is low and non-inductive. 240V x 0.5A is good for 100W, which is more than enough for a small chamber (20W is adequate).
+  Relatively cheap SSRs can be used because the power being switched is low and non-inductive. 240V x 0.5A is good for 100W, which is more than enough for a small chamber (a 20W heater is adequate).
   **NOTE**: Because the heater is pulsed, using a light bulb as the heat source is not recommended.
 - **For fridges**: Mechanical relays are recommended because the inductive load is a challenge for all but the most expensive SSRs. Mechanical relays are absolutely fine for cycle times in the order of minutes. SSRs are really superfluous here.
   <br>Minimum rating for mechanical relay: 240V, 10A.
@@ -73,7 +73,7 @@ The Arduino code assumes the relays are all _low level trigger_. (It would be a 
 
 ### Temperature sensors
 
-These should be DS18B20 (the waterproof variety where the business end is housed in a short stainless steel tube). Despite the fact that this sensor's interface is described as 'one-wire' (that is, one shared signal wire in addition to a common ground wire), using all three wires and with a 4.7kΩ pull-up resistor gives much better reliability.
+These should be DS18B20 (the waterproof variety where the business end is housed in a short stainless steel tube). Despite the fact that this sensor's interface is described as 'one-wire' (that is, one shared signal wire in addition to a common ground wire), using all three wires with a 4.7kΩ pull-up resistor gives much better reliability.
 
 #### Sensors used
 
@@ -88,7 +88,8 @@ So, six sensors in total for a two chamber installation.
 Strap all the sensor heads together with a rubber band and wait at least 10 minutes (or maybe speed up temperature equalisation my immersing the heads in a cup of water). With the Arduino connected to the development PC, call the `calibrateTemperatureSensors()` function (defined in `Temperature.h`) from the main `loop()` (defined in `ChamberController.ino`). This will regularly print (to the Arduino's serial console) the reading and the address of each sensor. Check for any outliers then assume the correct temperature is the average of the non-outliers. Or use a lab calibrated thermometer. Once you have established the 'true' temperature, determine the error offset for each sensor and program these, along with the device addresses, in `initTemperatureSensors()`:
 
 ```C++
-  // Edit this in sympathy with SENSOR_COUNT, having established each device's address and error using calibrateTemperatureSensors()
+  // Edit this in sympathy with SENSOR_COUNT, having established each device's address and
+  // error using calibrateTemperatureSensors()
   initSensorData(CH1_T_BEER,    0x3A11, 19);
   initSensorData(CH1_T_CHAMBER, 0x3606, 7);
   initSensorData(CH2_T_BEER,    0x3EE1, 11);
@@ -104,9 +105,6 @@ Parameter 2 is the sensor address and parameter 3 is the error offset \* 100. Af
 These are configured in `ChamberController.ino`, e.g.:
 
 ```C++
-  /*
-   * I/O pins
-   */
   // Input
   #define PIN__ONE_WIRE_BUS 2  // Temperature sensor bus
   // Output

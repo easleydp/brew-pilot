@@ -41,7 +41,8 @@ limit_req_zone $binary_remote_addr zone=default-xhr:64k rate=5r/s;
 limit_req_zone $binary_remote_addr zone=ndjson-xhr:64k rate=20r/s;
 
 server {
-        root /var/www/html;
+        # root /var/www/html;
+        root /home/david/brew-pilot/frontend;
 
         index index.html;
         server_name brewpilot.ml; # managed by Certbot
@@ -70,7 +71,7 @@ server {
         # FE app router based URLs
         # was: `location / {` but that meant we served the index page when attackers probed for e.g. "/any-random-url",
         # so now we itemise all the valid URLs.
-        location = ^/($|signin$|gyle-chart/|fermenter-management$|fermentation-profile$|status$) {
+        location ~ ^/($|signin$|gyle-chart/|fermenter-management$|fermentation-profile$|status$) {
                 # First attempt to serve request as file, then as directory, then fall back to assuming React Router will handle.
                 try_files $uri $uri/ /index.html$is_args$args;
                 root /home/david/brew-pilot/frontend;
@@ -89,7 +90,6 @@ server {
         ssl_certificate_key /etc/letsencrypt/live/brewpilot.ml/privkey.pem; # managed by Certbot
         include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
         ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
-
 }
 
 server {

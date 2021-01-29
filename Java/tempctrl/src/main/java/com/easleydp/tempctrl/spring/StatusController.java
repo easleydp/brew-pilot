@@ -11,6 +11,8 @@ import java.util.concurrent.TimeUnit;
 import com.easleydp.tempctrl.domain.ChamberManager;
 import com.easleydp.tempctrl.domain.ChamberManagerStatus;
 import com.easleydp.tempctrl.domain.JvmStatus;
+import com.easleydp.tempctrl.domain.MemoryStatsFileSystem;
+import com.easleydp.tempctrl.domain.MemoryStatsPi;
 import com.easleydp.tempctrl.util.OsCommandExecuter;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
@@ -53,7 +55,7 @@ public class StatusController
                   }, 10, TimeUnit.SECONDS);
     }
 
-    private static final String vcgencmd = "/opt/vc/bin/vcgencmd";
+    private static final String VCGEN_CMD = "/opt/vc/bin/vcgencmd";
 
     @GetMapping("/guest/log-chart/status")
     public StatusReportResponse getStatusReport() throws IOException
@@ -88,12 +90,14 @@ public class StatusController
     @JsonPropertyOrder({ "uptime", "temperature", "volts", "clock" })
     private static class PiStats
     {
-        private static boolean mockPi = new File(vcgencmd).exists() == false;
+        private static boolean mockPi = new File(VCGEN_CMD).exists() == false;
 
         private final String uptime;
 
         @SuppressWarnings("unused")
-        public final FileSystem fileSystem;
+        public final MemoryStatsPi memory;
+        @SuppressWarnings("unused")
+        public final MemoryStatsFileSystem fileSystem;
 
         @JsonInclude(Include.NON_NULL)
         public final JvmStatus jvm;
@@ -103,9 +107,10 @@ public class StatusController
         public final String clock;
 
         // Handy for testing
-        public PiStats(String uptime, FileSystem fileSystem, JvmStatus jvm, String temperature, String volts, String clock)
+        public PiStats(String uptime, MemoryStatsPi memory, MemoryStatsFileSystem fileSystem, JvmStatus jvm, String temperature, String volts, String clock)
         {
             this.uptime = uptime;
+            this.memory = memory;
             this.fileSystem = fileSystem;
             this.temperature = temperature;
             this.jvm = jvm;
@@ -117,11 +122,12 @@ public class StatusController
         {
             this(
                 OsCommandExecuter.execute("uptime", "-p"),
-                new FileSystem(File.listRoots()[0]),
+                new MemoryStatsPi(),
+                new MemoryStatsFileSystem(File.listRoots()[0]),
                 new JvmStatus(),
-                mockPi ? "temp=40.0'C" : OsCommandExecuter.execute(vcgencmd, "measure_temp"),
-                mockPi ? "volt=0.8765V" : OsCommandExecuter.execute(vcgencmd, "measure_volts", "core"),
-                mockPi ? "frequency(48)=750000000" : OsCommandExecuter.execute(vcgencmd, "measure_clock", "arm"));
+                mockPi ? "temp=40.0'C" : OsCommandExecuter.execute(VCGEN_CMD, "measure_temp"),
+                mockPi ? "volt=0.8765V" : OsCommandExecuter.execute(VCGEN_CMD, "measure_volts", "core"),
+                mockPi ? "frequency(48)=750000000" : OsCommandExecuter.execute(VCGEN_CMD, "measure_clock", "arm"));
         }
 
         @JsonInclude(Include.NON_NULL)
@@ -156,26 +162,6 @@ public class StatusController
                 return null;
             // e.g. "frequency(48)=750199232"
             return Integer.parseInt(substringAfter(clock, "="), 10);
-        }
-    }
-
-    private static class FileSystem
-    {
-        public final long total;  // Size of the partition. (This is the largest of three figures.)
-        public final long free;   // Number of unallocated bytes in the partition. (Less than total, greater than usable.)
-        // public final long usable; // Space available to this virtual machine. (This is the lowest of three figures.)
-
-        @SuppressWarnings("unused")
-        public int getPercentageFree()
-        {
-            return (int)(free * 100 / total);
-        }
-
-        FileSystem(File root)
-        {
-            total = root.getTotalSpace();
-            free = root.getFreeSpace();
-            // usable = root.getUsableSpace();
         }
     }
 

@@ -1,7 +1,6 @@
 package com.easleydp.tempctrl.domain;
 
 import java.lang.management.ManagementFactory;
-import java.lang.management.RuntimeMXBean;
 
 import com.easleydp.tempctrl.util.StringUtils;
 
@@ -11,32 +10,12 @@ public class JvmStatus {
     public final String uptime;
 
     @SuppressWarnings("unused")
-    public final Memory memory;
-
-    private static class Memory
-    {
-        public final long total;
-        public final long free;
-
-
-        @SuppressWarnings("unused")
-        public int getPercentageFree()
-        {
-            return (int)(free * 100 / total);
-        }
-
-        Memory()
-        {
-            free = Runtime.getRuntime().freeMemory();
-            total = Runtime.getRuntime().totalMemory();
-        }
-    }
+    public final MemoryStats memory;
 
     public JvmStatus() {
-        this.memory = new Memory();
+        this.memory = new MemoryStatsJvm(Runtime.getRuntime());
 
-        RuntimeMXBean rb = ManagementFactory.getRuntimeMXBean();
-        int uptimeMins = (int) (rb.getUptime() / (1000L * 60));
+        int uptimeMins = (int) (ManagementFactory.getRuntimeMXBean().getUptime() / (1000L * 60));
         this.uptime = StringUtils.friendlyUptime(uptimeMins);
     }
 

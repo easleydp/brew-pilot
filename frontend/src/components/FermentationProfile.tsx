@@ -89,6 +89,15 @@ const FermentationProfile = () => {
       n2x: number,
       isFirstPoint: boolean;
 
+    const profilePoints = profile.points;
+
+    // Determine how many days we should make visible by default
+    const lastPoint = profilePoints.length ? profilePoints[profilePoints.length - 1] : null;
+    let daysSpan = lastPoint ? lastPoint.hoursSinceStart / 24 : 0;
+    if (startTimeOffset) {
+      daysSpan = Math.max(daysSpan, Math.ceil(startTimeOffset / (1000 * 60 * 60 * 24)));
+    }
+
     // If startTimeOffset has been supplied, plot a vertical line indicating time now.
     const xAxisPlotLine: Array<XAxisPlotLinesOptions> | undefined = startTimeOffset
       ? [
@@ -162,7 +171,7 @@ const FermentationProfile = () => {
         buttonTheme: {
           width: 60,
         },
-        selected: 1,
+        selected: daysSpan <= 3 ? 1 : daysSpan <= 7 ? 2 : daysSpan <= 14 ? 3 : 4, // Index of selected range button
 
         inputEnabled: false,
       },
@@ -196,7 +205,7 @@ const FermentationProfile = () => {
           type: 'line',
           dashStyle: 'ShortDot',
           color: '#777',
-          data: profile.points.map((p) => [
+          data: profilePoints.map((p) => [
             utcMsFromDaysAndHours(0, p.hoursSinceStart),
             p.targetTemp / 10,
           ]),

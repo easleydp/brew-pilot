@@ -87,7 +87,7 @@ public class StatusController
         }
     }
 
-    @JsonPropertyOrder({ "uptime", "temperature", "volts", "clock" })
+    @JsonPropertyOrder({ "uptime", "temperature", "clockMHz" })
     private static class PiStats
     {
         private static boolean mockPi = new File(VCGEN_CMD).exists() == false;
@@ -102,9 +102,9 @@ public class StatusController
         @JsonInclude(Include.NON_NULL)
         public final JvmStatus jvm;
 
-        public final String temperature;
-        public final String volts;
-        public final String clock;
+        private final String temperature;
+        private final String volts;
+        private final String clock;
 
         // Handy for testing
         public PiStats(String uptime, MemoryStatsPi memory, MemoryStatsFileSystem fileSystem, JvmStatus jvm, String temperature, String volts, String clock)
@@ -127,7 +127,7 @@ public class StatusController
                 new JvmStatus(),
                 mockPi ? "temp=40.0'C" : OsCommandExecuter.execute(VCGEN_CMD, "measure_temp"),
                 mockPi ? "volt=0.8765V" : OsCommandExecuter.execute(VCGEN_CMD, "measure_volts", "core"),
-                mockPi ? "frequency(48)=750000000" : OsCommandExecuter.execute(VCGEN_CMD, "measure_clock", "arm"));
+                mockPi ? "frequency(48)=750199232" : OsCommandExecuter.execute(VCGEN_CMD, "measure_clock", "arm"));
         }
 
         @JsonInclude(Include.NON_NULL)
@@ -146,22 +146,23 @@ public class StatusController
             return new BigDecimal(substringBetween(temperature, "=", "'"));
         }
 
-        @JsonInclude(Include.NON_NULL)
-        public BigDecimal getVolts()
-        {
-            if (volts == null)
-                return null;
-            // e.g. "volt=0.8563V"
-            return new BigDecimal(substringBetween(volts, "=", "V"));
-        }
+        // Who cares about this value (particularly since it seems to bear no relation to what we understand as the Pi's input voltage)?
+        // @JsonInclude(Include.NON_NULL)
+        // public BigDecimal getVoltage()
+        // {
+        //     if (volts == null)
+        //         return null;
+        //     // e.g. "volt=0.8563V"
+        //     return new BigDecimal(substringBetween(volts, "=", "V"));
+        // }
 
         @JsonInclude(Include.NON_NULL)
-        public Integer getClock()
+        public BigDecimal getClockMHz()
         {
             if (clock == null)
                 return null;
             // e.g. "frequency(48)=750199232"
-            return Integer.parseInt(substringAfter(clock, "="), 10);
+            return BigDecimal.valueOf(((double) Integer.parseInt(substringAfter(clock, "="), 10)) / 1_000_000);
         }
     }
 

@@ -95,9 +95,9 @@ public class StatusController
         private final String uptime;
 
         @SuppressWarnings("unused")
-        public final MemoryStatsPi memory;
-        @SuppressWarnings("unused")
         public final MemoryStatsFileSystem fileSystem;
+        @SuppressWarnings("unused")
+        public final MemoryStatsPi memory;
 
         @JsonInclude(Include.NON_NULL)
         public final JvmStatus jvm;
@@ -162,7 +162,9 @@ public class StatusController
             if (clock == null)
                 return null;
             // e.g. "frequency(48)=750199232"
-            return BigDecimal.valueOf(((double) Integer.parseInt(substringAfter(clock, "="), 10)) / 1_000_000);
+            return BigDecimal
+                .valueOf(((double) Integer.parseInt(substringAfter(clock, "="), 10)) / 1_000_000)
+                .setScale(1, java.math.RoundingMode.HALF_UP);
         }
     }
 

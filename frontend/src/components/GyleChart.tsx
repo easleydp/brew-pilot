@@ -288,6 +288,7 @@ const GyleChart = () => {
     fridgeOn: boolean | undefined,
     series: SeriesDiscontinuous
   ) => {
+    // fridgeOn undefined signifies 'same as previous value'
     if (fridgeOn !== undefined) {
       const value = fridgeOn ? 10 : null;
       let valuesLen = series.yData ? series.yData.length : 0;
@@ -337,10 +338,9 @@ const GyleChart = () => {
     heaterOutput: number | undefined,
     series: SeriesDiscontinuous
   ) => {
+    // heaterOutput undefined signifies 'same as previous value'
     if (heaterOutput !== undefined) {
       const value = heaterOutput > 0 ? heaterOutput / 10 : null;
-      // const value = heaterOutput > 0 ? Math.floor(Math.random() * 20) + 1 : null;
-      // const value = heaterOutput > 0 ? 10 : null;
       let valuesLen = series.yData ? series.yData.length : 0;
       // Only add if it's a different value than previous.
       if (valuesLen === 0) {

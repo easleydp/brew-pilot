@@ -170,7 +170,7 @@ public class ChamberReadings
     {
         this.tPi = tPi;
     }
-    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonInclude(JsonInclude.Include.NON_NULL) // Note: we deliberately include zero since non-inclusion generally signifies 'same as previous value'.
     public Integer getHeaterOutput()
     {
         return heaterOutput;
@@ -179,7 +179,7 @@ public class ChamberReadings
     {
         this.heaterOutput = heaterOutput;
     }
-    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonInclude(JsonInclude.Include.NON_NULL) // Note: we deliberately include false since non-inclusion generally signifies 'same as previous value'.
     public Boolean getFridgeOn()
     {
         return fridgeOn;

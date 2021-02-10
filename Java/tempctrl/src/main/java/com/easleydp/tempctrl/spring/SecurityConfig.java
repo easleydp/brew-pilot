@@ -1,14 +1,18 @@
 package com.easleydp.tempctrl.spring;
 
 import java.io.IOException;
+import java.util.Map;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -43,7 +47,7 @@ import org.springframework.web.util.WebUtils;
 @EnableWebSecurity
 public class SecurityConfig
 {
-    // private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
+    private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
 
     @Autowired
     private Environment env;
@@ -151,6 +155,8 @@ public class SecurityConfig
                             .filter(auth -> auth.getAuthority().equals("ROLE_ADMIN"))
                             .findFirst().isPresent();
 
+                    logger.info("Successful login ({})", request.getParameter("username"));
+
                     response.setContentType("application/json");
                     response.setStatus(200);
                     response.getWriter().write("{\"result\":\"OK\", \"isAdmin\":" + isAdmin + "}");
@@ -167,6 +173,8 @@ public class SecurityConfig
                 public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response,
                         AuthenticationException e) throws IOException, ServletException
                 {
+                    logger.warn("Login failure ({})", request.getParameter("username"));
+
                     response.setContentType("application/json");
                     response.setStatus(401);
                     response.getWriter().write("{\"result\":\"UNAUTHORIZED\",\"message\":\"Authentication failure\"}");

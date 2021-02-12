@@ -18,39 +18,33 @@ import org.springframework.util.Assert;
 /**
  * Produces and collects Chamber instances.
  */
-public class ChamberRepository
-{
+public class ChamberRepository {
     private final Path chambersDir;
 
+    // Note that Chamber is stateful. Therefore we have to can't just create
+    // chambers a new without due consideration.
     private final Queue<Chamber> chambers = new ConcurrentLinkedQueue<>();
 
-    public ChamberRepository(Path dataDir)
-    {
+    public ChamberRepository(Path dataDir) {
         Assert.state(Files.exists(dataDir), "data dir should exist");
         chambersDir = dataDir.resolve("chambers");
         Assert.state(Files.exists(chambersDir), "chambers dir should exist");
 
-        getChamberDirs().stream()
-            .map(cd -> new Chamber(cd))
-            .forEach(c -> {
-                chambers.add(c);
-            });
+        getChamberDirs().stream().map(cd -> new Chamber(cd)).forEach(c -> {
+            chambers.add(c);
+        });
     }
 
     /** Finds chamber dirs in order (1, 2, ...) */
-    private List<Path> getChamberDirs()
-    {
+    private List<Path> getChamberDirs() {
         try (Stream<Path> stream = Files.walk(chambersDir, 1)) {
-            List<Path> dirs = stream
-                    .filter(path -> Files.isDirectory(path))
+            List<Path> dirs = stream.filter(path -> Files.isDirectory(path))
                     .filter(path -> StringUtils.isNumeric(path.getFileName().toString()))
-                    .filter(path -> Files.exists(path.resolve("chamber.json")))
-                    .collect(Collectors.toList());
+                    .filter(path -> Files.exists(path.resolve("chamber.json"))).collect(Collectors.toList());
 
             Collections.sort(dirs, new Comparator<Path>() {
                 @Override
-                public int compare(Path p1, Path p2)
-                {
+                public int compare(Path p1, Path p2) {
                     int n1 = Integer.parseInt(p1.getFileName().toString());
                     int n2 = Integer.parseInt(p2.getFileName().toString());
                     return n1 - n2;
@@ -58,24 +52,19 @@ public class ChamberRepository
             });
 
             return dirs;
-        }
-        catch (IOException e)
-        {
+        } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
-    public Collection<Chamber> getChambers()
-    {
+    public Collection<Chamber> getChambers() {
         return chambers;
     }
 
-    public Chamber getChamberById(int id)
-    {
+    public Chamber getChamberById(int id) {
         return chambers.stream()
                 .filter(ch -> ch.getId() == id)
                 .findFirst()
                 .orElseThrow();
-                // Java 8: .orElseThrow(IllegalArgumentException::new);
     }
 }

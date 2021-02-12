@@ -156,8 +156,8 @@ void handleGetLogMessages() {
 void handleStatus() {
   sendToMasterStart();
   Serial.print(F("status:")); Serial.print(uptimeMins);
-  printComma(); Serial.print(minFreeRam);
   printComma(); Serial.print(tProjectBox);
+  printComma(); Serial.print(minFreeRam);
   printComma(); Serial.print(minFreeRamLocation);
   printComma(); Serial.print(badSensorCount);
   printComma(); Serial.print(logBufferCannibalised);

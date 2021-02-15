@@ -230,7 +230,7 @@ void initChamberData() {
     {
       MovingChamberParams eepromMParams = {};
       getEepromMovingChamberParams(chamberId, eepromMParams);
-      if (mParams.checksum == generateChecksum(eepromMParams)) {
+      if (eepromMParams.checksum == generateChecksum(eepromMParams)) {
         memcpy(&mParams, &eepromMParams, sizeof(MovingChamberParams));
         logMsg(LOG_DEBUG, logPrefixChamberData, 't', chamberId);
       } else {

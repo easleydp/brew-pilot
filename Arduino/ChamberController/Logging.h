@@ -1,4 +1,4 @@
-// Rather than set a logLevel, we try and log everything but if buffer space runs out we canibalise starting with debug messages.
+// Rather than set a logLevel, we try and log everything but if buffer space runs out we cannibalise starting with debug messages.
 #define LOG_ERROR 3
 #define LOG_WARN 2
 #define LOG_INFO 1
@@ -13,15 +13,19 @@
 
 // Packed bit structure:
 // bit 7: chamberId-1 (unused in certain messages)
-// but 6: unused
-// bits 5,4,3,2: buffLen (0..LOG_BYTES_MAX)
+// bits 6,5,4,3,2: buffLen (0..LOG_BYTES_MAX)
 // bits 1,0: logLevel
 #define log_getChamberId(byte)  ((((byte) & 0x80) >> 7) + 1)
 #define log_setChamberId(byte, cid)  ((byte) |= ((cid - 1) << 7))
-#define log_getBuffLen(byte)  (((byte) & 0x3C) >> 2)
-#define log_setBuffLen(byte, len)  ((byte) |= (((len) << 2) & 0x3C))
+#define log_getBuffLen(byte)  (((byte) & 0x7C) >> 2)
+#define log_setBuffLen(byte, len)  ((byte) |= (((len) << 2) & 0x7C))
 #define log_getLevel(byte)  ((byte) & 0x03)
 #define log_setLevel(byte, level)  ((byte) |= ((level) & 0x03))
+
+// Sanity check. Given we only allocate 5 bits for buffLen, max value is 0x1F
+#if LOG_BYTES_MAX > 0x1F
+#error "LOG_BYTES_MAX is too large."
+#endif
 
 typedef struct {
   uint8_t sequenceNum;  // Assuming LOG_RECORD_COUNT <= 255
@@ -143,6 +147,7 @@ void logMsgBuffer(uint8_t logLevel, const char* prefix, char id, uint8_t chamber
   for (uint8_t i = 0; i < LOG_BYTES_MAX; i++)
     lrPtr->buff[i] = i < len ? buffer[i] : 0;
 
+  // Pack chamberId, buffLen and level into one byte
   uint8_t packed = 0;
   log_setChamberId(packed, chamberId);
   log_setBuffLen(packed, len);
@@ -162,21 +167,21 @@ template <typename A, typename B, typename C> void logMsg(uint8_t logLevel, cons
   if (&a != (void*) &_dummyLogParam) {
     partLen = sizeof(A);
     if (len + partLen > LOG_BYTES_MAX)
-      return logMsg(LOG_ERROR, loggingLogPrefix, 'a', chamberId, id, prefix, strlen(prefix));
+      return logMsgBuffer(LOG_ERROR, loggingLogPrefix, 'a', chamberId, (byte*) prefix, strlen(prefix));
     memcpy(&buffer[len], &a, partLen);
     len += partLen;
   }
   if (&b != (void*) &_dummyLogParam) {
     partLen = sizeof(B);
     if (len + partLen > LOG_BYTES_MAX)
-      return logMsg(LOG_ERROR, loggingLogPrefix, 'b', chamberId, id, prefix, strlen(prefix));
+      return logMsgBuffer(LOG_ERROR, loggingLogPrefix, 'b', chamberId, (byte*) prefix, strlen(prefix));
     memcpy(&buffer[len], &b, partLen);
     len += partLen;
   }
   if (&c != (void*) &_dummyLogParam) {
     partLen = sizeof(C);
     if (len + partLen > LOG_BYTES_MAX)
-      return logMsg(LOG_ERROR, loggingLogPrefix, 'c', chamberId, id, prefix, strlen(prefix));
+      return logMsgBuffer(LOG_ERROR, loggingLogPrefix, 'c', chamberId, (byte*) prefix, strlen(prefix));
     memcpy(&buffer[len], &c, partLen);
     len += partLen;
   }

@@ -9,12 +9,17 @@
 #define PIN__CH1_HEATER   12 // SSR, ch1               [ORANGE/WHITE]
 
 
+// Gives the version of the Arduino environment being used. Referred to in some libs.
+// Looks like Arduino IDE sets this but vscode Arduino extension does not, so fake release 1.6.5.
+#ifndef ARDUINO
+#define ARDUINO 10605
+#endif
+
 #include <limits.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <Base64.h> // https://github.com/agdl/Base64
 #include <EEPROM.h>
-#include <OneWire.h>
 #include <DallasTemperature.h>
 
 #include "Common.h"

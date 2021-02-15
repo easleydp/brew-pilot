@@ -101,7 +101,7 @@ void initTemperatureSensors() {
     dallas.getAddress(address, i);
     Sensor* ptr = findSensorByAddress(address);
     if (ptr == NULL) {
-      Serial.print(F("ERROR! no found: "));
+      Serial.print(F("ERROR! not found: "));
       Serial.println(shortenAddress(address), HEX);
       return;
     }

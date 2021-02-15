@@ -1,5 +1,6 @@
 package com.easleydp.tempctrl.domain;
 
+import static java.nio.charset.StandardCharsets.*;
 import static java.lang.Double.*;
 
 import java.awt.event.KeyEvent;
@@ -411,10 +412,19 @@ public class ArduinoChamberManager implements ChamberManager
                     default:
                         break;
                 }
+            case "LG":
+                switch (id)
+                {
+                    case 'a': case 'b': case 'c':
+	                    // prefix/* variable length string */
+                        return String.format("{prefix: %s}", bytesToAsciiString(buffer));
+                    default:
+                        break;
+                }
         }
 
         // Catch all - format as byte array
-        return byteArrayToString(buffer);
+        return bytesToStringRepOfRawBytes(buffer);
     }
 
     public static boolean isPrintableChar(char c) {
@@ -425,7 +435,7 @@ public class ArduinoChamberManager implements ChamberManager
                 block != Character.UnicodeBlock.SPECIALS;
     }
 
-    private static String byteArrayToString(byte[] buffer)
+    static String bytesToStringRepOfRawBytes(byte[] buffer)
     {
         StringBuffer sb = new StringBuffer("[");
         for (int i = 0; i < buffer.length; i++)
@@ -454,6 +464,11 @@ public class ArduinoChamberManager implements ChamberManager
     {
         // <https://stackoverflow.com/a/27610608/65555>
         return ((long) bytesToInt16(hiLo, hiHi) & 0xffff) << 16 | ((long) bytesToInt16(loLo, loHi) & 0xffff);
+    }
+
+    static String bytesToAsciiString(byte[] buffer)
+    {
+        return new String(buffer, US_ASCII);
     }
 
     private static void logChamberParamMismatchError(int chamberId, String paramName, Object expected, Object actual)

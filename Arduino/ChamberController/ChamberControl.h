@@ -204,19 +204,19 @@ void controlChamber(ChamberData& cd) {
   // not PID heating in case we commence PID heating next time round.
 
   // To avoid integral wind-up, we constrain as follows: If the integral contribution is too large, reject the adjustment.
-  float latestIntegral = cd.integral + tError;
+  float latestIntegral = cd.mParams.integral + tError;
   float integralContrib = params.Ki*latestIntegral;
   if (abs(integralContrib) > 50)
     logMsg(LOG_DEBUG, logPrefixPid, 'W', chamberId, integralContrib/* float */);
   else
-    cd.integral = latestIntegral;
+    cd.mParams.integral = latestIntegral;
 
-  logMsg(LOG_DEBUG, logPrefixPid, '~', chamberId, tError/* int16 */, cd.integral/* float */, cd.priorError/* float */);
+  logMsg(LOG_DEBUG, logPrefixPid, '~', chamberId, tError/* int16 */, cd.mParams.integral/* float */, cd.priorError/* float */);
   if (heatPidWise) {
     // Tuning insight - see what each PID factor is contributing:
     logMsg(LOG_DEBUG, logPrefixPid, 'C'/* PID output Components (3 floats) */,
-      chamberId, params.Kp*tError, params.Ki*cd.integral, params.Kd*(tError - cd.priorError));
-    float pidOutput = params.Kp*tError + params.Ki*cd.integral + params.Kd*(tError - cd.priorError);
+      chamberId, params.Kp*tError, params.Ki*cd.mParams.integral, params.Kd*(tError - cd.priorError));
+    float pidOutput = params.Kp*tError + params.Ki*cd.mParams.integral + params.Kd*(tError - cd.priorError);
     // PID output range check
     if (pidOutput < 0.0) { // we've screwed-up somehow
       logMsg(LOG_ERROR, logPrefixPid, '!', chamberId, pidOutput/* float */);

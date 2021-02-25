@@ -134,6 +134,7 @@ void controlChamber(ChamberData& cd) {
   boolean heatPidWise = false;
   const char mode = cd.params.mode;
   const int16_t tTarget = cd.mParams.tTarget;
+  const int16_t tTargetNext = cd.mParams.tTargetNext;
 
   int16_t tError = tTarget - cd.tBeer; // +ve - beer too cool; -ve beer too warm
 
@@ -156,7 +157,7 @@ void controlChamber(ChamberData& cd) {
       // Fridge is on. Keep it on only if hot outside and beer temp is rising.
       if (tExternal > tTarget  &&  cd.tBeerLastDelta > 0) {
         // ... but NOT if temp profile is about to turn upwards in next hour
-        if (cd.mParams.tTargetNext <= tTarget)
+        if (tTargetNext <= tTarget)
           fSetting = ON;
       }
     } else {
@@ -183,19 +184,19 @@ void controlChamber(ChamberData& cd) {
     if (tErrorAdjustedForSawtooth < 0) {
       if ((tExternalBoost + T_EXTERNAL_BOOST_THRESHOLD) < tErrorAdjustedForSawtooth) {  // Outside temp is markedly in our favour
         // Beer needs cooling but we can leave it to tExternal
-        // UNLESS exothermic, in which case we'll need to actively cool.
-        if (exothermic) {
+        // UNLESS exothermic OR we're ramping down, in which case we should actively cool.
+        if (exothermic || tTargetNext < tTarget) {
           fSetting = ON;
         }
       } else {  // Outside temp is not sufficiently in our favour
-        if (!cd.fridgeOn) {
-          fSetting = ON;
-        } else {
-          // Fridge is already on. Leave it on unless we're approaching the target temp (i.e. within 1 degree)
-          // AND we've been cooling for 10 mins or longer in which case switch off (min on time permitting, of course).
-          if (tErrorAdjustedForSawtooth <= -10  ||  cd.fridgeStateChangeMins < 10)
-            fSetting = ON;
-        }
+        fSetting = ON;
+      }
+      if (cd.fridgeOn  &&  fSetting == ON) {
+        // Fridge is already on and we've provisionally determined it should stay on.
+        // Countermand this if we're approaching the target temp (i.e. within 1 degree) AND we've been
+        // cooling for 10 mins or longer in which case switch off (min on time permitting, of course).
+        if (tErrorAdjustedForSawtooth > -10  &&  cd.fridgeStateChangeMins >= 10)
+          fSetting = OFF;
       }
     }
   }
@@ -205,7 +206,7 @@ void controlChamber(ChamberData& cd) {
 
   // To avoid integral wind-up, we constrain as follows: If the integral contribution is too large, reject the adjustment.
   float latestIntegral = cd.mParams.integral + tError;
-  float integralContrib = params.Ki*latestIntegral;
+  float integralContrib = params.Ki * latestIntegral;
   if (abs(integralContrib) > 50)
     logMsg(LOG_DEBUG, logPrefixPid, 'W', chamberId, integralContrib/* float */);
   else

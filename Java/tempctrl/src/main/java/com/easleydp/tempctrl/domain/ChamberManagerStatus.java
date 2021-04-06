@@ -1,10 +1,10 @@
 package com.easleydp.tempctrl.domain;
 
 import java.math.BigDecimal;
-import java.math.BigInteger;
 
 import com.easleydp.tempctrl.util.StringUtils;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 /**
  * Value object representing the status reported from a chamber manager.
@@ -15,9 +15,10 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 public class ChamberManagerStatus
 {
     public ChamberManagerStatus(
-            int uptimeMins, int projectBoxTemperature, int minFreeRam, int minFreeRamLocation, int badSensorCount, boolean logBufferCannibalised)
+            int uptimeMins, int garageTemperature, int projectBoxTemperature, int minFreeRam, int minFreeRamLocation, int badSensorCount, boolean logBufferCannibalised)
     {
         this.uptimeMins = uptimeMins;
+        this.garageTemperature = garageTemperature;
         this.projectBoxTemperature = projectBoxTemperature;
         this.minFreeRam = minFreeRam;
         this.minFreeRamLocation = minFreeRamLocation;
@@ -26,6 +27,7 @@ public class ChamberManagerStatus
     }
 
     private final int uptimeMins;
+    private final int garageTemperature;
     private final int projectBoxTemperature;
     public final int minFreeRam;
     public final int minFreeRamLocation;
@@ -47,6 +49,13 @@ public class ChamberManagerStatus
         return "🙂 All good";
     }
 
+    @JsonIgnore
+    public BigDecimal getGarageTemperature()
+    {
+        return BigDecimal.valueOf(garageTemperature).scaleByPowerOfTen(-1);
+    }
+
+    @JsonIgnore
     public BigDecimal getProjectBoxTemperature()
     {
         return BigDecimal.valueOf(projectBoxTemperature).scaleByPowerOfTen(-1);

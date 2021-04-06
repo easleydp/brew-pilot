@@ -66,8 +66,19 @@ public class StatusController
         );
     }
 
+    @JsonPropertyOrder({ "garageTemperature", "projectBoxTemperature" })
     private static final class StatusReportResponse
     {
+        public BigDecimal getGarageTemperature()
+        {
+            return arduino != null ? arduino.getGarageTemperature() : null;
+        }
+
+        public BigDecimal getProjectBoxTemperature()
+        {
+            return arduino != null ? arduino.getProjectBoxTemperature() : null;
+        }
+
         @JsonInclude(Include.NON_NULL)
         public final PiStats raspberryPi;
 

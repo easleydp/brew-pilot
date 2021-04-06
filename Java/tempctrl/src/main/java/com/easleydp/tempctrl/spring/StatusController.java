@@ -98,7 +98,7 @@ public class StatusController
         }
     }
 
-    @JsonPropertyOrder({ "uptime", "temperature", "clockMHz" })
+    @JsonPropertyOrder({ "uptime", "socTemperature", "cpuTemperature", "clockMHz" })
     private static class PiStats
     {
         private static boolean mockPi = new File(VCGEN_CMD).exists() == false;
@@ -113,17 +113,19 @@ public class StatusController
         @JsonInclude(Include.NON_NULL)
         public final JvmStatus jvm;
 
-        private final String temperature;
+        private final String socTemperature;
+        private final String cpuTemperature;
         private final String volts;
         private final String clock;
 
         // Handy for testing
-        public PiStats(String uptime, MemoryStatsPi memory, MemoryStatsFileSystem fileSystem, JvmStatus jvm, String temperature, String volts, String clock)
+        public PiStats(String uptime, MemoryStatsPi memory, MemoryStatsFileSystem fileSystem, JvmStatus jvm, String socTemperature, String cpuTemperature, String volts, String clock)
         {
             this.uptime = uptime;
             this.memory = memory;
             this.fileSystem = fileSystem;
-            this.temperature = temperature;
+            this.socTemperature = socTemperature;
+            this.cpuTemperature = cpuTemperature;
             this.jvm = jvm;
             this.volts = volts;
             this.clock = clock;
@@ -136,7 +138,8 @@ public class StatusController
                 new MemoryStatsPi(),
                 new MemoryStatsFileSystem(File.listRoots()[0]),
                 new JvmStatus(),
-                mockPi ? "temp=40.0'C" : OsCommandExecuter.execute(VCGEN_CMD, "measure_temp"),
+                mockPi ? "temp=30.2'C" : OsCommandExecuter.execute(VCGEN_CMD, "measure_temp"),
+                mockPi ? "30280" : OsCommandExecuter.execute("cat", "/sys/class/thermal/thermal_zone0/temp"),
                 mockPi ? "volt=0.8765V" : OsCommandExecuter.execute(VCGEN_CMD, "measure_volts", "core"),
                 mockPi ? "frequency(48)=750199232" : OsCommandExecuter.execute(VCGEN_CMD, "measure_clock", "arm"));
         }
@@ -149,12 +152,23 @@ public class StatusController
         }
 
         @JsonInclude(Include.NON_NULL)
-        public BigDecimal getTemperature()
+        public BigDecimal getSocTemperature()
         {
-            if (temperature == null)
+            if (socTemperature == null)
                 return null;
             // e.g. "temp=41.0'C"
-            return new BigDecimal(substringBetween(temperature, "=", "'"));
+            return new BigDecimal(substringBetween(socTemperature, "=", "'"));
+        }
+
+        @JsonInclude(Include.NON_NULL)
+        public BigDecimal getCpuTemperature()
+        {
+            if (cpuTemperature == null)
+                return null;
+            // e.g. "30180"
+            return new BigDecimal(cpuTemperature)
+                .divide(new BigDecimal(1000))
+                .setScale(1, java.math.RoundingMode.HALF_UP);
         }
 
         // Who cares about this value (particularly since it seems to bear no relation to what we understand as the Pi's input voltage)?

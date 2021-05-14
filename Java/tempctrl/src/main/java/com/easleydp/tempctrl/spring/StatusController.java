@@ -160,16 +160,17 @@ public class StatusController
             return new BigDecimal(substringBetween(socTemperature, "=", "'"));
         }
 
-        @JsonInclude(Include.NON_NULL)
-        public BigDecimal getCpuTemperature()
-        {
-            if (cpuTemperature == null)
-                return null;
-            // e.g. "30180"
-            return new BigDecimal(cpuTemperature)
-                .divide(new BigDecimal(1000))
-                .setScale(1, java.math.RoundingMode.HALF_UP);
-        }
+        // Seems this is never significantly different from socTemperature, so omit for now.
+        // @JsonInclude(Include.NON_NULL)
+        // public BigDecimal getCpuTemperature()
+        // {
+        //     if (cpuTemperature == null)
+        //         return null;
+        //     // e.g. "30180"
+        //     return new BigDecimal(cpuTemperature)
+        //         .divide(new BigDecimal(1000))
+        //         .setScale(1, java.math.RoundingMode.HALF_UP);
+        // }
 
         // Who cares about this value (particularly since it seems to bear no relation to what we understand as the Pi's input voltage)?
         // @JsonInclude(Include.NON_NULL)

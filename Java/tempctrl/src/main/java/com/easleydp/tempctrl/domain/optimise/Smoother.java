@@ -2,6 +2,8 @@ package com.easleydp.tempctrl.domain.optimise;
 
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.BeanWrapperImpl;
 import org.springframework.util.Assert;
@@ -34,6 +36,8 @@ import org.springframework.util.Assert;
  */
 public class Smoother
 {
+    private static final Logger logger = LoggerFactory.getLogger(Smoother.class);
+
     private int thresholdHeight;
     private int[] thresholdWidths;
 
@@ -323,14 +327,26 @@ public class Smoother
             this.index = index;
             this.value = value;
         }
+
+        @Override
+        public String toString() {
+            return "{" + " index=" + index + ", value=" + value + "}";
+        }
+
     }
 
     class Tip extends Point
     {
-        final boolean peak;
+        final boolean peak;  // The sense (i.e. direction) of the tip - true: peak; false: trough
         final int width;
         final int height;
         final boolean significant;
+
+        @Override
+        public String toString() {
+            return "{" + " point=" + super.toString() +
+                ", peak=" + peak + ", width=" + width + ", height=" + height + ", significant=" + significant + "}";
+        }
 
         /** Note: `values` is only used on construction for calculating width & height; no reference is retained. */
         public Tip(int index, boolean peak, int[] values)
@@ -375,6 +391,7 @@ public class Smoother
         /**
          * A flat-topped peak (or flat-bottomed trough) may have any index along the flat
          * region (though typically first or last).
+         * @return true if the other Tip is (at least effectively) the same as this Tip.
          */
         public boolean isEffectivelyEqualTo(Tip other, int[] values)
         {
@@ -384,17 +401,19 @@ public class Smoother
             if (value != other.value)
                 return false;
 
-            // If every point between the two tips is the same value, they're equal.
+            // If any point between the two tips has a different value then clearly not a
+            // flat-topped peak (or flat-bottomed trough).
             for (int i = index; i < other.index; i++)
                 if (values[i] != value)
                     return false;
 
-            Assert.state(peak == other.peak, "peak should be same");
+            Assert.state(peak == other.peak, "direction of tip should be same");
             // Likewise the width and height should be the same. Careful, though - these vital
             // stats might have changed due to smoothing that's happened to the immediate left.
             Tip thisTipFresh = new Tip(index, peak, values);
-            Assert.state(thisTipFresh.width == other.width, "width should be same");
-            Assert.state(thisTipFresh.height == other.height, "height should be same");
+            Tip otherTipFresh = new Tip(other.index, other.peak, values);
+            Assert.state(thisTipFresh.width == otherTipFresh.width, "width should be same");
+            Assert.state(thisTipFresh.height == otherTipFresh.height, "height should be same");
 
             return true;
         }

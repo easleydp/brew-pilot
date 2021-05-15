@@ -4,7 +4,7 @@ RaspberryPi and Arduino temperature controller for fermentation chambers and bee
 
 The Arduino is responsible for real time temperature control while the RPi provides a web-based management interface.
 
-The chamber heater is controlled in PID fashion. The heater power is pulsed to achieve a pseudo variable power level.
+The chamber heater is controlled in PID fashion. The heater power is pulsed to achieve a pseudo-variable power level.
 <br>The fridge, on the other hand, is controlled conservatively to avoid short cycling the compressor.
 
 Each chamber is assumed to have refrigeration but a heater is optional. A chamber without a heater is assumed to be a _beer fridge_.
@@ -61,7 +61,7 @@ If you want to branch heat sensor cables (so that only one cable leaves the proj
 
 ### Relays
 
-- **For heaters**: Solid State Relays (SSRs) are recommended because these are pulsed to give a pseudo variable heater output between 0-100%.
+- **For heaters**: Solid State Relays (SSRs) are recommended because these are pulsed to give a pseudo-variable heater output between 0-100%.
   (Pulse cycle time is 100 seconds; 1% output equates to 1s on, 99s off; 2% output equates to 2s on, 98s off; etc.)
   Relatively cheap SSRs can be used because the power being switched is low and non-inductive. 240V x 0.5A is good for 100W, which is more than enough for a small chamber (a 20W heater is adequate).
   **NOTE**: Because the heater is pulsed, using a light bulb as the heat source is not recommended.

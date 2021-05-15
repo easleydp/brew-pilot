@@ -238,6 +238,49 @@ public class SmootherTests
     }
 
     @Test
+    /**
+     * Reproduce a bug where an assertion got caught out. Width and height of last
+     * tip are liable to change due to smoothing that's happened to the immediate left.
+     */
+    public void testSmoothingAltersWidthOfLastTip()
+    {
+        assertSmoothed(2,
+                new int[] {2, 1, 3, 3, 2, 1},  // lastTip width is 3
+                new int[] {2, 2, 3, 3, 2, 1}); // lastTip width is now 2
+    }
+
+    @Test
+    /**
+     * Stress test the invariants (assertions) built into the Smoother logic.
+     * Note: Consider using any failures as the basis for further tests, such as
+     * testSmoothingAltersHeightOfLastTip() & testSmoothingAltersWidthOfLastTip().
+     */
+    public void testStressSmoother()
+    {
+        int[] values = new int[0];
+        Smoother smoother = new Smoother(2);
+        List<String> failures = new ArrayList<>();
+        int tries = 100_000;
+        for (int n = 0; n < tries; n++) {
+            try {
+                // Create some random values
+                values = new int[randomInt(6, 10)];
+                for (int i = 0; i < values.length; i++) {
+                    values[i] = randomInt(0, 3);
+                }
+                // Subject the code under test to the random data
+                smoother.smoothOutSmallFluctuations(values.clone());
+            } catch (IllegalStateException ex) {
+                failures.add("\n\"" + ex.getMessage() + "\". These values broke it: " + Arrays.toString(values));
+            }
+            if (failures.size() > 10) break;
+        }
+        if (!failures.isEmpty()) {
+            fail(org.apache.commons.lang3.StringUtils.join(failures));
+        }
+    }
+
+    @Test
     public void flattenTip()
     {
         assertTipFlattened(

@@ -40,6 +40,14 @@
       "protocol": "inspector",
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen"
+    },
+    {
+      "type": "java",
+      "name": "Remote debug (attach)",
+      "projectName": "tempctrl",
+      "request": "attach",
+      "hostName": "raspberrypi",
+      "port": 8124
     }
   ]
 }

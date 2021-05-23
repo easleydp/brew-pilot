@@ -34,6 +34,9 @@ public class StatusController
     @Autowired
     private ChamberManager chamberManager;
 
+    @Autowired
+    private EmailService emailService;
+
     Supplier<ChamberManagerStatus> chamberManagerStatusSupplier;
 
     public StatusController()
@@ -60,6 +63,8 @@ public class StatusController
     @GetMapping("/guest/log-chart/status")
     public StatusReportResponse getStatusReport() throws IOException
     {
+        // emailService.sendSimpleMessage("Test email from service", "11");
+
         return new StatusReportResponse(
             new PiStats(),
             chamberManagerStatusSupplier.get()

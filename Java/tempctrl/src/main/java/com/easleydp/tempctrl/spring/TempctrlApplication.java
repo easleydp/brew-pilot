@@ -13,6 +13,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.Environment;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.util.Assert;
 
@@ -27,6 +28,7 @@ import com.easleydp.tempctrl.domain.PropertyUtils;
 // exclude = { SecurityAutoConfiguration.class, ManagementWebSecurityAutoConfiguration.class }
 )
 @EnableScheduling
+@EnableAsync
 public class TempctrlApplication
 {
     private static final Logger logger = LoggerFactory.getLogger(TempctrlApplication.class);

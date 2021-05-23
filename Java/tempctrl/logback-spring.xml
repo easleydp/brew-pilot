@@ -1,0 +1,30 @@
+<configuration scan="true">
+    <include resource="org/springframework/boot/logging/logback/base.xml"/>
+    <!-- Only uncomment on server (unless testing):
+    <springProperty name="smtpHost" source="smtp.host" />
+    <springProperty name="smtpPort" source="smtp.port" />
+    <springProperty name="smtpTo" source="smtp.to" />
+    <springProperty name="smtpFrom" source="smtp.from" />
+    <springProperty name="smtpUsername" source="smtp.username" />
+    <springProperty name="smtpPassword" source="smtp.password" />
+    <appender name="EMAIL" class="ch.qos.logback.classic.net.SMTPAppender">
+        <smtpHost>${smtpHost}</smtpHost>
+        <smtpPort>${smtpPort}</smtpPort>
+        <to>${smtpTo}</to>
+        <from>${smtpFrom}</from>
+        <username>${smtpUsername}</username>
+        <password>${smtpPassword}</password>
+        <subject>BrewPilot: %logger{20} - %m</subject>
+        <STARTTLS>true</STARTTLS>
+        <layout class="ch.qos.logback.classic.PatternLayout">
+            <pattern>%date %-5level %logger{35} - %message%n</pattern>
+        </layout>
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>WARN</level>
+        </filter>
+    </appender>
+    <root level="DEBUG">
+        <appender-ref ref="EMAIL" />
+    </root>
+    -->
+</configuration>

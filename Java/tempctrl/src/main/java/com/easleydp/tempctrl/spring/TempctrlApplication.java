@@ -38,6 +38,7 @@ public class TempctrlApplication
     public void init()
     {
         PropertyUtils.setEnv(env);
+        logger.debug("Current working dir is {}", System.getProperty("user.dir"));
     }
 
     @Bean

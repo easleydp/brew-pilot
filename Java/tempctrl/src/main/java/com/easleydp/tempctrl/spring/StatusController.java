@@ -13,6 +13,7 @@ import com.easleydp.tempctrl.domain.ChamberManagerStatus;
 import com.easleydp.tempctrl.domain.JvmStatus;
 import com.easleydp.tempctrl.domain.MemoryStatsFileSystem;
 import com.easleydp.tempctrl.domain.MemoryStatsPi;
+import com.easleydp.tempctrl.spring.CollectReadingsScheduler.ReadingsCollectionDurationStats;
 import com.easleydp.tempctrl.util.OsCommandExecuter;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
@@ -36,6 +37,9 @@ public class StatusController
 
     @Autowired
     private EmailService emailService;
+
+    @Autowired
+    private CollectReadingsScheduler collectReadingsScheduler;
 
     Supplier<ChamberManagerStatus> chamberManagerStatusSupplier;
 
@@ -67,7 +71,8 @@ public class StatusController
 
         return new StatusReportResponse(
             new PiStats(),
-            chamberManagerStatusSupplier.get()
+            chamberManagerStatusSupplier.get(),
+            collectReadingsScheduler.getReadingsCollectionDurationStats()
         );
     }
 
@@ -84,16 +89,15 @@ public class StatusController
             return arduino != null ? arduino.getProjectBoxTemperature() : null;
         }
 
-        @JsonInclude(Include.NON_NULL)
         public final PiStats raspberryPi;
-
-        @JsonInclude(Include.NON_NULL)
         public final ChamberManagerStatus arduino;
+        public final ReadingsCollectionDurationStats readingsCollectionDurationStats;
 
-        public StatusReportResponse(PiStats piStats, ChamberManagerStatus arduino)
+        public StatusReportResponse(PiStats piStats, ChamberManagerStatus arduino, ReadingsCollectionDurationStats readingsCollectionDurationStats)
         {
             this.raspberryPi = piStats;
             this.arduino = arduino;
+            this.readingsCollectionDurationStats = readingsCollectionDurationStats;
         }
 
         @JsonInclude(Include.NON_NULL)

@@ -127,7 +127,7 @@ public class ArduinoChamberManager implements ChamberManager
 
             // We send `gyleAgeHours` as a regular param but RPi also maintains the value in case it goes
             // off-line. Hence, it can occasionally get ahead by one.
-            if (params.gyleAgeHours != gyleAgeHours  &&  params.gyleAgeHours != gyleAgeHours + 1)
+            if (params.gyleAgeHours != gyleAgeHours  &&  params.gyleAgeHours != gyleAgeHours - 1)
                 logChamberParamMismatchError(chamberId, "gyleAgeHours", params.gyleAgeHours, gyleAgeHours);
             if (params.tTarget != tTarget)
                 logChamberParamMismatchError(chamberId, "tTarget", params.tTarget, tTarget);

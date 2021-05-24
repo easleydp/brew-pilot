@@ -108,6 +108,8 @@ public class ArduinoMessenger implements AutoCloseable
      */
     public void sendRequest(String request) throws IOException
     {
+        logger.debug("sendRequest(\"{}\")", request);
+
         // Before sending the request ensure there is no stray data waiting to be read, since
         // this will just confuse things when we come to read the response to this request.
         purgeReadBuffer();

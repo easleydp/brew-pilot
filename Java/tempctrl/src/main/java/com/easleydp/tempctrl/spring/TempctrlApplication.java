@@ -67,12 +67,6 @@ public class TempctrlApplication
                     new DummyChamberManager(chamberRepository) :
                     new ArduinoChamberManager(chamberRepository);
     }
-//
-//    @Bean
-//    public ReadingsCollector readingsCollector(ChamberManager chamberManager, Path dataDir)
-//    {
-//        return new ReadingsCollector(chamberManager, dataDir);
-//    }
 
 
 	public static void main(String[] args) {

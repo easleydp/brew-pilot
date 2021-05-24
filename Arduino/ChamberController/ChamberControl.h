@@ -219,8 +219,8 @@ void controlChamber(ChamberData& cd) {
       chamberId, params.Kp*tError, params.Ki*cd.mParams.integral, params.Kd*(tError - cd.priorError));
     float pidOutput = params.Kp*tError + params.Ki*cd.mParams.integral + params.Kd*(tError - cd.priorError);
     // PID output range check
-    if (pidOutput < 0.0) { // we've screwed-up somehow
-      logMsg(LOG_ERROR, logPrefixPid, '!', chamberId, pidOutput/* float */);
+    if (pidOutput < 0.0) { // Surprising that heatPidWise is true but PID output is -ve. Can happen though, most commonly due to integral being -ve.
+      logMsg(LOG_WARN, logPrefixPid, '!', chamberId, pidOutput/* float */);
       hSetting = 0;
     } else if (pidOutput > 100.0) {
       // This isn't unusual if there's no heater since the beer may get significantly cooler than the target.

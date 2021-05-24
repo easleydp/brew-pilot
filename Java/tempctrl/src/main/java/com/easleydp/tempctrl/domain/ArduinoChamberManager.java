@@ -307,7 +307,7 @@ public class ArduinoChamberManager implements ChamberManager
                             return "{error: \"Expected 4 bytes\"}";
 
                         return String.format("%s {pidOutput: %.3f}",
-                                id == '+' ? "pidOutput > 100" : id == '-' ? "pidOutput" : "pidOutput < 0 (we've screwed-up somehow)",
+                                id == '+' ? "pidOutput > 100" : id == '-' ? "pidOutput" : "pidOutput < 0",
                                 bytesToFloat(buffer[0], buffer[1], buffer[2], buffer[3]));
                     case 'C':
                     {

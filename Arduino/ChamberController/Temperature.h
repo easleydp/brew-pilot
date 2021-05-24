@@ -117,7 +117,7 @@ int16_t getTemperatureX10(uint8_t sensorIndex) {
   // A disconnected sensor seems to give a reading of approximately -127.
   // Regard anything less that -50 as an error and return a special value that denotes 'DO NOT USE!'
   if (reading < -50.0f) {
-    logMsg(LOG_ERROR, logPrefixTemperature, 'D', 1, sensorIndex/* uint8_t */, reading/* float */);
+    logMsg(LOG_WARN, logPrefixTemperature, 'D', 1, sensorIndex/* uint8_t */, reading/* float */);
     return SHRT_MIN;
   }
   int16_t readingX10 = (reading + 0.05f) * 10;

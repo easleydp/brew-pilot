@@ -47,7 +47,7 @@ static const char* logPrefixTemperature = "T";
 void initSensorData(uint8_t ourIndex, uint16_t shortAddress, int8_t error) {
   sensorData[ourIndex].shortAddress = shortAddress;
   sensorData[ourIndex].error = error;
-  sensorData[ourIndex].prevReading = INT_MIN;
+  sensorData[ourIndex].prevReading = SHRT_MIN;
 }
 
 // Each sensor has an 64 bit address. For such a relatively small number of sensors as ours 16 bits is sufficient to discriminate.
@@ -68,7 +68,7 @@ Sensor* findSensorByAddress(const DeviceAddress& fullAddress) {
 
 uint8_t badSensorCount = 0;
 
-// This must be called once each period before reading the individual temperatures (using getTemperatureX10()).
+// This must be called once each period before reading the individual temperatures (using getTemperature()).
 // Retuns true if all ok.
 boolean readTemperatures() {
   dallas.requestTemperatures();
@@ -110,39 +110,42 @@ void initTemperatureSensors() {
   badSensorCount = 0;
 }
 
-// Retrieves latest reading for the specified sensor, converts to int x10, and applies a degree of averaging w.r.t. previous readings.
-int16_t getTemperatureX10(uint8_t sensorIndex) {
+// Retrieves latest reading for the specified sensor, converts to int x10,
+// and applies a degree of averaging w.r.t. previous readings.
+int16_t getTemperature(uint8_t sensorIndex) {
   Sensor& sensor = *(&sensorData[sensorIndex]);  // Who knows why `sensorData[sensorIndex]` doesn't work
-  float reading = dallas.getTempCByIndex(sensor.dallasIndex) + ((float) sensor.error) / 100.0f;
-  // A disconnected sensor seems to give a reading of approximately -127.
-  // Regard anything less that -50 as an error and return a special value that denotes 'DO NOT USE!'
-  if (reading < -50.0f) {
-    logMsg(LOG_WARN, logPrefixTemperature, 'D', 1, sensorIndex/* uint8_t */, reading/* float */);
-    return SHRT_MIN;
-  }
-  int16_t readingX10 = (reading + 0.05f) * 10;
+  float readingRaw = dallas.getTempCByIndex(sensor.dallasIndex) + ((float) sensor.error) / 100.0f;
   int16_t prevReading = sensor.prevReading;
-  if (prevReading == INT_MIN) {
-    prevReading = readingX10;
+  // A disconnected sensor seems to give a reading of -127.04.
+  // Regard anything less that -50 as an error and return the previous reading.
+  if (readingRaw < -50.0f) {
+    // Some sensors seem prone to give this false reading occasionally even when not actually
+    // disconnected, so we log as warning rather than error.
+    logMsg(LOG_WARN, logPrefixTemperature, 'D', 1, sensorIndex/* uint8_t */, readingRaw/* float */);
+    return prevReading;
   }
-  sensor.prevReading = readingX10;
-  return (prevReading + readingX10) / 2;
+  int16_t reading = (readingRaw + 0.05f) * 10;
+  if (prevReading == SHRT_MIN) {
+    prevReading = reading;
+  }
+  sensor.prevReading = reading;
+  return (prevReading + reading) / 2;
 }
 
 void readTBeer(ChamberData& cd) {
-  int16_t t = getTemperatureX10(cd.chamberId == 1 ? CH1_T_BEER : CH2_T_BEER);
+  int16_t t = getTemperature(cd.chamberId == 1 ? CH1_T_BEER : CH2_T_BEER);
   cd.tBeer = t != SHRT_MIN ? t : cd.mParams.tTarget;
 }
 void readTChamber(ChamberData& cd) {
-  int16_t t = getTemperatureX10(cd.chamberId == 1 ? CH1_T_CHAMBER : CH2_T_CHAMBER);
+  int16_t t = getTemperature(cd.chamberId == 1 ? CH1_T_CHAMBER : CH2_T_CHAMBER);
   cd.tChamber = t != SHRT_MIN ? t : cd.mParams.tTarget;
 }
 void readTExternal() {
-  int16_t t = getTemperatureX10(T_EXTERNAL);
+  int16_t t = getTemperature(T_EXTERNAL);
   tExternal = t != SHRT_MIN ? t : 0;
 }
 void readTProjectBox() {
-  int16_t t = getTemperatureX10(T_PROJECT_BOX);
+  int16_t t = getTemperature(T_PROJECT_BOX);
   tProjectBox = t != SHRT_MIN ? t : 0;
 }
 
@@ -169,7 +172,7 @@ void readTProjectBox() {
 //      Serial.print(F(", adjusted: "));
 //      Serial.print(reading + ((float) sensor.error) / 100.0f);
 //      Serial.print(F(" (intX10: "));
-//      Serial.print(getTemperatureX10(i));
+//      Serial.print(getTemperature(i));
 //      Serial.println(F(")"));
 //    }
 //    Serial.print(F("------ Avg: "));

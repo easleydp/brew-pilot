@@ -52,6 +52,12 @@ public class SecurityConfig
     @Autowired
     private Environment env;
 
+    @Autowired
+    private EmailService emailService;
+
+    // Hack. Allow static code to access the above Spring component.
+    private static EmailService _emailService = null;
+
     @Bean
     public UserDetailsService userDetailsService() throws Exception
     {
@@ -69,6 +75,9 @@ public class SecurityConfig
         Assert.state(pwdHash != null && pwdHash.length() > 0, "Admin password not specified");
         manager.createUser(User.withUsername("admin").password(pwdHash)
                 .roles("USER", "ADMIN").build());
+
+        // Hack
+        _emailService = emailService;
 
         return manager;
     }
@@ -156,6 +165,9 @@ public class SecurityConfig
                             .findFirst().isPresent();
 
                     logger.info("Successful login ({})", request.getParameter("username"));
+                    if (!isAdmin) {
+                        _emailService.sendSimpleMessage("BrewPilot guest login", "");
+                    }
 
                     response.setContentType("application/json");
                     response.setStatus(200);
@@ -174,6 +186,7 @@ public class SecurityConfig
                         AuthenticationException e) throws IOException, ServletException
                 {
                     logger.warn("Login failure ({})", request.getParameter("username"));
+                    _emailService.sendSimpleMessage("BrewPilot login failure", request.getParameter("username"));
 
                     response.setContentType("application/json");
                     response.setStatus(401);

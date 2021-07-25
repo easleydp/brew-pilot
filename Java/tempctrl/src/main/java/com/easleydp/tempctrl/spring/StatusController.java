@@ -67,8 +67,11 @@ public class StatusController
     @GetMapping("/guest/log-chart/status")
     public StatusReportResponse getStatusReport() throws IOException
     {
-        // emailService.sendSimpleMessage("Test email from service", "11");
+        return buildStatusReportResponse();
+    }
 
+    // Called by getStatusReport() above and also by StillAliveMessageScheduler
+    StatusReportResponse buildStatusReportResponse() {
         return new StatusReportResponse(
             new PiStats(),
             chamberManagerStatusSupplier.get(),

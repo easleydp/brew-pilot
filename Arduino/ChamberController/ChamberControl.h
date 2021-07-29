@@ -7,7 +7,7 @@
 // we can when heating so the achieved temperature profile is inevitably a sawtooth
 // waveform. This waveform should be approximately centred on tTarget. The greater
 // this value, the more the sawtooth is lifted.
-#define COOLING_SAWTOOTH_MIDPOINT 4 /* 0.4 degrees (this value assumes fridgeMinOnTimeMins is of the order of 10 mins) */
+#define COOLING_SAWTOOTH_MIDPOINT 2 /* 0.2 degrees (this value assumes fridgeMinOnTimeMins is of the order of 10 mins) */
 
 // When tExternal is in our favour (for heating or cooling) by at least this much
 // we may avoid actively heating/cooling.
@@ -192,11 +192,13 @@ void controlChamber(ChamberData& cd) {
         fSetting = ON;
       }
       if (cd.fridgeOn  &&  fSetting == ON) {
-        // Fridge is already on and we've provisionally determined it should stay on.
-        // Countermand this if we're approaching the target temp (i.e. within 1 degree) AND we've been
-        // cooling for 10 mins or longer in which case switch off (min on time permitting, of course).
-        if (tErrorAdjustedForSawtooth > -10  &&  cd.fridgeStateChangeMins >= 10)
-          fSetting = OFF;
+        // Cooling is set to continue.
+        // If, however, chamber temp has more than crossed below target and beer temp is
+        // approaching target, then - on the assumption the cooling has some momentum -
+        // switch off early (min on time permitting, of course).
+        if (tTarget - cd.tChamber > 3  &&  tErrorAdjustedForSawtooth > -3) {
+            fSetting = OFF;
+        }
       }
     }
   }

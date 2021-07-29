@@ -35,7 +35,14 @@ struct ChecksummedParams {
 struct ChamberParams : ChecksummedParams {
   char mode;
   boolean hasHeater;
-  uint8_t fridgeMinOnTimeMins, fridgeMinOffTimeMins, fridgeSwitchOnLagMins;
+  // Fridge will stay on at least this long. NOTE: This is the effective on time,
+  // i.e. power on time - fridgeSwitchOnLagMins
+  uint8_t fridgeMinOnTimeMins;
+  // Fridge will stay off at least this long.
+  uint8_t fridgeMinOffTimeMins;
+  // Some fridges have a built-in anti-cycling feature whereby, after power-up,
+  // a few minutes elapse before the compressor is actually switched on.
+  uint8_t fridgeSwitchOnLagMins;
   int16_t tMin, tMax;
   // Heater PID parameters
   float Kp, Ki, Kd;

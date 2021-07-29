@@ -50,7 +50,7 @@ void initSensorData(uint8_t ourIndex, uint16_t shortAddress, int8_t error) {
   sensorData[ourIndex].prevReading = SHRT_MIN;
 }
 
-// Each sensor has an 64 bit address. For such a relatively small number of sensors as ours 16 bits is sufficient to discriminate.
+// Each sensor has a 64 bit address. For such a relatively small number of sensors as ours 16 bits is sufficient to discriminate.
 // (Note: byte[0] is always 0x28 for DS18B20; [4] appears to be always either 5E or 5F; [5] appears to be always 14; [6] appears to
 // be  always 01; [7] is CRC of first 7 bytes.)
 // Most significant byte of the return value is byte[1] of the full address, LSB of the return value is byte[2] of the full address.

@@ -34,25 +34,5 @@ void keepTrackOfTime() {
   }
 }
 
-//void keepTrackOfTime() {
-//
-//  prevUptimeMillis = uptimeMillis;
-//  uptimeMillis = millis();
-//
-//  // millis() returns a uint32_t, which wraps every 49.7 days. So we maintain a minutes count too, which - as a uint32_t - allows us to run for 8171 years.
-//  if (prevUptimeMillis != uptimeMillis) {
-//    if (uptimeMillis < prevUptimeMillis) {
-//      // uptimeMillis has wrapped
-//      millisSinceLastUpdatedMins += uptimeMillis + (ULONG_MAX - prevUptimeMillis);
-//    } else {
-//      millisSinceLastUpdatedMins += uptimeMillis - prevUptimeMillis;
-//    }
-//    while (millisSinceLastUpdatedMins > MINUTE_MILLIS) {
-//      _minuteTick();
-//      millisSinceLastUpdatedMins -= MINUTE_MILLIS;
-//    }
-//  }
-//}
-
 
 // End

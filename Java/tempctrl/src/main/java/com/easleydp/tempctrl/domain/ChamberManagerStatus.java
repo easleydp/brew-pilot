@@ -43,10 +43,10 @@ public class ChamberManagerStatus
     public String getHealthMessage()
     {
         if (badSensorCount > 0)
-            return "🥵 Bad sensor(s)";
+            return "Bad sensor(s) 🥵";
         if (logBufferCannibalised)
-            return "😨 Log buffer cannibalised";
-        return "🙂 All good";
+            return "Log buffer cannibalised 😨";
+        return "All good 🙂";
     }
 
     @JsonIgnore

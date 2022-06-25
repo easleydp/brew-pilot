@@ -480,7 +480,7 @@ const GyleChart = () => {
       const chamberName = gyleDetails.chamberName;
       const hasHeater = gyleDetails.hasHeater;
       const dtStarted = gyleDetails.dtStarted;
-      const isBeerFridge = gyleDetails.hasHeater;
+      const isBeerFridge = !gyleDetails.hasHeater;
       const hourMs = 1000 * 60 * 60;
       const pad2 = (n: number) => {
         return n < 10 ? '0' + n : '' + n;
@@ -786,7 +786,7 @@ const GyleChart = () => {
       return new Promise((resolve, reject) => {
         let aggregatedReadings: IReadings[] = [];
         let readingsLogs = gyleDetails.readingsLogs;
-        const isBeerFridge = gyleDetails.hasHeater;
+        const isBeerFridge = !gyleDetails.hasHeater;
         if (isBeerFridge) {
           const genN = 4;
           // Limit extent of beer fridge chart by fetching no more than one `genN` file (and no files of

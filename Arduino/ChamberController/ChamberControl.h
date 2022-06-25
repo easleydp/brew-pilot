@@ -7,7 +7,7 @@
 // we can when heating so the achieved temperature profile is inevitably a sawtooth
 // waveform. This waveform should be approximately centred on tTarget. The greater
 // this value, the more the sawtooth is lifted.
-#define COOLING_SAWTOOTH_MIDPOINT 2 /* 0.2 degrees (this value assumes fridgeMinOnTimeMins is of the order of 10 mins) */
+#define COOLING_SAWTOOTH_MIDPOINT 3 /* 0.3 degrees (this value assumes fridgeMinOnTimeMins is of the order of 10 mins) */
 
 // When tExternal is in our favour (for heating or cooling) by at least this much
 // we may avoid actively heating/cooling.

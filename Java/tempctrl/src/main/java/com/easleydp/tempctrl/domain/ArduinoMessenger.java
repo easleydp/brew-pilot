@@ -71,14 +71,14 @@ public class ArduinoMessenger implements AutoCloseable
             {
                 logger.debug("Found serial comm port: " + sp.getPortDescription() + ", " + sp.getDescriptivePortName() + ", " + sp.getSystemPortName());
             }
-            // If there's only one that mentions "USB-to-Serial", go for that.
+            // If there's only one that mentions "USB-to-Serial" (or similar), go for that.
             // If more than one, look for the preferred port name otherwise go with first.
             List<SerialPort> usbPorts = Arrays.asList(serialPorts).stream()
-                    .filter(sp -> sp.getPortDescription().indexOf("USB-to-Serial") != -1)
+                    .filter(sp -> sp.getPortDescription().matches("(?i)USB.+Serial"))
                     .collect(Collectors.toList());
             if (usbPorts.isEmpty())
             {
-                logger.warn("No serial comm ports described as \"USB-to-Serial\"!");
+                logger.warn("No serial comm ports described as \"USB-to-Serial\" (or similar)!");
             }
             else
             {
@@ -95,7 +95,7 @@ public class ArduinoMessenger implements AutoCloseable
                 String usbPortDescsJoined = usbPorts.stream()
                         .map(SerialPort::getPortDescription)
                         .collect( Collectors.joining("; ") );
-                logger.warn("Failed to choose between the following unrecognised USB-to-Serial ports (going with first): " + usbPortDescsJoined);
+                logger.warn("Failed to choose between the following unrecognised 'USB-to-Serial' ports (going with first): " + usbPortDescsJoined);
                 return usbPorts.get(0);
             }
         }

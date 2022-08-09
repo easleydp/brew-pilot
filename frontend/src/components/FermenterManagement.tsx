@@ -147,7 +147,8 @@ const FermenterManagement = () => {
       gyle!.name = values.formName;
       gyle!.dtStarted = values.formDtStarted ? parseInt(values.formDtStarted) : undefined;
       gyle!.dtEnded = values.formDtEnded ? parseInt(values.formDtEnded) : undefined;
-      gyle!.mode = values.formMode;
+      // gyle!.mode = values.formMode; Commented-out in sympathy with form.
+      // gyle.mode is currently returned as we received it
       // gyle.temperatureProfile is returned as we received it
       setSubmitting(true);
       const url = '/tempctrl/admin/chamber/1/latest-gyle';
@@ -280,7 +281,9 @@ const FermenterManagement = () => {
         </Row>
       </Form.Group>
 
-      <Form.Group controlId="formMode">
+      {/* For the time being, don't display the "Mode" field since this feature
+          is unproven and of dubious usefulness. */}
+      {/* <Form.Group controlId="formMode">
         <Form.Label>Mode</Form.Label>
         <Form.Control as="select" {...formik.getFieldProps('formMode')}>
           <option value={Mode.Auto}>Auto</option>
@@ -289,7 +292,7 @@ const FermenterManagement = () => {
           <option value={Mode.DisableFridge}>Disable fridge</option>
           <option value={Mode.MonitorOnly}>Monitor only</option>
         </Form.Control>
-      </Form.Group>
+      </Form.Group> */}
 
       <Row>
         <Col>

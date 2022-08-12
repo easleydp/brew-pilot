@@ -507,44 +507,97 @@ const GyleChart = () => {
         return `Day&nbsp;${days}, hour&nbsp;${hours}`;
       };
 
+      /*
+       * See if we have previously stored the user's series selection (in LocalStorage).
+       */
+      interface SeriesSelection {
+        tTarget: boolean;
+        tBeer: boolean;
+        tChamber: boolean;
+        tExternal: boolean;
+        fridgeOn: boolean;
+        heaterOutput: boolean;
+      }
+      const seriesSelectionKey = 'seriesSelection' + chamberId;
+      const seriesSelectionJson: string | null = localStorage.getItem(seriesSelectionKey);
+      const seriesSelection: SeriesSelection = seriesSelectionJson
+        ? JSON.parse(seriesSelectionJson)
+        : {
+            tTarget: true,
+            tBeer: true,
+            tChamber: false,
+            tExternal: false,
+            fridgeOn: false,
+            heaterOutput: false,
+          };
+
+      /*
+       * Detect changes to series selection and update LocalStorage.
+       */
+      const sharedShowHideHandler = function (event: Event) {
+        const series = event.target as Series | null;
+        if (series !== null) {
+          const options = series.options;
+          // We actually get two events where we expect only one. It would be benign but
+          // inefficient to handle both. The one we want to ignore is distinguished by
+          // having a "className" property (value "highcharts-navigator-series").
+          if (!options.className) {
+            const seriesId = options.id as keyof SeriesSelection;
+            seriesSelection[seriesId] = event.type === 'show';
+            localStorage.setItem(seriesSelectionKey, JSON.stringify(seriesSelection));
+          }
+        }
+      };
+      const sharedSeriesEvents = {
+        show: sharedShowHideHandler,
+        hide: sharedShowHideHandler,
+      };
+
       const series = [
         {
           name: 'Target beer temp.',
           id: 'tTarget',
+          selected: seriesSelection.tTarget,
           type: 'line',
           dashStyle: 'ShortDot',
           color: '#777',
+          events: sharedSeriesEvents,
         } as Highcharts.SeriesLineOptions,
         {
           name: 'Beer temp.',
           id: 'tBeer',
+          selected: seriesSelection.tBeer,
           type: 'spline',
           color: 'rgba(247, 163, 92, 1.0)',
           showInNavigator: true,
+          events: sharedSeriesEvents,
         } as Highcharts.SeriesSplineOptions,
         {
           name: isBeerFridge ? 'Fridge temp.' : 'Chamber temp.',
           id: 'tChamber',
-          selected: false,
+          selected: seriesSelection.tChamber,
           type: 'spline',
           color: 'rgba(131, 50, 168, 0.5)',
+          events: sharedSeriesEvents,
         } as Highcharts.SeriesSplineOptions,
         {
           name: 'Garage temp.', // TODO: Make "Garage" part configurable
           id: 'tExternal',
-          selected: false,
+          selected: seriesSelection.tExternal,
           type: 'spline',
           color: 'rgba(0, 150, 0, 0.5)',
+          events: sharedSeriesEvents,
         } as Highcharts.SeriesSplineOptions,
         {
           name: 'Fridge on',
           id: 'fridgeOn',
-          selected: false,
+          selected: seriesSelection.fridgeOn,
           type: 'area',
           color: 'rgba(113, 166, 210, 1.0)',
           fillOpacity: 0.3,
           lineWidth: 1,
           dataGrouping: { enabled: false },
+          events: sharedSeriesEvents,
           //showInNavigator: true,
         } as Highcharts.SeriesAreaOptions,
       ] as Array<Highcharts.SeriesOptionsType>;
@@ -553,12 +606,13 @@ const GyleChart = () => {
         series.push({
           name: 'Heater output',
           id: 'heaterOutput',
-          selected: false,
+          selected: seriesSelection.heaterOutput,
           type: 'areaspline',
           color: 'rgba(255, 90, 150, 0.75)',
           fillOpacity: 0.3,
           lineWidth: 1,
           dataGrouping: { enabled: false },
+          events: sharedSeriesEvents,
           //showInNavigator: true,
         } as Highcharts.SeriesAreasplineOptions);
       }

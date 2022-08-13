@@ -803,9 +803,17 @@ const GyleChart = () => {
           .then((response) => {
             const ndjson: string = response.data;
             const readings: IReadings[] = ndjson
-              .split('\n')
-              .filter((json) => json)
-              .map((json) => JSON.parse(json));
+              .split('\n') // Each line represents a JSON object
+              .filter((json) => json) // Filter-out blank lines
+              .map((json) => {
+                try {
+                  return JSON.parse(json);
+                } catch (e) {
+                  console.warn(`Bad ndjson line in gyle readings: ${json}`);
+                  return null;
+                }
+              })
+              .filter((reading) => reading); // Filter-out nulls (in case there were and parse errors)
             resolve(readings);
           })
           .catch((error) => {

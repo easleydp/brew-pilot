@@ -793,12 +793,13 @@ const GyleChart = () => {
           reject(Error('gyleDetails should not be null at this stage'));
           return;
         }
+        const logFileLocator = `chambers/${chamberId}/gyles/${gyleDetails.gyleId}/logs/${logName}.ndjson`;
         axios
           .get(
             // Note: We'll configure nginx to handle `/tempctrl/data` itself rather then pass to app server.
             // Only reason for `/tempctrl` prefix is to make this work with React's proxy server. In this
             // case the app server DOES handle the data requests.
-            `/tempctrl/data/chambers/${chamberId}/gyles/${gyleDetails.gyleId}/logs/${logName}.ndjson`
+            `/tempctrl/data/${logFileLocator}`
           )
           .then((response) => {
             const ndjson: string = response.data;
@@ -809,7 +810,7 @@ const GyleChart = () => {
                 try {
                   return JSON.parse(json);
                 } catch (e) {
-                  console.warn(`Bad ndjson line in gyle readings: ${json}`);
+                  console.warn(`Malformed line in ${logFileLocator}: ${json}`);
                   return null;
                 }
               })

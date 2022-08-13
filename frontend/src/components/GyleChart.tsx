@@ -542,15 +542,17 @@ const GyleChart = () => {
           // inefficient to handle both. The one we want to ignore is distinguished by
           // having a "className" property (value "highcharts-navigator-series").
           if (!options.className) {
+            // Record the change of series selection in LocalStorage.
             const seriesId = options.id as keyof SeriesSelection;
             seriesSelection[seriesId] = event.type === 'show';
             localStorage.setItem(seriesSelectionKey, JSON.stringify(seriesSelection));
+
+            // User may click on legend labels or the checkbox. Amazingly, we have to take care of
+            // keeping things in sync. (I guess this is also the reason why we get two events.)
+            series.select(event.type === 'show');
           }
+          return false;
         }
-      };
-      const sharedSeriesEvents = {
-        show: sharedShowHideHandler,
-        hide: sharedShowHideHandler,
       };
 
       const series = [
@@ -561,7 +563,6 @@ const GyleChart = () => {
           type: 'line',
           dashStyle: 'ShortDot',
           color: '#777',
-          events: sharedSeriesEvents,
         } as Highcharts.SeriesLineOptions,
         {
           name: 'Beer temp.',
@@ -570,7 +571,6 @@ const GyleChart = () => {
           type: 'spline',
           color: 'rgba(247, 163, 92, 1.0)',
           showInNavigator: true,
-          events: sharedSeriesEvents,
         } as Highcharts.SeriesSplineOptions,
         {
           name: isBeerFridge ? 'Fridge temp.' : 'Chamber temp.',
@@ -578,7 +578,6 @@ const GyleChart = () => {
           selected: seriesSelection.tChamber,
           type: 'spline',
           color: 'rgba(131, 50, 168, 0.5)',
-          events: sharedSeriesEvents,
         } as Highcharts.SeriesSplineOptions,
         {
           name: 'Garage temp.', // TODO: Make "Garage" part configurable
@@ -586,7 +585,6 @@ const GyleChart = () => {
           selected: seriesSelection.tExternal,
           type: 'spline',
           color: 'rgba(0, 150, 0, 0.5)',
-          events: sharedSeriesEvents,
         } as Highcharts.SeriesSplineOptions,
         {
           name: 'Fridge on',
@@ -597,7 +595,6 @@ const GyleChart = () => {
           fillOpacity: 0.3,
           lineWidth: 1,
           dataGrouping: { enabled: false },
-          events: sharedSeriesEvents,
           //showInNavigator: true,
         } as Highcharts.SeriesAreaOptions,
       ] as Array<Highcharts.SeriesOptionsType>;
@@ -612,7 +609,6 @@ const GyleChart = () => {
           fillOpacity: 0.3,
           lineWidth: 1,
           dataGrouping: { enabled: false },
-          events: sharedSeriesEvents,
           //showInNavigator: true,
         } as Highcharts.SeriesAreasplineOptions);
       }
@@ -726,21 +722,8 @@ const GyleChart = () => {
                   }
                   return false;
                 },
-                // User may click on legend labels or the checkbox. Amazingly we have to take care of keeping things in sync.
-                hide: function (event) {
-                  const series = event.target as Series | null;
-                  if (series !== null) {
-                    series.select(false);
-                    return false;
-                  }
-                },
-                show: function (event) {
-                  const series = event.target as Series | null;
-                  if (series !== null) {
-                    series.select(true);
-                    return false;
-                  }
-                },
+                hide: sharedShowHideHandler,
+                show: sharedShowHideHandler,
               },
             },
           },

@@ -15,7 +15,7 @@ import Home from './Home';
 import GyleChart from './GyleChart';
 import Status from './Status';
 import TemperatureProfile from './TemperatureProfile';
-import FermenterManagement from './FermenterManagement';
+import GyleManagement from './GyleManagement';
 import Login from './Login';
 import Logout from './Logout';
 import IChamberSummary from '../api/IChamberSummary';
@@ -144,7 +144,7 @@ const Nested = () => {
               </Nav.Link>
             )} */}
             {isAdmin && (
-              <Nav.Link as={NavLink} to="/fermenter-management" onMouseDown={closeNav}>
+              <Nav.Link as={NavLink} to="/gyle-management/1" onMouseDown={closeNav}>
                 Fermenter management
               </Nav.Link>
             )}
@@ -174,7 +174,7 @@ const Nested = () => {
         <Route path="/signout" component={Logout} />
         <Route path="/status" component={Status} />
         <Route path="/temperature-profile/:chamberId" component={TemperatureProfile} />
-        <Route path="/fermenter-management" component={FermenterManagement} />
+        <Route path="/gyle-management/:chamberId" component={GyleManagement} />
         <Route path="/gyle-chart/:chamberId" component={GyleChart} />
         <Route path="/">
           <Home chamberSummaries={chamberSummaries} chamberSummariesError={chamberSummariesError} />

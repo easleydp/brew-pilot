@@ -1,8 +1,9 @@
-import './FermenterManagement.scss';
+import './GyleManagement.scss';
 import React, { useEffect, useState } from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
 import ILocationState from '../api/ILocationState';
 import { useAppState, Auth } from './state';
+import { useParams } from 'react-router-dom';
 import IGyle from '../api/IGyle';
 import { Mode } from '../api/Mode';
 import NowPattern from '../util/NowPattern';
@@ -47,13 +48,15 @@ interface IValues {
 //   return errors;
 // };
 
-const FermenterManagement = () => {
+const GyleManagement = () => {
   const history = useHistory<ILocationState>();
   const location = useLocation<ILocationState>();
   const { state, dispatch } = useAppState();
   const isAuth = state && state.isAuth;
   const isLoggedIn = isAuth === Auth.LoggedIn;
   const isAdmin = isLoggedIn && state.isAdmin;
+
+  const { chamberId } = useParams<{ chamberId: string }>();
 
   const [loading, setLoading] = useState<boolean>(true);
   const [gyle, setGyle] = useState<IGyle | null>(null);
@@ -70,7 +73,7 @@ const FermenterManagement = () => {
   useEffect(() => {
     console.info(
       Auth[isAuth],
-      '=================== FermenterManagement useEffect invoked ======================'
+      '=================== GyleManagement useEffect invoked ======================'
     );
 
     if (isAuth === Auth.NotLoggedIn) {
@@ -93,7 +96,7 @@ const FermenterManagement = () => {
 
   // Returns promise for retrieving IGyle
   const getGyle = (): Promise<IGyle> => {
-    const url = '/tempctrl/guest/chamber/1/latest-gyle';
+    const url = '/tempctrl/guest/chamber/' + chamberId + '/latest-gyle';
     return new Promise((resolve, reject) => {
       axios
         .get(url)
@@ -155,7 +158,7 @@ const FermenterManagement = () => {
       // gyle.mode is currently returned as we received it
       // gyle.temperatureProfile is returned as we received it
       setSubmitting(true);
-      const url = '/tempctrl/admin/chamber/1/latest-gyle';
+      const url = '/tempctrl/admin/chamber/' + chamberId + '/latest-gyle';
       axios
         .post(url, gyle)
         .then((response) => {
@@ -208,7 +211,7 @@ const FermenterManagement = () => {
   return loading ? (
     <Loading />
   ) : (
-    <Form className="fermenter-management" onBlur={handleFormBlur} onSubmit={formik.handleSubmit}>
+    <Form className="gyle-management" onBlur={handleFormBlur} onSubmit={formik.handleSubmit}>
       <Toast
         className="success"
         onClose={() => setShowSuccess(false)}
@@ -309,4 +312,4 @@ const FermenterManagement = () => {
   );
 };
 
-export default FermenterManagement;
+export default GyleManagement;

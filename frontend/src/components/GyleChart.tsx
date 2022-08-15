@@ -119,8 +119,12 @@ const GyleChart = () => {
   };
 
   // BE generally returns ms since epoch / readingsTimestampResolutionMillis
-  const restoreUtcMillisPrecision = useCallback((timestamp: number): number => {
-    return timestamp * getGyleDetails().readingsTimestampResolutionMillis;
+  const restoreUtcMillisPrecision = useCallback((dt: number): number => {
+    return dt * getGyleDetails().readingsTimestampResolutionMillis;
+  }, []);
+  // When logging, we may want to go back to compact format.
+  const dropUtcMillisPrecision = useCallback((millis: number): number => {
+    return millis / getGyleDetails().readingsTimestampResolutionMillis;
   }, []);
 
   /** Adds the supplied readings to the chart then redraws. */
@@ -185,8 +189,10 @@ const GyleChart = () => {
           return dt;
         }, 0);
         if (oldestDt >= dt) {
+          const rogue = dropUtcMillisPrecision(dt);
+          const oldest = dropUtcMillisPrecision(oldestDt);
           throw Error(
-            `Reading at ${dt} is not later than our the oldest reading we already have (${oldestDt}).`
+            `Reading at ${rogue} is not later than our the oldest reading we already have (${oldest}).`
           );
         }
 
@@ -231,7 +237,7 @@ const GyleChart = () => {
 
       chart.redraw();
     },
-    [restoreUtcMillisPrecision]
+    [restoreUtcMillisPrecision, dropUtcMillisPrecision]
   );
 
   // TODO: Remove this debug code:
@@ -451,7 +457,7 @@ const GyleChart = () => {
 
     // For this chart we want the Highstock range selector to default to the right hand side
     // of the x-axis, i.e. to show latest points by default. (This is the stock behaviour
-    // but we have to take care to undo the patch applied in FermentationProfile.tsx)
+    // but we have to take care to undo the patch applied in TemperatureProfile.tsx)
     applyPatchRangeDefaultLeft(Highcharts, false);
 
     // Returns promise for retrieving IGyleDetails
@@ -889,9 +895,11 @@ const GyleChart = () => {
       console.debug('user definitely not logged in');
       history.push({ pathname: '/signin', state: { from: location.pathname } });
     } else if (isAuth === Auth.Unknown) {
-      // The user has hit F5? Go to the home page where we can check if they're logged in.
+      // We assume the user has hit F5 or hand entered the URL (thus reloading the app), so we don't
+      // know whether they're logged in. The App component will be automatically be invoked when the
+      // app is loaded (whatever the URL location). This will establish whether user is logged in
+      // and update the isAuth state variable, which will cause this useEffect hook to re-execute.
       console.debug('user has hit F5?');
-      history.push({ pathname: '/', state: { from: location.pathname } });
     } else {
       getLatestGyleDetails()
         .then((gyleDetails) => {

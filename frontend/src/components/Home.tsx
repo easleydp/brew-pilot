@@ -1,6 +1,6 @@
 import './Home.scss';
 import React, { useEffect } from 'react';
-import { useHistory } from 'react-router-dom';
+import { useHistory, useLocation } from 'react-router-dom';
 import ILocationState from '../api/ILocationState';
 import { useAppState, Auth } from './state';
 import { Link } from 'react-router-dom';
@@ -18,12 +18,13 @@ type HomeProps = {
 //const Home: React.FC = () => {
 const Home = ({ chamberSummaries, chamberSummariesError }: HomeProps) => {
   const history = useHistory<ILocationState>();
+  const location = useLocation<ILocationState>();
   const { state, dispatch } = useAppState();
   const isAuth = state && state.isAuth;
 
   const handleAuthError = () => {
     console.debug('Redirecting to signin');
-    history.push({ pathname: '/signin', state: { from: '/' } });
+    history.push({ pathname: '/signin', state: { from: location.pathname } });
     dispatch({ type: 'LOGOUT' });
   };
 

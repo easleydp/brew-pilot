@@ -200,7 +200,7 @@ public class ChamberController
     }
 
     /**
-     * Called by 'Fermentation Profile' view to retrieve data for the specified chamber's latest gyle.
+     * Called by 'Temperature Profile' view to retrieve data for the specified chamber's latest gyle.
      */
     @GetMapping("/guest/chamber/{chamberId}/latest-gyle-profile")
     public TemperatureProfileDto getLatestGyleProfile(@PathVariable("chamberId") int chamberId)

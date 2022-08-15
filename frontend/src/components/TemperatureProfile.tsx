@@ -1,7 +1,7 @@
-import './FermentationProfile.scss';
+import './TemperatureProfile.scss';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { isMobile } from 'react-device-detect';
-import { useHistory } from 'react-router-dom';
+import { useHistory, useLocation } from 'react-router-dom';
 import ILocationState from '../api/ILocationState';
 import { useAppState, Auth } from './state';
 import { useParams } from 'react-router-dom';
@@ -24,7 +24,7 @@ import Loading from './Loading';
 
 DraggablePoints(Highcharts);
 
-const FermentationProfile = () => {
+const TemperatureProfile = () => {
   interface PointDragDropObjectWithXAndY extends Highcharts.PointDragDropObject {
     x: number;
     y: number;
@@ -37,10 +37,13 @@ const FermentationProfile = () => {
   }
 
   const history = useHistory<ILocationState>();
+  const location = useLocation<ILocationState>();
   const { state, dispatch } = useAppState();
   const isAuth = state && state.isAuth;
   const isLoggedIn = isAuth === Auth.LoggedIn;
   const isAdmin = isLoggedIn && state.isAdmin;
+
+  const { chamberId } = useParams<{ chamberId: string }>();
 
   const [loading, setLoading] = useState<boolean>(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -455,7 +458,7 @@ const FermentationProfile = () => {
   useEffect(() => {
     console.info(
       Auth[isAuth],
-      '=================== FermentationProfile useEffect invoked ======================'
+      '=================== TemperatureProfile useEffect invoked ======================'
     );
 
     // For this chart we want the Highstock range selector to default to the left hand side
@@ -464,7 +467,7 @@ const FermentationProfile = () => {
 
     // Returns promise for retrieving IGyle. (We retrieve the whole gyle since we need dtStarted/Ended as well as the profile.)
     const getGyle = (): Promise<IGyle> => {
-      const url = '/tempctrl/guest/chamber/1/latest-gyle';
+      const url = '/tempctrl/guest/chamber/' + chamberId + '/latest-gyle';
       return new Promise((resolve, reject) => {
         axios
           .get(url)
@@ -476,7 +479,7 @@ const FermentationProfile = () => {
             const status = error?.response?.status;
             if (status === 403 || status === 401) {
               console.debug(`Redirecting to signin after ${status}`);
-              history.push({ pathname: '/signin', state: { from: '/fermenter-profile' } });
+              history.push({ pathname: '/signin', state: { from: location.pathname } });
               dispatch({ type: 'LOGOUT' });
             }
             reject(error);
@@ -486,7 +489,7 @@ const FermentationProfile = () => {
 
     // // Returns promise for retrieving ITemperatureProfile
     // const getTemperatureProfile = (): Promise<ITemperatureProfile> => {
-    //   const url = '/tempctrl/guest/chamber/1/latest-gyle-profile';
+    //   const url = '/tempctrl/guest/chamber/' + chamberId + '/latest-gyle-profile';
     //   return new Promise((resolve, reject) => {
     //     axios
     //       .get(url)
@@ -498,7 +501,7 @@ const FermentationProfile = () => {
     //         const status = error?.response?.status;
     //         if (status === 403 || status === 401) {
     //           console.debug(`Redirecting to signin after ${status}`);
-    //           history.push({ pathname: '/signin', state: { from: '/fermentation-profile' } });
+    //           history.push({ pathname: '/signin', state: { from: location.pathname } });
     //           dispatch({ type: 'LOGOUT' });
     //         }
     //         reject(error);
@@ -508,10 +511,13 @@ const FermentationProfile = () => {
 
     if (isAuth === Auth.NotLoggedIn) {
       // The user is definitely not logged in. Go straight to signin form.
-      history.push({ pathname: '/signin', state: { from: '/fermentation-profile' } });
+      history.push({ pathname: '/signin', state: { from: location.pathname } });
     } else if (isAuth === Auth.Unknown) {
-      // The user has hit F5? Go to the home page where we can check if they're logged in.
-      history.push({ pathname: '/', state: { from: '/fermentation-profile' } });
+      // We assume the user has hit F5 or hand entered the URL (thus reloading the app), so we don't
+      // know whether they're logged in. The App component will be automatically be invoked when the
+      // app is loaded (whatever the URL location). This will establish whether user is logged in
+      // and update the isAuth state variable, which will cause this useEffect hook to re-execute.
+      console.debug('user has hit F5?');
     } else {
       getGyle().then((gyle) => {
         setLoading(false);
@@ -566,7 +572,7 @@ const FermentationProfile = () => {
     };
 
     setSubmitting(true);
-    const url = '/tempctrl/admin/chamber/1/latest-gyle-profile';
+    const url = '/tempctrl/admin/chamber/' + chamberId + '/latest-gyle-profile';
     try {
       await axios.post(url, temperatureProfile);
       backedUpProfileRef.current = temperatureProfile;
@@ -577,7 +583,7 @@ const FermentationProfile = () => {
       const status = error?.response?.status;
       if (status === 403 || status === 401) {
         console.debug(`Redirecting to signin after ${status}`);
-        history.push({ pathname: '/signin', state: { from: '/fermentation-profile' } });
+        history.push({ pathname: '/signin', state: { from: location.pathname } });
         dispatch({ type: 'LOGOUT' });
       } else {
         setErrorMessage(Utils.getErrorMessage(error));
@@ -594,7 +600,7 @@ const FermentationProfile = () => {
   return loading ? (
     <Loading />
   ) : (
-    <div className="fermentation-profile">
+    <div className="temperature-profile">
       <Toast
         className="success"
         onClose={() => setShowSuccess(false)}
@@ -637,4 +643,4 @@ const FermentationProfile = () => {
   );
 };
 
-export default FermentationProfile;
+export default TemperatureProfile;

@@ -14,7 +14,7 @@ import { Nav, Navbar, NavDropdown } from 'react-bootstrap';
 import Home from './Home';
 import GyleChart from './GyleChart';
 import Status from './Status';
-import FermentationProfile from './FermentationProfile';
+import TemperatureProfile from './TemperatureProfile';
 import FermenterManagement from './FermenterManagement';
 import Login from './Login';
 import Logout from './Logout';
@@ -85,8 +85,8 @@ const Nested = () => {
         state: { from: location?.state?.from || location.pathname || '/' },
       });
     } else {
-      isAuth === Auth.Unknown &&
-        console.log('Calling fetchData() though unclear whether user is logged-in.');
+      console.log('Calling fetchData()');
+      isAuth === Auth.Unknown && console.log('  though unclear whether user is logged-in');
       fetchData();
     }
   }, [isAuth, history, dispatch]);
@@ -149,7 +149,7 @@ const Nested = () => {
               </Nav.Link>
             )}
             {isLoggedIn && (
-              <Nav.Link as={NavLink} to="/fermentation-profile" onMouseDown={closeNav}>
+              <Nav.Link as={NavLink} to="/temperature-profile/1" onMouseDown={closeNav}>
                 Fermentation profile
               </Nav.Link>
             )}
@@ -173,7 +173,7 @@ const Nested = () => {
         <Route path="/signin" component={Login} />
         <Route path="/signout" component={Logout} />
         <Route path="/status" component={Status} />
-        <Route path="/fermentation-profile" component={FermentationProfile} />
+        <Route path="/temperature-profile/:chamberId" component={TemperatureProfile} />
         <Route path="/fermenter-management" component={FermenterManagement} />
         <Route path="/gyle-chart/:chamberId" component={GyleChart} />
         <Route path="/">

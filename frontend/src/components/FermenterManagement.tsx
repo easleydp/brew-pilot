@@ -1,6 +1,6 @@
 import './FermenterManagement.scss';
 import React, { useEffect, useState } from 'react';
-import { useHistory } from 'react-router-dom';
+import { useHistory, useLocation } from 'react-router-dom';
 import ILocationState from '../api/ILocationState';
 import { useAppState, Auth } from './state';
 import IGyle from '../api/IGyle';
@@ -49,6 +49,7 @@ interface IValues {
 
 const FermenterManagement = () => {
   const history = useHistory<ILocationState>();
+  const location = useLocation<ILocationState>();
   const { state, dispatch } = useAppState();
   const isAuth = state && state.isAuth;
   const isLoggedIn = isAuth === Auth.LoggedIn;
@@ -74,10 +75,13 @@ const FermenterManagement = () => {
 
     if (isAuth === Auth.NotLoggedIn) {
       // The user is definitely not logged in. Go straight to signin form.
-      history.push({ pathname: '/signin', state: { from: '/fermenter-management' } });
+      history.push({ pathname: '/signin', state: { from: location.pathname } });
     } else if (isAuth === Auth.Unknown) {
-      // The user has hit F5? Go to the home page where we can check if they're logged in.
-      history.push({ pathname: '/', state: { from: '/fermenter-management' } });
+      // We assume the user has hit F5 or hand entered the URL (thus reloading the app), so we don't
+      // know whether they're logged in. The App component will be automatically be invoked when the
+      // app is loaded (whatever the URL location). This will establish whether user is logged in
+      // and update the isAuth state variable, which will cause this useEffect hook to re-execute.
+      console.debug('user has hit F5?');
     } else {
       getGyle().then((gyle) => {
         setLoading(false);
@@ -101,7 +105,7 @@ const FermenterManagement = () => {
           const status = error?.response?.status;
           if (status === 403 || status === 401) {
             console.debug(`Redirecting to signin after ${status}`);
-            history.push({ pathname: '/signin', state: { from: '/fermenter-management' } });
+            history.push({ pathname: '/signin', state: { from: location.pathname } });
             dispatch({ type: 'LOGOUT' });
           }
           reject(error);
@@ -163,7 +167,7 @@ const FermenterManagement = () => {
           const status = error?.response?.status;
           if (status === 403 || status === 401) {
             console.debug(`Redirecting to signin after ${status}`);
-            history.push({ pathname: '/signin', state: { from: '/fermenter-management' } });
+            history.push({ pathname: '/signin', state: { from: location.pathname } });
             dispatch({ type: 'LOGOUT' });
           } else {
             setErrorMessage(Utils.getErrorMessage(error));

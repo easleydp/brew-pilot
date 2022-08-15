@@ -2,7 +2,7 @@ import './Status.scss';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAppState, Auth } from './state';
-import { useHistory } from 'react-router-dom';
+import { useHistory, useLocation } from 'react-router-dom';
 import ILocationState from '../api/ILocationState';
 import Cookies from 'universal-cookie';
 import Loading from './Loading';
@@ -43,6 +43,7 @@ const Status: React.FC = () => {
   }
 
   const history = useHistory<ILocationState>();
+  const location = useLocation<ILocationState>();
   const [loading, setLoading] = useState<boolean>(true);
   const [status, setStatus] = useState<IStatusReport | null>(null);
 
@@ -56,18 +57,12 @@ const Status: React.FC = () => {
         const response = await axios(url);
         setLoading(false);
         setStatus(response.data);
-        if (isAuth === Auth.Unknown) {
-          dispatch({
-            type: 'LOGIN',
-            isAdmin: new Cookies().get('isAdmin') === 'true',
-          });
-        }
       } catch (error) {
         console.debug(url + ' ERROR', error);
         const status = error?.response?.status;
         if (status === 403 || status === 401) {
           console.debug(`Redirecting to signin after ${status}`);
-          history.push({ pathname: '/signin', state: { from: '/status' } });
+          history.push({ pathname: '/signin', state: { from: location.pathname } });
           dispatch({ type: 'LOGOUT' });
         }
       }
@@ -80,11 +75,17 @@ const Status: React.FC = () => {
 
     // If we know the user is definitely not logged in, go straight to signin form.
     if (isAuth === Auth.NotLoggedIn) {
-      history.push({ pathname: '/signin', state: { from: '/status' } });
+      history.push({ pathname: '/signin', state: { from: location.pathname } });
+    } else if (isAuth === Auth.Unknown) {
+      // We assume the user has hit F5 or hand entered the URL (thus reloading the app), so we don't
+      // know whether they're logged in. The App component will be automatically be invoked when the
+      // app is loaded (whatever the URL location). This will establish whether user is logged in
+      // and update the isAuth state variable, which will cause this useEffect hook to re-execute.
+      console.debug('user has hit F5?');
     } else {
       fetchData();
     }
-  }, [dispatch, history]);
+  }, [dispatch, history, isAuth]);
 
   return loading ? (
     <Loading />

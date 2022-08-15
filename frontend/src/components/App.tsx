@@ -98,7 +98,12 @@ const Nested = () => {
     setNavExpanded(expanded);
   };
   const closeNav = function () {
-    setNavExpanded(false);
+    // Was simply:  setNavExpanded(false);
+    //
+    // Had to introduce the delay as a hack after the following problem emerged on
+    // Chrome on Android (though not evident in the simulator): On selecting a
+    // link from the dropdown menu, the menu closed but the link was not followed.
+    setTimeout(() => setNavExpanded(false), 10);
   };
 
   return (

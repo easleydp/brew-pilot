@@ -7,12 +7,13 @@ import org.springframework.test.context.TestPropertySource;
 @SpringBootTest
 @TestPropertySource(properties = {
         "pwdhash.guest: $2y$04$ZuztduDisdh4KBxSREaxCOrbzRxYuSweQxseZ7fPMa5v3us1aolMa", // "guest"
-        "pwdhash.admin: $2y$04$iwY4S/mX48AaoAUG8.8hieVJJJkKLWvoQoReOeXqdAZu7GCYe5EIi"  // "admin"
+        "pwdhash.admin: $2y$04$iwY4S/mX48AaoAUG8.8hieVJJJkKLWvoQoReOeXqdAZu7GCYe5EIi", // "admin"
+        "dataDir: /home/david/brew-pilot/Java/tempctrl/src/test/resources/testData"
 })
 class TempctrlApplicationTests {
 
-	@Test
-	void contextLoads() {
-	}
+    @Test
+    void contextLoads() {
+    }
 
 }

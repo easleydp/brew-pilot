@@ -13,6 +13,8 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.Environment;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.util.Assert;
@@ -24,28 +26,30 @@ import com.easleydp.tempctrl.domain.DummyChamberManager;
 import com.easleydp.tempctrl.domain.PropertyUtils;
 
 @SpringBootApplication(
-     // Uncomment this line to temporarily disable Spring Security:
+// Uncomment this line to temporarily disable Spring Security:
 // exclude = { SecurityAutoConfiguration.class, ManagementWebSecurityAutoConfiguration.class }
 )
 @EnableScheduling
 @EnableAsync
-public class TempctrlApplication
-{
+public class TempctrlApplication {
     private static final Logger logger = LoggerFactory.getLogger(TempctrlApplication.class);
 
     @Autowired
     private Environment env;
 
     @PostConstruct
-    public void init()
-    {
+    public void init() {
         PropertyUtils.setEnv(env);
         logger.debug("Current working dir is {}", System.getProperty("user.dir"));
     }
 
     @Bean
-    public Path dataDir()
-    {
+    public JavaMailSender javaMailSender() {
+        return new JavaMailSenderImpl();
+    }
+
+    @Bean
+    public Path dataDir() {
         String strPath = env.getRequiredProperty("dataDir");
         Path path = Paths.get(strPath);
         Assert.state(Files.exists(path), "dataDir '" + strPath + "' does not exist.");
@@ -53,24 +57,20 @@ public class TempctrlApplication
     }
 
     @Bean
-    public ChamberRepository chamberRepository(Path dataDir)
-    {
+    public ChamberRepository chamberRepository(Path dataDir) {
         return new ChamberRepository(dataDir);
     }
 
     @Bean
-    public ChamberManager chamberManager(ChamberRepository chamberRepository)
-    {
-    	boolean useDummyChamberManager = PropertyUtils.getBoolean("dummy.chambers", false);
-    	logger.info("Using " + (useDummyChamberManager ? "DummyChamberManager" : "ArduinoChamberManager"));
-        return useDummyChamberManager ?
-                    new DummyChamberManager(chamberRepository) :
-                    new ArduinoChamberManager(chamberRepository);
+    public ChamberManager chamberManager(ChamberRepository chamberRepository) {
+        boolean useDummyChamberManager = PropertyUtils.getBoolean("dummy.chambers", false);
+        logger.info("Using " + (useDummyChamberManager ? "DummyChamberManager" : "ArduinoChamberManager"));
+        return useDummyChamberManager ? new DummyChamberManager(chamberRepository)
+                : new ArduinoChamberManager(chamberRepository);
     }
 
-
-	public static void main(String[] args) {
-		SpringApplication.run(TempctrlApplication.class, args);
-	}
+    public static void main(String[] args) {
+        SpringApplication.run(TempctrlApplication.class, args);
+    }
 
 }

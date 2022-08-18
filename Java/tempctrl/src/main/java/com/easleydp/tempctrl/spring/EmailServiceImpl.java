@@ -4,8 +4,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
+import org.springframework.mail.MailSendException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -21,15 +24,15 @@ public class EmailServiceImpl implements EmailService {
 
     @Override
     @Async
+    @Retryable(value = MailSendException.class, maxAttempts = 4, backoff = @Backoff(delay = 60L
+            * 1000, multiplier = 2.0))
     public void sendSimpleMessage(String subject, String text) {
         String from = env.getProperty("mail.from");
         String to = env.getProperty("mail.to");
-        boolean smtpIsConfigured = to != null  &&  from != null;
+        boolean smtpIsConfigured = to != null && from != null;
 
-        logger.debug(
-            "{}\n\tSubject: {}\n\tText: {}",
-            smtpIsConfigured ? "Sending mail message:" : "Mail not configured. Would have sent:",
-            subject, text);
+        logger.debug("{}\n\tSubject: {}\n\tText: {}",
+                smtpIsConfigured ? "Sending mail message:" : "Mail not configured. Would have sent:", subject, text);
 
         if (smtpIsConfigured) {
             SimpleMailMessage message = new SimpleMailMessage();

@@ -141,26 +141,26 @@ class EmailMessageSchedulerTests {
     private static final Date triggerTime = buildUtcDate(2022, 8, 17, 0, 0);
 
     @Test
-    void testSendColdCrashComingSoonMessage_case1() throws IOException {
+    void testSendColdCrashComingSoonMessage_case1() {
         testTriggeredCase(new Date(triggerTime.getTime() - hoursAndMinutesInMillis(6, 19)));
     }
 
     @Test
-    void testSendColdCrashComingSoonMessage_case2() throws IOException {
+    void testSendColdCrashComingSoonMessage_case2() {
         testTriggeredCase(new Date(triggerTime.getTime() - hoursAndMinutesInMillis(6, 1)));
     }
 
     @Test
-    void testSendColdCrashComingSoonMessage_case3() throws IOException {
+    void testSendColdCrashComingSoonMessage_case3() {
         testNotTriggeredCase(new Date(triggerTime.getTime() - hoursAndMinutesInMillis(6, 21)));
     }
 
     @Test
-    void testSendColdCrashComingSoonMessage_case4() throws IOException {
+    void testSendColdCrashComingSoonMessage_case4() {
         testNotTriggeredCase(new Date(triggerTime.getTime() - hoursAndMinutesInMillis(5, 59)));
     }
 
-    private void testTriggeredCase(Date timeNow) throws IOException {
+    private void testTriggeredCase(Date timeNow) {
         emailMessageScheduler.testableSendColdCrashComingSoonMessage(timeNow);
 
         assertMessageSubjectEquals("Plan to dry hop this gyle on Wednesday?");
@@ -170,7 +170,7 @@ class EmailMessageSchedulerTests {
                 "Fermentation chamber's gyle \"#45 Reid 1839 BPA\" is due to cold crash on Wednesday August 17 at 1:00am.");
     }
 
-    private void testNotTriggeredCase(Date timeNow) throws IOException {
+    private void testNotTriggeredCase(Date timeNow) {
         emailMessageScheduler.testableSendColdCrashComingSoonMessage(timeNow);
 
         assertMessageSubjectEquals(null);

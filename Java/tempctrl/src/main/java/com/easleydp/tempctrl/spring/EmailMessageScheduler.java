@@ -48,12 +48,12 @@ public class EmailMessageScheduler {
     }
 
     @Scheduled(fixedRateString = "${coldCrashCheck.periodMinutes}", timeUnit = TimeUnit.MINUTES)
-    public void sendColdCrashComingSoonMessage() throws IOException {
+    public void sendColdCrashComingSoonMessage() {
         logger.debug("sendColdCrashComingSoonMessage called");
         testableSendColdCrashComingSoonMessage(new Date());
     }
 
-    void testableSendColdCrashComingSoonMessage(Date timeNow) throws IOException {
+    void testableSendColdCrashComingSoonMessage(Date timeNow) {
         for (Chamber chamber : chamberRepository.getChambers()) {
             Gyle latestGyle = chamber.getLatestGyle();
             if (latestGyle != null) {

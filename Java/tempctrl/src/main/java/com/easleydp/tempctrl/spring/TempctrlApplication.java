@@ -83,15 +83,13 @@ public class TempctrlApplication {
         SpringApplication.run(TempctrlApplication.class, args);
     }
 
-    private static final String GMT_ID = "GMT";
-
     /**
      * Sets the app time zone to UTC if necessary, i.e. if the server's time zone is
      * not UTC.
      */
     private static void ensureAppTimeZoneIsUtc() {
         TimeZone serverTimeZone = TimeZone.getDefault();
-        TimeZone timeZone = TimeZone.getTimeZone(GMT_ID);
+        TimeZone timeZone = TimeZone.getTimeZone("Etc/UTC");
 
         if (serverTimeZone.equals(timeZone)) {
             logger.info("Server/application time zone is " + prettyPrintTimeZone(timeZone) + ".");

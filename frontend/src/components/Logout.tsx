@@ -14,10 +14,12 @@ const Logout: React.FC = () => {
   const { dispatch } = useAppState();
 
   useEffect(() => {
+    console.info('=================== Logout useEffect invoked ======================');
+
     axios
       .get('/tempctrl/logout')
       .then((response) => {
-        history.push({ pathname: '/signin', state: { from: location.pathname } });
+        history.push({ pathname: '/signin', state: { from: '/' } });
         dispatch({ type: 'LOGOUT' });
       })
       .catch((error) => {

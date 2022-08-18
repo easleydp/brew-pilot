@@ -132,14 +132,14 @@ const EmailTest = () => {
         <Toast.Body>{errorMessage}</Toast.Body>
       </Toast>
       <Form.Group controlId="formSubject">
-        <Form.Label>Email subject</Form.Label>
+        <Form.Label>Subject</Form.Label>
         <Form.Control type="text" {...formik.getFieldProps('formSubject')} />
         {formik.errors.formSubject ? (
           <Form.Text className="text-error">{formik.errors.formSubject}</Form.Text>
         ) : null}
       </Form.Group>
       <Form.Group controlId="formText">
-        <Form.Label>Email message text</Form.Label>
+        <Form.Label>Message text</Form.Label>
         <Form.Control as="textarea" rows={5} {...formik.getFieldProps('formText')} />
         {formik.errors.formText ? (
           <Form.Text className="text-error">{formik.errors.formText}</Form.Text>

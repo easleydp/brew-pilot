@@ -71,7 +71,7 @@ server {
         # FE app router based URLs
         # was: `location / {` but that meant we served the index page when attackers probed for e.g. "/any-random-url",
         # so now we itemise all the valid URLs.
-        location ~ ^/($|signin$|gyle-chart/|gyle-management/|temperature-profile/|status$) {
+        location ~ ^/($|signin$|gyle-chart/|gyle-management/|temperature-profile/|status$|email-test$) {
                 # First attempt to serve request as file, then as directory, then fall back to assuming React Router will handle.
                 try_files $uri $uri/ /index.html$is_args$args;
                 root /home/david/brew-pilot/frontend;

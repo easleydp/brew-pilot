@@ -16,6 +16,7 @@ import GyleChart from './GyleChart';
 import Status from './Status';
 import TemperatureProfile from './TemperatureProfile';
 import GyleManagement from './GyleManagement';
+import EmailTest from './EmailTest';
 import Login from './Login';
 import Logout from './Logout';
 import IChamberSummary from '../api/IChamberSummary';
@@ -181,6 +182,7 @@ const Nested = () => {
         <Route path="/temperature-profile/:chamberId" component={TemperatureProfile} />
         <Route path="/gyle-management/:chamberId" component={GyleManagement} />
         <Route path="/gyle-chart/:chamberId" component={GyleChart} />
+        <Route path="/email-test" component={EmailTest} />
         <Route path="/">
           <Home chamberSummaries={chamberSummaries} chamberSummariesError={chamberSummariesError} />
         </Route>

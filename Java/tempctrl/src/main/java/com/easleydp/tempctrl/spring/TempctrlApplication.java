@@ -14,8 +14,6 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.Environment;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.retry.annotation.EnableRetry;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -51,11 +49,6 @@ public class TempctrlApplication {
     public void init() {
         PropertyUtils.setEnv(env);
         logger.debug("Current working dir is {}", System.getProperty("user.dir"));
-    }
-
-    @Bean
-    public JavaMailSender javaMailSender() {
-        return new JavaMailSenderImpl();
     }
 
     @Bean

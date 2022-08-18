@@ -2,7 +2,6 @@ package com.easleydp.tempctrl.spring;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.io.IOException;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.TimeZone;
@@ -54,6 +53,12 @@ class EmailMessageSchedulerTests {
 
                 @Override
                 public void sendSimpleMessage(String subject, String text) {
+                    this.subject = subject;
+                    this.text = text;
+                }
+
+                @Override
+                public void sendSimpleMessage_noRetry(String subject, String text) {
                     this.subject = subject;
                     this.text = text;
                 }

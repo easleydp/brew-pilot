@@ -16,17 +16,26 @@ import org.springframework.stereotype.Service;
 public class EmailServiceImpl implements EmailService {
     private static final Logger logger = LoggerFactory.getLogger(EmailServiceImpl.class);
 
-    @Autowired
+    @Autowired(required = false) // 'required = false' for sake of tests (it is required in prod)
     private JavaMailSender mailSender;
 
     @Autowired
     private Environment env;
 
     @Override
-    @Async
     @Retryable(value = MailSendException.class, maxAttempts = 4, backoff = @Backoff(delay = 60L
             * 1000, multiplier = 2.0))
     public void sendSimpleMessage(String subject, String text) {
+        _sendSimpleMessage(subject, text);
+    }
+
+    @Override
+    public void sendSimpleMessage_noRetry(String subject, String text) {
+        _sendSimpleMessage(subject, text);
+    }
+
+    @Async
+    private void _sendSimpleMessage(String subject, String text) {
         String from = env.getProperty("mail.from");
         String to = env.getProperty("mail.to");
         boolean smtpIsConfigured = to != null && from != null;
@@ -35,6 +44,8 @@ public class EmailServiceImpl implements EmailService {
                 smtpIsConfigured ? "Sending mail message:" : "Mail not configured. Would have sent:", subject, text);
 
         if (smtpIsConfigured) {
+            if (mailSender == null)
+                throw new RuntimeException("mailSender dependency has not been injected.");
             SimpleMailMessage message = new SimpleMailMessage();
             message.setFrom(from);
             message.setTo(to);

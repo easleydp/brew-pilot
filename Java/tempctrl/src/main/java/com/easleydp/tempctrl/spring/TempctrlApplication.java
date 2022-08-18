@@ -3,6 +3,7 @@ package com.easleydp.tempctrl.spring;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.TimeZone;
 
 import javax.annotation.PostConstruct;
 
@@ -27,12 +28,19 @@ import com.easleydp.tempctrl.domain.PropertyUtils;
 
 @SpringBootApplication(
 // Uncomment this line to temporarily disable Spring Security:
-// exclude = { SecurityAutoConfiguration.class, ManagementWebSecurityAutoConfiguration.class }
+// exclude = { SecurityAutoConfiguration.class,
+// ManagementWebSecurityAutoConfiguration.class }
 )
 @EnableScheduling
 @EnableAsync
 public class TempctrlApplication {
     private static final Logger logger = LoggerFactory.getLogger(TempctrlApplication.class);
+
+    // (This static block needs to be placed in any class which is loaded at
+    // startup).
+    static {
+        ensureAppTimeZoneIsUtc();
+    }
 
     @Autowired
     private Environment env;
@@ -71,6 +79,42 @@ public class TempctrlApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(TempctrlApplication.class, args);
+    }
+
+    private static final String GMT_ID = "GMT";
+
+    /**
+     * Sets the app time zone to UTC if necessary, i.e. if the server's time zone is
+     * not UTC.
+     */
+    private static void ensureAppTimeZoneIsUtc() {
+        TimeZone serverTimeZone = TimeZone.getDefault();
+        TimeZone timeZone = TimeZone.getTimeZone(GMT_ID);
+
+        if (serverTimeZone.equals(timeZone)) {
+            logger.info("Server/application time zone is " + prettyPrintTimeZone(timeZone) + ".");
+        } else {
+            TimeZone.setDefault(timeZone);
+            logger.info("Server time zone is " + prettyPrintTimeZone(serverTimeZone) + ".");
+            logger.info("Application time zone set to " + prettyPrintTimeZone(timeZone) + ".");
+        }
+
+        if (timeZone.useDaylightTime())
+            fail("The application cannot use a time zone that uses daylight saving time.");
+    }
+
+    private static String prettyPrintTimeZone(TimeZone tz) {
+        return tz.getID() + (tz.useDaylightTime() ? " (uses DST)" : "");
+    }
+
+    /** Logs reason for a failure during static initialisation and exits. */
+    private static void fail(String reason) {
+        logger.error(reason);
+        System.out.println("\n\n******** " + reason + " ********\n\n");
+        throw new IllegalStateException(reason);
+        // Note: There is no need to do a System.exit(). Throwing the above exception
+        // from this static initialisation leaves the app not fully initialised. The
+        // container responds with a 404 error to all requests.
     }
 
 }

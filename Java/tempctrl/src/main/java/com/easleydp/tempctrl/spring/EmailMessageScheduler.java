@@ -5,6 +5,7 @@ import static com.easleydp.tempctrl.domain.PropertyUtils.getInteger;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -17,6 +18,7 @@ import com.easleydp.tempctrl.domain.Chamber;
 import com.easleydp.tempctrl.domain.ChamberRepository;
 import com.easleydp.tempctrl.domain.Gyle;
 import com.easleydp.tempctrl.domain.PointDto;
+import com.easleydp.tempctrl.domain.PropertyUtils;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
@@ -85,16 +87,24 @@ public class EmailMessageScheduler {
 
     /** @return e.g. "Wednesday" */
     private static String dayOfWeek(Date when) {
-        return new SimpleDateFormat("EEEE").format(when);
+        return formatAsLocalTime("EEEE", when);
     }
 
     /** @return e.g. "Wednesday August 17" */
     private static String on(Date when) {
-        return new SimpleDateFormat("EEEE MMMM d").format(when);
+        return formatAsLocalTime("EEEE MMMM d", when);
     }
 
-    /** @return e.g. "3:41pm" */
+    /** @return e.g. "3:41pm" (local time) */
     private static String at(Date when) {
-        return new SimpleDateFormat("K:mma").format(when);
+        return formatAsLocalTime("K:mma", when);
+    }
+
+    private static final String TIMEZONE_LOCAL_ID = PropertyUtils.getString("timezone.localId", "Europe/London");
+
+    private static String formatAsLocalTime(String format, Date when) {
+        SimpleDateFormat sdf = new SimpleDateFormat(format);
+        sdf.setTimeZone(TimeZone.getTimeZone(TIMEZONE_LOCAL_ID));
+        return sdf.format(when);
     }
 }

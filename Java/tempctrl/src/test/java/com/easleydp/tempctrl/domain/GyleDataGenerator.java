@@ -16,8 +16,7 @@ import org.springframework.mock.env.MockEnvironment;
 import org.springframework.util.Assert;
 import org.springframework.util.FileSystemUtils;
 
-public class GyleDataGenerator
-{
+public class GyleDataGenerator {
     private MockChamberManager chamberManagerSim;
     private ChamberRepository chambers;
     private Chamber chamber;
@@ -30,15 +29,13 @@ public class GyleDataGenerator
     private static final int genMultiplier = 4;
     private static final int maxGenerations = 3;
 
-    private void collectReadings() throws IOException
-    {
+    private void collectReadings() throws IOException {
         chamberManagerSim.setNowTime(timeNow);
         gyle.collectReadings(chamberManagerSim, timeNow);
     }
 
     @BeforeEach
-    public void beforeEach() throws Exception
-    {
+    public void beforeEach() throws Exception {
         env = new MockEnvironment();
         PropertyUtils.setEnv(env);
 
@@ -52,26 +49,24 @@ public class GyleDataGenerator
                 FileSystemUtils.deleteRecursively(g.gyleDir.resolve("logs"));
     }
 
-    @Test
+    // @Test // Slow test. Only enable when needed.
     /** From 4 weeks ago up until now. */
-    public void shouldGenerateRealisticDataFor4WeekGyle() throws Exception
-    {
+    public void shouldGenerateRealisticDataFor4WeekGyle() throws Exception {
         Date endTime = new Date();
         startTime = DateUtils.addWeeks(endTime, -4);
 
         chamber = chambers.getChamberById(2);
         gyle = chamber.getGyleById(1);
-        assertNotNull(gyle, "Chamber 2 gyle 1 should be found");  // Actually, getGyleById will already have checked not null.
-        gyle.setDtStarted(startTime.getTime());  // So now it's the active gyle
+        assertNotNull(gyle, "Chamber 2 gyle 1 should be found"); // Actually, getGyleById will already have checked not
+                                                                 // null.
+        gyle.setDtStarted(startTime.getTime()); // So now it's the active gyle
         chamberManagerSim = new MockChamberManager(startTime, gyle.getTemperatureProfile(), env);
 
         timeNow = startTime;
-        while (timeNow.getTime() < endTime.getTime())
-        {
+        while (timeNow.getTime() < endTime.getTime()) {
             timeNow = addMinutes(timeNow, 1);
             collectReadings();
         }
     }
-
 
 }

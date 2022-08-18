@@ -9,40 +9,40 @@ import org.springframework.util.Assert;
 
 /**
  * Represents a temperature profile defined by a user.
- * The first point represents the start temperature; must have `millisSinceStart` of 0.
- * Each successive point has a `millisSinceStart` value greater than the previous.
- * The last point represents the final temperature at which the beer should be held indefinitely.
- * This class takes care of interpolating between set points to calculate a target temperature at any point in time.
+ * <li>The first point represents the start temperature; must have
+ * `millisSinceStart` of 0.
+ * <li>Each successive point has a `millisSinceStart` value greater than the
+ * previous.
+ * <li>The last point represents the final temperature at which the beer should
+ * be held indefinitely.
+ *
+ * This class takes care of interpolating between set points to calculate a
+ * target temperature at any point in time.
  */
-public class TemperatureProfile extends TemperatureProfileDto
-{
+public class TemperatureProfile extends TemperatureProfileDto {
     private static final Logger logger = LoggerFactory.getLogger(TemperatureProfile.class);
 
-    public TemperatureProfile(TemperatureProfileDto temperatureProfileDto)
-    {
+    public TemperatureProfile(TemperatureProfileDto temperatureProfileDto) {
         BeanUtils.copyProperties(temperatureProfileDto, this);
     }
 
-    public TemperatureProfile()
-    {
+    public TemperatureProfile() {
     }
 
     /**
-     * @param targetTemp  target temperature (degrees x 10)
+     * @param targetTemp
+     *            target temperature (degrees x 10)
      */
-    public void addPoint(int hoursSinceStart, int targetTemp)
-    {
+    public void addPoint(int hoursSinceStart, int targetTemp) {
         PointDto point = new PointDto(hoursSinceStart, targetTemp);
 
-        // If & when needed this method can be enhanced to allow adding points in any order but for now we insist
+        // If & when needed this method can be enhanced to allow adding points in any
+        // order but for now we insist
         // points are added in order.
-        if (points.isEmpty())
-        {
+        if (points.isEmpty()) {
             if (hoursSinceStart != 0)
                 throw new IllegalArgumentException("First point must have be at t0");
-        }
-        else
-        {
+        } else {
             if (hoursSinceStart <= points.get(points.size() - 1).getHoursSinceStart())
                 throw new IllegalArgumentException("Point being added must occur after last point");
         }
@@ -50,12 +50,16 @@ public class TemperatureProfile extends TemperatureProfileDto
     }
 
     /**
-     * @return the target temperature (degrees x 10) at any given time since the profile started.
-     * If the specified millisSinceStart is between two points an interpolated value is calculated.
-     * If the specified millisSinceStart is after the last point the last set point temperature is returned.
+     * @return the target temperature (degrees x 10) at any given time since the
+     *         profile started.
+     *
+     *         If the specified millisSinceStart is between two points an
+     *         interpolated value is calculated.
+     *
+     *         If the specified millisSinceStart is after the last point the last
+     *         set point temperature is returned.
      */
-    public int getTargetTempAt(final long millisSinceStart)
-    {
+    public int getTargetTempAt(final long millisSinceStart) {
         if (millisSinceStart < 0)
             throw new IllegalArgumentException("millisSinceStart cannot be -ve");
 
@@ -68,16 +72,14 @@ public class TemperatureProfile extends TemperatureProfileDto
 
         PointDto prevPoint = null;
         PointDto point = null;
-        for (Iterator<PointDto> iter = points.iterator(); iter.hasNext(); )
-        {
+        for (Iterator<PointDto> iter = points.iterator(); iter.hasNext();) {
             prevPoint = point;
             point = iter.next();
 
             if (point.getMillisSinceStart() == millisSinceStart)
                 return point.getTargetTemp();
 
-            if (point.getMillisSinceStart() > millisSinceStart)
-            {
+            if (point.getMillisSinceStart() > millisSinceStart) {
                 // Interpolate
                 Assert.state(prevPoint != null, "prevPoint should be non-null");
                 final int yA = prevPoint.getTargetTemp();
@@ -92,7 +94,46 @@ public class TemperatureProfile extends TemperatureProfileDto
         return point.getTargetTemp();
     }
 
-	public TemperatureProfileDto toDto() {
-		return new TemperatureProfileDto(points);
-	}
+    /**
+     * Locates the start of the cold crash.
+     *
+     * @return The point that looks like the start of the cold crash phase, or null
+     *         if none.
+     *
+     *         Specifically, we look for the first point that sits immediately
+     *         between a flat section to the left and a downwards ramp to the right
+     *         where the gradient is at least 0.5°C/hr and temp drop is at least
+     *         5°C.
+     */
+    public PointDto getCrashStartPoint() {
+        if (points.size() < 3) {
+            return null;
+        }
+        // Get the points as an array so we can easily look ahead.
+        PointDto pts[] = points.toArray(new PointDto[0]);
+        int len = pts.length;
+
+        // Look for a point between a flat section and a significant downwards ramp.
+        PointDto prevPt = pts[0];
+        for (int i = 1; i < len - 1; i++) { // Note: Deliberately ignoring the last point
+            PointDto pt = pts[i];
+            if (prevPt.getTargetTemp() == pt.getTargetTemp()) {
+                PointDto nextPt = pts[i + 1];
+                int tempDrop = pt.getTargetTemp() - nextPt.getTargetTemp();
+                if (tempDrop >= 50) { // Remember, temperature values are degrees x10
+                    int hours = nextPt.getHoursSinceStart() - pt.getHoursSinceStart();
+                    int gradient = tempDrop / hours;
+                    if (gradient >= 5) { // i.e. must be 0.5°C/hr or steeper
+                        return pt;
+                    }
+                }
+            }
+            prevPt = pt;
+        }
+        return null;
+    }
+
+    public TemperatureProfileDto toDto() {
+        return new TemperatureProfileDto(points);
+    }
 }

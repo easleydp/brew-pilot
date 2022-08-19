@@ -21,10 +21,15 @@ import Highcharts, {
 // import * as Highcharts from 'highcharts/highstock';
 import DraggablePoints from 'highcharts/modules/draggable-points';
 import Loading from './Loading';
+import IChamberSummary from '../api/IChamberSummary';
 
 DraggablePoints(Highcharts);
 
-const TemperatureProfile = () => {
+type TemperatureProfileProps = {
+  chamberSummaries: IChamberSummary[];
+};
+
+const TemperatureProfile = ({ chamberSummaries }: TemperatureProfileProps) => {
   interface PointDragDropObjectWithXAndY extends Highcharts.PointDragDropObject {
     x: number;
     y: number;
@@ -458,6 +463,7 @@ const TemperatureProfile = () => {
   useEffect(() => {
     console.info(
       Auth[isAuth],
+      chamberSummaries,
       '=================== TemperatureProfile useEffect invoked ======================'
     );
 
@@ -467,8 +473,8 @@ const TemperatureProfile = () => {
 
     // Returns promise for retrieving IGyle. (We retrieve the whole gyle since we need dtStarted/Ended as well as the profile.)
     const getGyle = (): Promise<IGyle> => {
-      const url = '/tempctrl/guest/chamber/' + chamberId + '/latest-gyle';
       return new Promise((resolve, reject) => {
+        const url = '/tempctrl/guest/chamber/' + chamberId + '/latest-gyle';
         axios
           .get(url)
           .then((response) => {
@@ -531,7 +537,7 @@ const TemperatureProfile = () => {
         chartRef.current = buildChart(backedUpProfileRef.current, startTimeOffsetRef.current);
       });
     }
-  }, [dispatch, history, isAuth]);
+  }, [chamberSummaries, dispatch, history, isAuth]);
 
   const handleReset = () => {
     chartRef.current = buildChart(backedUpProfileRef.current!, startTimeOffsetRef.current);
@@ -573,29 +579,38 @@ const TemperatureProfile = () => {
 
     setSubmitting(true);
     const url = '/tempctrl/admin/chamber/' + chamberId + '/latest-gyle-profile';
-    try {
-      await axios.post(url, temperatureProfile);
-      backedUpProfileRef.current = temperatureProfile;
-      setShowSuccess(true);
-      setSubmitting(false);
-    } catch (error) {
-      console.debug(url + ' ERROR', error, error.response.data);
-      const status = error?.response?.status;
-      if (status === 403 || status === 401) {
-        console.debug(`Redirecting to signin after ${status}`);
-        history.push({ pathname: '/signin', state: { from: location.pathname } });
-        dispatch({ type: 'LOGOUT' });
-      } else {
-        setErrorMessage(Utils.getErrorMessage(error));
-        setShowError(true);
-        // Note, we deliberately don't `setSubmitting(false)` here; that only happens when the user acknowledges the error.
-      }
-    }
+    axios
+      .post(url, temperatureProfile)
+      .then((response) => {
+        backedUpProfileRef.current = temperatureProfile;
+        setShowSuccess(true);
+        setSubmitting(false);
+      })
+      .catch((error) => {
+        console.debug(url + ' ERROR', error, error?.response?.data);
+        const status = error?.response?.status;
+        if (status === 403 || status === 401) {
+          console.debug(`Redirecting to signin after ${status}`);
+          history.push({ pathname: '/signin', state: { from: location.pathname } });
+          dispatch({ type: 'LOGOUT' });
+        } else {
+          setErrorMessage(Utils.getErrorMessage(error));
+          setShowError(true);
+          // Note, we deliberately don't `setSubmitting(false)` here; that only happens when the user acknowledges the error.
+        }
+      });
   };
 
-  const instruction = `${isMobile ? 'Tap' : 'Click '} the chart to add a new point. ${
-    isMobile ? 'Tap' : 'Click '
-  } an existing point to remove, or drag to move.`;
+  const getTitle = () => {
+    return chamberSummaries.length
+      ? chamberSummaries[+chamberId - 1].name + ' temperature profile'
+      : '';
+  };
+  const getInstruction = () => {
+    return `${isMobile ? 'Tap' : 'Click '} the chart to add a new point. ${
+      isMobile ? 'Tap' : 'Click '
+    } an existing point to remove, or drag to move.`;
+  };
 
   return loading ? (
     <Loading />
@@ -627,8 +642,8 @@ const TemperatureProfile = () => {
           </Button>
         </div>
         <div className="item instructions">
-          <h2>Fermentation temperature profile</h2>
-          <p>{instruction}</p>
+          <h2>{getTitle()}</h2>
+          <p>{getInstruction()}</p>
         </div>
         <div className="item button right">
           <Button variant="primary" disabled={!isAdmin || submitting} onClick={handleSave}>

@@ -39,39 +39,41 @@ const Nested = () => {
     console.log(Auth[isAuth], '=================== App useEffect invoked ===================');
 
     const fetchData = async () => {
-      try {
-        // If the previous auth state was `Unknown` and the new state is `LoggedIn` and
-        // we have data then we don't need to make the Ajax call again.
-        const prevIsAuth = prevIsAuthRef.current;
-        prevIsAuthRef.current = isAuth;
-        if (
-          prevIsAuth !== Auth.Unknown ||
-          isAuth !== Auth.LoggedIn ||
-          chamberSummaries.length === 0
-        ) {
-          const response = await axios('/tempctrl/guest/chamber-summaries-and-user-type');
-          setChamberSummaries(response.data.chamberSummaries);
-          dispatch({
-            type: 'LOGIN',
-            isAdmin: response.data.isAdmin,
+      // If the previous auth state was `Unknown` and the new state is `LoggedIn` and
+      // we have data then we don't need to make the Ajax call again.
+      const prevIsAuth = prevIsAuthRef.current;
+      prevIsAuthRef.current = isAuth;
+      if (
+        prevIsAuth !== Auth.Unknown ||
+        isAuth !== Auth.LoggedIn ||
+        chamberSummaries.length === 0
+      ) {
+        axios
+          .get('/tempctrl/guest/chamber-summaries-and-user-type')
+          .then((response) => {
+            setChamberSummaries(response.data.chamberSummaries);
+            dispatch({
+              type: 'LOGIN',
+              isAdmin: response.data.isAdmin,
+            });
+          })
+          .catch((error) => {
+            console.debug(error);
+            const status = error?.response?.status;
+            if (status === 403 || status === 401) {
+              console.debug(
+                `Redirecting to signin after ${status}. location.state.from is "${location?.state?.from}", location.pathname is "${location.pathname}"`
+              );
+              history.push({
+                pathname: '/signin',
+                state: { from: location?.state?.from || location.pathname || '/' },
+              });
+              setChamberSummaries([]);
+              dispatch({ type: 'LOGOUT' });
+            } else {
+              setChamberSummariesError('' + error);
+            }
           });
-        }
-      } catch (error) {
-        console.debug(error);
-        const status = error?.response?.status;
-        if (status === 403 || status === 401) {
-          console.debug(
-            `Redirecting to signin after ${status}. location.state.from is "${location?.state?.from}", location.pathname is "${location.pathname}"`
-          );
-          history.push({
-            pathname: '/signin',
-            state: { from: location?.state?.from || location.pathname || '/' },
-          });
-          setChamberSummaries([]);
-          dispatch({ type: 'LOGOUT' });
-        } else {
-          setChamberSummariesError('' + error);
-        }
       }
     };
 
@@ -179,7 +181,9 @@ const Nested = () => {
         <Route path="/signin" component={Login} />
         <Route path="/signout" component={Logout} />
         <Route path="/status" component={Status} />
-        <Route path="/temperature-profile/:chamberId" component={TemperatureProfile} />
+        <Route path="/temperature-profile/:chamberId">
+          <TemperatureProfile chamberSummaries={chamberSummaries} />
+        </Route>
         <Route path="/gyle-management/:chamberId" component={GyleManagement} />
         <Route path="/gyle-chart/:chamberId" component={GyleChart} />
         <Route path="/email-test" component={EmailTest} />

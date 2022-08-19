@@ -53,19 +53,21 @@ const Status: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       const url = '/tempctrl/guest/log-chart/status';
-      try {
-        const response = await axios(url);
-        setLoading(false);
-        setStatus(response.data);
-      } catch (error) {
-        console.debug(url + ' ERROR', error);
-        const status = error?.response?.status;
-        if (status === 403 || status === 401) {
-          console.debug(`Redirecting to signin after ${status}`);
-          history.push({ pathname: '/signin', state: { from: location.pathname } });
-          dispatch({ type: 'LOGOUT' });
-        }
-      }
+      axios
+        .get(url)
+        .then((response) => {
+          setLoading(false);
+          setStatus(response.data);
+        })
+        .catch((error) => {
+          console.debug(url + ' ERROR', error);
+          const status = error?.response?.status;
+          if (status === 403 || status === 401) {
+            console.debug(`Redirecting to signin after ${status}`);
+            history.push({ pathname: '/signin', state: { from: location.pathname } });
+            dispatch({ type: 'LOGOUT' });
+          }
+        });
     };
 
     console.info(

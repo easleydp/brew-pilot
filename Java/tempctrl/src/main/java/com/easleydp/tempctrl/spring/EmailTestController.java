@@ -7,8 +7,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.easleydp.tempctrl.domain.EmailTestDto;
-
 @RestController
 public class EmailTestController {
     private static final Logger logger = LoggerFactory.getLogger(EmailTestController.class);
@@ -19,9 +17,20 @@ public class EmailTestController {
     @PostMapping("/admin/email-test")
     public void sendEmail(@RequestBody EmailTestDto emailTest) {
         logger.info("POST email-test\n\t" + emailTest);
-        if (emailTest.getNoRetry())
-            emailService.sendSimpleMessage_noRetry(emailTest.getSubject(), emailTest.getText());
+        if (emailTest.noRetry)
+            emailService.sendSimpleMessage_noRetry(emailTest.subject, emailTest.text);
         else
-            emailService.sendSimpleMessage(emailTest.getSubject(), emailTest.getText());
+            emailService.sendSimpleMessage(emailTest.subject, emailTest.text);
+    }
+
+    private static final class EmailTestDto {
+        public String subject;
+        public String text;
+        public boolean noRetry;
+
+        @Override
+        public String toString() {
+            return "{" + " subject='" + subject + "'" + " text='" + text + "'" + " noRetry=" + noRetry + "}";
+        }
     }
 }

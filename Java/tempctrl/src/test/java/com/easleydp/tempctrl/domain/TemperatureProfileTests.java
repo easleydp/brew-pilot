@@ -60,4 +60,31 @@ public class TemperatureProfileTests {
         assertEquals(profile.getPoints().get(1), profile.getCrashStartPoint(),
                 "Second point should still be start of crash.");
     }
+
+    @Test
+    public void testGetCrashEndPoint() {
+        profile = new TemperatureProfile();
+        profile.addPoint(0, 175);
+        profile.addPoint(1, 0);
+        assertNull(profile.getCrashEndPoint(),
+                "Shouldn't be detected as crash because not preceded by a flat section.");
+
+        profile = new TemperatureProfile();
+        profile.addPoint(0, 175);
+        profile.addPoint(1, 175);
+        profile.addPoint(2, 0);
+        assertEquals(profile.getPoints().get(2), profile.getCrashEndPoint(), "Last point should be end of crash.");
+
+        profile.getPoints().get(2).setTargetTemp(150);
+        assertNull(profile.getCrashEndPoint(), "Shouldn't be detected as crash because drop isn't deep enough.");
+        profile.getPoints().get(2).setTargetTemp(0); // restore
+
+        profile.getPoints().get(2).setHoursSinceStart(48);
+        assertNull(profile.getCrashEndPoint(), "Shouldn't be detected as crash because gradient isn't steep enough.");
+        profile.getPoints().get(2).setHoursSinceStart(2); // restore
+
+        profile.addPoint(3, -1);
+        assertEquals(profile.getPoints().get(3), profile.getCrashEndPoint(),
+                "Last point should still be end of crash.");
+    }
 }

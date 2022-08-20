@@ -21,7 +21,7 @@ import com.easleydp.tempctrl.domain.Gyle;
 
 @SpringBootTest
 @TestPropertySource(properties = { "spring.profiles.active: test", "coldCrashCheck.periodMinutes: 20",
-        "coldCrashCheck.priorNoticeHours: 6" })
+        "coldCrashCheck.priorNoticeHours: 6", "coldCrashCheck.postCrashDwellHours: 24" })
 @DirtiesContext // Hack to allow multiple Spring integration test suites, otherwise the first
                 // suite seems to leave the application context instantiated.
 class EmailMessageSchedulerTests {
@@ -120,11 +120,11 @@ class EmailMessageSchedulerTests {
     }
 
     /**
-     * EmailMessageScheduler tests.
+     * EmailMessageScheduler - crashStartPoint tests.
      *
      * beforeEach sets "dtStarted" to 1659830400000 (2022/08/07 00:00 UTC).
-     * "hoursSinceStart" of the profile point ar the start of the cold crash is 240,
-     * so this maps to a dt of 1660694400000 (2022/08/17 00:00 UTC).
+     * "hoursSinceStart" of the profile point at the start of the cold crash is 240,
+     * so this maps to a dt of 1660694400000 (Wed 2022/08/17 00:00 UTC).
      *
      * Given that in this test suite we have set the properties as follows:
      * <ul>
@@ -139,34 +139,34 @@ class EmailMessageSchedulerTests {
      * and emails should not be triggered at:
      * <ul>
      * <li>[Test case 3] 6 hours and 21 minutes prior to dt
-     * <li>[Test case 4] 5 hours 59 minutes prior to dt
+     * <li>[Test case 4] 5 hours and 59 minutes prior to dt
      * </ul>
      */
 
-    private static final Date triggerTime = buildUtcDate(2022, 8, 17, 0, 0);
+    private static final Date coldCrashStartTime = buildUtcDate(2022, 8, 17, 0, 0);
 
     @Test
     void testSendColdCrashComingSoonMessage_case1() {
-        testTriggeredCase(new Date(triggerTime.getTime() - hoursAndMinutesInMillis(6, 19)));
+        testSendColdCrashComingSoonMessage(new Date(coldCrashStartTime.getTime() - hoursAndMinutesInMillis(6, 19)));
     }
 
     @Test
     void testSendColdCrashComingSoonMessage_case2() {
-        testTriggeredCase(new Date(triggerTime.getTime() - hoursAndMinutesInMillis(6, 1)));
+        testSendColdCrashComingSoonMessage(new Date(coldCrashStartTime.getTime() - hoursAndMinutesInMillis(6, 1)));
     }
 
     @Test
     void testSendColdCrashComingSoonMessage_case3() {
-        testNotTriggeredCase(new Date(triggerTime.getTime() - hoursAndMinutesInMillis(6, 21)));
+        testNoMessageSent(new Date(coldCrashStartTime.getTime() - hoursAndMinutesInMillis(6, 21)));
     }
 
     @Test
     void testSendColdCrashComingSoonMessage_case4() {
-        testNotTriggeredCase(new Date(triggerTime.getTime() - hoursAndMinutesInMillis(5, 59)));
+        testNoMessageSent(new Date(coldCrashStartTime.getTime() - hoursAndMinutesInMillis(5, 59)));
     }
 
-    private void testTriggeredCase(Date timeNow) {
-        emailMessageScheduler.testableSendColdCrashComingSoonMessage(timeNow);
+    private void testSendColdCrashComingSoonMessage(Date timeNow) {
+        emailMessageScheduler.testableSendGyleRelatedNotifications(timeNow);
 
         assertMessageSubjectEquals("Plan to dry hop this gyle on Wednesday?");
         // Note: Time should be presented in local time, which for us is BST.
@@ -175,8 +175,64 @@ class EmailMessageSchedulerTests {
                 "Fermentation chamber's gyle \"#45 Reid 1839 BPA\" is due to cold crash on Wednesday August 17 at 1:00am.");
     }
 
-    private void testNotTriggeredCase(Date timeNow) {
-        emailMessageScheduler.testableSendColdCrashComingSoonMessage(timeNow);
+    /**
+     * EmailMessageScheduler - crashEndPoint tests.
+     *
+     * beforeEach sets "dtStarted" to 1659830400000 (2022/08/07 00:00 UTC).
+     * "hoursSinceStart" of the profile point at the end of the cold crash is 246,
+     * so this maps to a dt of 1660716000000 (Wed 2022/08/17 06:00 UTC).
+     *
+     * Given that in this test suite we have set the properties as follows:
+     * <ul>
+     * <li>"coldCrashCheck.periodMinutes: 20"
+     * <li>"coldCrashCheck.postCrashDwellHours: 24"
+     * </ul>
+     * emails should be triggered at:
+     * <ul>
+     * <li>[Test case 1] 23 hours and 41 minutes after dt
+     * <li>[Test case 2] 23 hours and 59 minutes after dt
+     * </ul>
+     * and emails should not be triggered at:
+     * <ul>
+     * <li>[Test case 3] 23 hours and 39 minutes after dt
+     * <li>[Test case 4] 24 hours and 1 minute after dt
+     * </ul>
+     */
+
+    private static final Date endCrashTime = buildUtcDate(2022, 8, 17, 6, 0);
+
+    @Test
+    void testSendTimeToBottleMessage_case1() {
+        testSendTimeToBottleMessage(new Date(endCrashTime.getTime() + hoursAndMinutesInMillis(23, 41)));
+    }
+
+    @Test
+    void testSendTimeToBottleMessage_case2() {
+        testSendTimeToBottleMessage(new Date(endCrashTime.getTime() + hoursAndMinutesInMillis(23, 59)));
+    }
+
+    @Test
+    void testSendTimeToBottleMessage_case3() {
+        testNoMessageSent(new Date(endCrashTime.getTime() + hoursAndMinutesInMillis(23, 39)));
+    }
+
+    @Test
+    void testSendTimeToBottleMessage_case4() {
+        testNoMessageSent(new Date(endCrashTime.getTime() + hoursAndMinutesInMillis(24, 1)));
+    }
+
+    private void testSendTimeToBottleMessage(Date timeNow) {
+        emailMessageScheduler.testableSendGyleRelatedNotifications(timeNow);
+
+        assertMessageSubjectEquals("Bottle this gyle on Thursday?");
+        // Note: Time should be presented in local time, which for us is BST.
+        // Hence, 7:00am instead of 6:00am.
+        assertMessageTextEquals(
+                "Fermentation chamber's gyle \"#45 Reid 1839 BPA\" could be bottled on Thursday August 18 at 7:00am.");
+    }
+
+    private void testNoMessageSent(Date timeNow) {
+        emailMessageScheduler.testableSendGyleRelatedNotifications(timeNow);
 
         assertMessageSubjectEquals(null);
         assertMessageTextEquals(null);

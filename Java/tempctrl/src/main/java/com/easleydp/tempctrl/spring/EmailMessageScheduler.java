@@ -48,39 +48,63 @@ public class EmailMessageScheduler {
     }
 
     @Scheduled(fixedRateString = "${coldCrashCheck.periodMinutes}", timeUnit = TimeUnit.MINUTES)
-    public void sendColdCrashComingSoonMessage() {
-        logger.debug("sendColdCrashComingSoonMessage called");
-        testableSendColdCrashComingSoonMessage(new Date());
+    public void sendGyleRelatedNotifications() {
+        logger.debug("sendGyleRelatedNotifications called");
+        testableSendGyleRelatedNotifications(new Date());
     }
 
-    void testableSendColdCrashComingSoonMessage(Date timeNow) {
+    void testableSendGyleRelatedNotifications(Date timeNow) {
         for (Chamber chamber : chamberRepository.getChambers()) {
             Gyle latestGyle = chamber.getLatestGyle();
             if (latestGyle != null) {
                 Long dtStarted = latestGyle.getDtStarted();
                 if (dtStarted != null && dtStarted > 0 && latestGyle.getDtEnded() == null) {
-                    PointDto crashStartPoint = latestGyle.getTemperatureProfile().getCrashStartPoint();
-                    if (crashStartPoint != null) {
-                        // Assuming the checking period is of the order of 30 minutes, we want to
-                        // trigger the email when the crash start time - priorNoticeHours is less than
-                        // 30 minutes away. So, when this scheduled task next fires in 30 minutes time,
-                        // this figure will have gone -ve.
-
-                        long periodMillis = getInteger("coldCrashCheck.periodMinutes", 30) * 1000L * 60L;
-                        long priorNoticeMillis = getInteger("coldCrashCheck.priorNoticeHours", 24) * 1000L * 60L * 60L;
-
-                        long timeNowMs = timeNow.getTime();
-                        long millisSinceStart = timeNowMs - dtStarted;
-                        long millisUntilTrigger = crashStartPoint.getMillisSinceStart() - priorNoticeMillis
-                                - millisSinceStart;
-                        if (millisUntilTrigger > 0 && millisUntilTrigger < periodMillis) {
-                            Date when = new Date(timeNowMs + millisUntilTrigger + priorNoticeMillis);
-                            emailService.sendSimpleMessage("Plan to dry hop this gyle on " + dayOfWeek(when) + "?",
-                                    chamber.getName() + "'s gyle \"" + latestGyle.getName()
-                                            + "\" is due to cold crash on " + on(when) + " at " + at(when) + ".");
-                        }
-                    }
+                    long periodMillis = getInteger("coldCrashCheck.periodMinutes", 30) * 1000L * 60L;
+                    long timeNowMs = timeNow.getTime();
+                    long millisSinceStart = timeNowMs - dtStarted;
+                    sendCrashStartNotifications(periodMillis, timeNowMs, millisSinceStart, latestGyle, chamber);
+                    sendCrashEndNotifications(periodMillis, timeNowMs, millisSinceStart, latestGyle, chamber);
                 }
+            }
+        }
+    }
+
+    private void sendCrashStartNotifications(long periodMillis, long timeNowMs, long millisSinceStart, Gyle latestGyle,
+            Chamber chamber) {
+        PointDto crashStartPoint = latestGyle.getTemperatureProfile().getCrashStartPoint();
+        if (crashStartPoint != null) {
+            // Assuming the checking period is of the order of 30 minutes, we want to
+            // trigger the email when the crash start time - priorNoticeHours is less than
+            // 30 minutes away. So, when this scheduled task next fires in 30 minutes time,
+            // this figure will have gone -ve.
+            long priorNoticeMillis = getInteger("coldCrashCheck.priorNoticeHours", 36) * 1000L * 60 * 60;
+
+            long millisUntilTrigger = crashStartPoint.getMillisSinceStart() - priorNoticeMillis - millisSinceStart;
+            if (millisUntilTrigger > 0 && millisUntilTrigger < periodMillis) {
+                Date when = new Date(timeNowMs + millisUntilTrigger + priorNoticeMillis);
+                emailService.sendSimpleMessage("Plan to dry hop this gyle on " + dayOfWeek(when) + "?",
+                        chamber.getName() + "'s gyle \"" + latestGyle.getName() + "\" is due to cold crash on "
+                                + on(when) + " at " + at(when) + ".");
+            }
+        }
+    }
+
+    private void sendCrashEndNotifications(long periodMillis, long timeNowMs, long millisSinceStart, Gyle latestGyle,
+            Chamber chamber) {
+        PointDto crashEndPoint = latestGyle.getTemperatureProfile().getCrashEndPoint();
+        if (crashEndPoint != null) {
+            // Assuming the checking period is of the order of 30 minutes, we want to
+            // trigger the email when the crash end time + postCrashDwellHours is less than
+            // 30 minutes away. So, when this scheduled task next fires in 30 minutes time,
+            // this figure will have gone -ve.
+            long postCrashDwellMillis = getInteger("coldCrashCheck.postCrashDwellHours", 48) * 1000L * 60 * 60;
+
+            long millisUntilTrigger = crashEndPoint.getMillisSinceStart() + postCrashDwellMillis - millisSinceStart;
+            if (millisUntilTrigger > 0 && millisUntilTrigger < periodMillis) {
+                Date when = new Date(timeNowMs + millisUntilTrigger);
+                emailService.sendSimpleMessage("Bottle this gyle on " + dayOfWeek(when) + "?",
+                        chamber.getName() + "'s gyle \"" + latestGyle.getName() + "\" could be bottled on " + on(when)
+                                + " at " + at(when) + ".");
             }
         }
     }

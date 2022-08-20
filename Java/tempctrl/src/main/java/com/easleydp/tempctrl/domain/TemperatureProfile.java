@@ -133,6 +133,19 @@ public class TemperatureProfile extends TemperatureProfileDto {
         return null;
     }
 
+    /**
+     * Locates the end of the cold crash.
+     *
+     * @return The point that looks like the end of the cold crash phase, or null if
+     *         none.
+     *
+     *         Specifically, we first check for the presence of a crashStartPoint,
+     *         then, if found return the last point in the profile.
+     */
+    public PointDto getCrashEndPoint() {
+        return getCrashStartPoint() != null ? points.get(points.size() - 1) : null;
+    }
+
     public TemperatureProfileDto toDto() {
         return new TemperatureProfileDto(points);
     }

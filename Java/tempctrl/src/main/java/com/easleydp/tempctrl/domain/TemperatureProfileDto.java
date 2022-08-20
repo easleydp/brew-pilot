@@ -5,26 +5,24 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Marries-up with the the contents of profile.json.
- * See also TemperatureProfile, which extends this class.
+ * Marries-up with the the contents of profile.json. See also
+ * TemperatureProfile, which extends this class.
  */
-public class TemperatureProfileDto
-{
+public class TemperatureProfileDto {
     protected List<PointDto> points = new ArrayList<>();
 
-    public TemperatureProfileDto() {}
+    public TemperatureProfileDto() {
+    }
 
     public TemperatureProfileDto(List<PointDto> points) {
         setPoints(points);
-	}
+    }
 
-	public List<PointDto> getPoints()
-    {
+    public List<PointDto> getPoints() {
         return Collections.unmodifiableList(points);
     }
 
-    public void setPoints(List<PointDto> points)
-    {
+    public void setPoints(List<PointDto> points) {
         if (points == null)
             throw new IllegalArgumentException("points is required");
         if (points.isEmpty())
@@ -41,9 +39,7 @@ public class TemperatureProfileDto
 
     @Override
     public String toString() {
-        return "{" +
-            " points=" + points +
-            "}";
+        return "{" + " points=" + points + "}";
     }
 
     @Override

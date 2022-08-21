@@ -62,15 +62,15 @@ public class EmailMessageScheduler {
                     long periodMillis = getInteger("coldCrashCheck.periodMinutes", 30) * 1000L * 60L;
                     long timeNowMs = timeNow.getTime();
                     long millisSinceStart = timeNowMs - dtStarted;
-                    sendCrashStartNotifications(periodMillis, timeNowMs, millisSinceStart, latestGyle, chamber);
-                    sendCrashEndNotifications(periodMillis, timeNowMs, millisSinceStart, latestGyle, chamber);
+                    maybeSendCrashStartNotification(periodMillis, timeNowMs, millisSinceStart, latestGyle, chamber);
+                    maybeSendCrashEndNotification(periodMillis, timeNowMs, millisSinceStart, latestGyle, chamber);
                 }
             }
         }
     }
 
-    private void sendCrashStartNotifications(long periodMillis, long timeNowMs, long millisSinceStart, Gyle latestGyle,
-            Chamber chamber) {
+    private void maybeSendCrashStartNotification(long periodMillis, long timeNowMs, long millisSinceStart,
+            Gyle latestGyle, Chamber chamber) {
         PointDto crashStartPoint = latestGyle.getTemperatureProfile().getCrashStartPoint();
         if (crashStartPoint != null) {
             // Assuming the checking period is of the order of 30 minutes, we want to
@@ -89,8 +89,8 @@ public class EmailMessageScheduler {
         }
     }
 
-    private void sendCrashEndNotifications(long periodMillis, long timeNowMs, long millisSinceStart, Gyle latestGyle,
-            Chamber chamber) {
+    private void maybeSendCrashEndNotification(long periodMillis, long timeNowMs, long millisSinceStart,
+            Gyle latestGyle, Chamber chamber) {
         PointDto crashEndPoint = latestGyle.getTemperatureProfile().getCrashEndPoint();
         if (crashEndPoint != null) {
             // Assuming the checking period is of the order of 30 minutes, we want to

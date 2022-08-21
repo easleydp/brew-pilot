@@ -10,31 +10,29 @@ import org.springframework.core.env.Environment;
 import org.springframework.util.Assert;
 
 /** A mock ChamberManager for testing purposes. */
-public class MockChamberManager implements ChamberManager
-{
+public class MockChamberManager implements ChamberManager {
     private Map<Integer, ChamberParameters> chamberParametersById = new HashMap<>();
 
     private Random random;
 
     /**
      * When the temperatureProfile should be considered to have started.
-     * @param startTime  Some point in time >= startTime
+     * 
+     * @param startTime
+     *            Some point in time >= startTime
      */
-    public MockChamberManager(Date startTime, TemperatureProfile temperatureProfile, Environment env)
-    {
+    public MockChamberManager(Date startTime, TemperatureProfile temperatureProfile, Environment env) {
         this.startTime = startTime;
         this.temperatureProfile = temperatureProfile;
     }
 
     @Override
-    public void setParameters(int chamberId, ChamberParameters chamberParameters)
-    {
-        chamberParametersById.put(chamberId,  chamberParameters);
+    public void setParameters(int chamberId, ChamberParameters chamberParameters) {
+        chamberParametersById.put(chamberId, chamberParameters);
     }
 
     @Override
-    public ChamberReadings getReadings(int chamberId, Date timeNow)
-    {
+    public ChamberReadings collectReadings(int chamberId, Date timeNow) {
         random = new Random(timeNow.hashCode() + chamberId * 3);
 
         Assert.state(nowTime != null, "nowTime should be set before calling this method.");
@@ -51,10 +49,9 @@ public class MockChamberManager implements ChamberManager
             tMin = -5 * 10;
             tMax = 40 * 10;
             int gyleAgeHours = (int) (millisSinceStart / (1000L * 60 * 60));
-            params = new ChamberParameters(gyleAgeHours, tTarget, tTargetNext, tMin, tMax, true, 10, 10, 0, 1.2, 2.3, 3.4, Mode.AUTO);
-        }
-        else
-        {
+            params = new ChamberParameters(gyleAgeHours, tTarget, tTargetNext, tMin, tMax, true, 10, 10, 0, 1.2, 2.3,
+                    3.4, Mode.AUTO);
+        } else {
             tTarget = params.tTarget;
         }
 
@@ -64,14 +61,14 @@ public class MockChamberManager implements ChamberManager
         int tPi = tExternal + randomInt(50, 70);
         int heaterOutput = getDayOfMonthFromDate(nowTime) % 2 == 0 ? randomInt(1, 100) : 0;
         boolean fridgeOn = heaterOutput == 0;
-        return new ChamberReadings(timeNow,
-                tTarget, tBeer, tExternal, tChamber, tPi, params.hasHeater ? heaterOutput : null, fridgeOn, Mode.AUTO, params);
+        return new ChamberReadings(timeNow, tTarget, tBeer, tExternal, tChamber, tPi,
+                params.hasHeater ? heaterOutput : null, fridgeOn, Mode.AUTO, params);
     }
+
     private Integer lastTExternal = null;
 
     /** @returns degrees C x 10 */
-    private int getExternalTempFromDate(Date date, Integer prevTemp)
-    {
+    private int getExternalTempFromDate(Date date, Integer prevTemp) {
         int tendTowards = _getExternalTempFromDate(date);
         if (prevTemp == null)
             return tendTowards;
@@ -81,8 +78,8 @@ public class MockChamberManager implements ChamberManager
         else
             return prevTemp - randomInt(1, 2);
     }
-    private int _getExternalTempFromDate(Date date)
-    {
+
+    private int _getExternalTempFromDate(Date date) {
         int nHours = date.getHours();
         if (0 <= nHours && nHours < 3)
             return 30;
@@ -101,22 +98,19 @@ public class MockChamberManager implements ChamberManager
         return 50;
     }
 
-    private static int getDayOfMonthFromDate(Date d)
-    {
+    private static int getDayOfMonthFromDate(Date d) {
         Calendar cal = Calendar.getInstance();
         cal.setTime(d);
         return cal.get(Calendar.DAY_OF_MONTH);
     }
 
-    private int randomInt(int from, int to)
-    {
+    private int randomInt(int from, int to) {
         return from + random.nextInt(to - from + 1);
     }
 
-
     /*
-     * The following fields and methods are only applicable to the simulator and would make no
-     * sense for a non-test ChamberManager.
+     * The following fields and methods are only applicable to the simulator and
+     * would make no sense for a non-test ChamberManager.
      */
 
     private final TemperatureProfile temperatureProfile;
@@ -126,19 +120,20 @@ public class MockChamberManager implements ChamberManager
     private Date nowTime = null;
 
     /**
-     * Whereas a genuine ChamberManager impl simply returns current values, this simulator doesn't operate
-     * in real time. Rather, it must be told where it is in the preprogrammed story. This principle allows
-     * tests to run faster than real time.
-     * @param now  Some point in time >= startTime
+     * Whereas a genuine ChamberManager impl simply returns current values, this
+     * simulator doesn't operate in real time. Rather, it must be told where it is
+     * in the preprogrammed story. This principle allows tests to run faster than
+     * real time.
+     * 
+     * @param now
+     *            Some point in time >= startTime
      */
-    public void setNowTime(Date now)
-    {
+    public void setNowTime(Date now) {
         this.nowTime = now;
     }
 
     @Override
-    public void slurpLogMessages()
-    {
+    public void slurpLogMessages() {
         // TODO Auto-generated method stub
 
     }

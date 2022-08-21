@@ -143,40 +143,34 @@ public class Gyle extends GyleDto {
     }
 
     /**
-     * Get readings from the chamber manager and store (in memory buffer if not
-     * persistently).
+     * Log readings (supplied from the chamber manager) and store (in memory buffer
+     * if not persistently).
      *
      * @param gyle
      * @param timeNow
-     *                    - Supplied by caller for the sake of testability. In real
-     *                    life it will be equal to the actual time now.
+     *            - Supplied by caller for the sake of testability. In real life it
+     *            will be equal to the actual time now.
      *
-     *                    Note: Recent readings are stored buffered in memory. When
-     *                    the buffer size limit is reached they're flushed to
-     *                    persistent storage (files on disk). The set of data files
-     *                    for the gyle are consolidated once in a while.
+     *            Note: Recent readings are stored buffered in memory. When the
+     *            buffer size limit is reached they're flushed to persistent storage
+     *            (files on disk). The set of data files for the gyle are
+     *            consolidated once in a while.
      * @throws IOException
      */
-    public void collectReadings(ChamberManager chamberManager, Date timeNow) throws IOException {
+    public void logLatestReadings(ChamberReadings chamberReadings, Date timeNow) throws IOException {
         final int chamberId = chamber.getId();
-        logger.debug("collectReadings() for chamber " + chamberId);
+        logger.debug("logLatestReadings() for chamber " + chamberId + " gyle " + gyleDir.getFileName());
 
-        ChamberReadings chamberReadings = chamberManager.getReadings(chamberId, timeNow);
-        if (logger.isDebugEnabled()) {
-            logger.debug("Chamber " + chamberId + " readings: " + chamberReadings.toString());
-        }
         latestChamberReadings = chamberReadings;
 
         if (logAnalysis == null)
             logAnalysis = new LogAnalysis(); // Fail fast rather than leave this until first flush
 
         // NOTE: We don't flush the buffer as soon as it becomes full because then a
-        // client
-        // keeping up-to-date by just consuming 'recent' records would likely miss a
-        // record.
-        // Instead, we leave the buffer full then, on the next call to this routine,
-        // check
-        // whether to flush before adding the first record of a new buffer.
+        // client keeping up-to-date by just consuming 'recent' records would likely
+        // miss a record. Instead, we leave the buffer full then, on the next call to
+        // this routine, check whether to flush before adding the first record of a new
+        // buffer.
 
         // If the memory buffer is ready to be flushed, flush & release, and consolidate
         // log files as necessary.
@@ -187,8 +181,7 @@ public class Gyle extends GyleDto {
                 logAnalysis.maybeConsolidateLogFiles();
             } else {
                 // Now that a little time has passed since the last consolidation, the redundant
-                // gen1
-                // files can be removed.
+                // gen1 files can be removed.
                 logAnalysis.performAnyPostConsolidationCleanup();
             }
         }
@@ -316,8 +309,7 @@ public class Gyle extends GyleDto {
                             lastDtEnd = fd.dtEnd;
 
                             // This would be inexplicable but let's check anyway: Having sorted by dtStart
-                            // ASC,
-                            // generations should implicitly be sorted DESC.
+                            // ASC, generations should implicitly be sorted DESC.
                             if (fd.generation > lastGeneration) {
                                 logger.error("Detected inexplicable log file on start-up: " + fd.getFilename());
                             } else {
@@ -490,8 +482,7 @@ public class Gyle extends GyleDto {
         private void optimiseReadings() {
             // Removes insignificant fluctuations in the temperature readings.
             // Must smooth before removing redundant records since the smoothing algorithm
-            // assumes readings
-            // are taken with a fixed frequency.
+            // assumes readings are taken with a fixed frequency.
             if (config.smoothTemperatureReadings)
                 for (IntPropertyAccessor temperatureAccessor : ChamberReadings.allTemperatureAccessors)
                     smoother.smoothOutSmallFluctuations((List) readingsList, temperatureAccessor);
@@ -504,9 +495,8 @@ public class Gyle extends GyleDto {
                     nullOutRedundantValues(readingsList, propertyName);
 
                 // Given that the records have been fed through `nullOutRedundantValues()`, any
-                // intermediate
-                // records where all the nullable properties have been set to null are
-                // redundant.
+                // intermediate records where all the nullable properties have been set to null
+                // are redundant.
                 if (config.removeRedundantIntermediateReadings)
                     removeRedundantIntermediateBeans(readingsList, ChamberReadings.getNullablePropertyNames());
             }

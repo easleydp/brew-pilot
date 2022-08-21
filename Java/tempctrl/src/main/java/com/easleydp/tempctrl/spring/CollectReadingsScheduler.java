@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 import com.easleydp.tempctrl.domain.Chamber;
 import com.easleydp.tempctrl.domain.ChamberManager;
 import com.easleydp.tempctrl.domain.ChamberParameters;
+import com.easleydp.tempctrl.domain.ChamberReadings;
 import com.easleydp.tempctrl.domain.ChamberRepository;
 import com.easleydp.tempctrl.domain.Gyle;
 
@@ -64,11 +65,17 @@ public class CollectReadingsScheduler {
             logger.debug("Slurping log messages AFTER SENDING parameters to chamber " + chamberId);
             chamberManager.slurpLogMessages();
 
+            logger.debug("Taking readings for chamber " + lg.chamber.getId());
+            ChamberReadings latestReadings = chamberManager.collectReadings(chamberId, timeNow);
+            if (logger.isDebugEnabled()) {
+                logger.debug("Chamber " + chamberId + " readings: " + latestReadings.toString());
+            }
+            ch.setLatestChamberReadings(latestReadings);
+            logger.debug("Slurping log messages AFTER COLLECTING readings for chamber " + chamberId);
+            chamberManager.slurpLogMessages();
+
             if (lg != null && lg.isActive()) {
-                logger.debug("Taking readings for chamber " + lg.chamber.getId() + " gyle " + lg.gyleDir.getFileName());
-                lg.collectReadings(chamberManager, timeNow);
-                logger.debug("Slurping log messages AFTER COLLECTING readings for chamber " + chamberId);
-                chamberManager.slurpLogMessages();
+                lg.logLatestReadings(latestReadings, timeNow);
             }
         } catch (Throwable t) {
             logger.error(t.getMessage(), t);
@@ -80,15 +87,16 @@ public class CollectReadingsScheduler {
     private void logDuration(int duration) {
         logger.debug("collectReadings took {}ms", duration);
 
-        // First collection tends to be so slow as to significantly skew the stats, so ignore.
+        // First collection tends to be so slow as to significantly skew the stats, so
+        // ignore.
         if (first) {
             first = false;
         } else {
             // Log warning if duration is significantly longer than average.
             int average = (int) (durationStats.getAverage() + 0.5);
-            if (durationStats.getCount() > 10  &&  duration >= average * 2) {
-                logger.warn("collectReadings took {}ms compared to average of {}ms and max of {}ms.",
-                    duration, average, durationStats.getMax());
+            if (durationStats.getCount() > 10 && duration >= average * 2) {
+                logger.warn("collectReadings took {}ms compared to average of {}ms and max of {}ms.", duration, average,
+                        durationStats.getMax());
             }
             durationStats.accept(duration);
         }
@@ -97,12 +105,14 @@ public class CollectReadingsScheduler {
     // Summary stats for external parties
     public static class ReadingsCollectionDurationStats {
         public final int min, max, average;
+
         ReadingsCollectionDurationStats(int min, int max, int average) {
             this.min = min;
             this.max = max;
             this.average = average;
         }
     }
+
     public ReadingsCollectionDurationStats getReadingsCollectionDurationStats() {
         if (durationStats.getCount() == 0) {
             return null;

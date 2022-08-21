@@ -31,7 +31,9 @@ public class GyleDataGenerator {
 
     private void collectReadings() throws IOException {
         chamberManagerSim.setNowTime(timeNow);
-        gyle.collectReadings(chamberManagerSim, timeNow);
+        ChamberReadings latestReadings = chamberManagerSim.collectReadings(chamber.getId(), timeNow);
+        chamber.setLatestChamberReadings(latestReadings);
+        gyle.logLatestReadings(latestReadings, timeNow);
     }
 
     @BeforeEach

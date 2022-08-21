@@ -37,6 +37,7 @@ public class Chamber extends ChamberDto {
     private Gyle latestGyle;
     private Path jsonFile;
     private Long jsonFileLastModified;
+    private ChamberReadings latestChamberReadings;
 
     public Chamber(Path chamberDir) {
         this.chamberDir = chamberDir;
@@ -114,12 +115,14 @@ public class Chamber extends ChamberDto {
         Path gylesDir = chamberDir.resolve("gyles");
         Assert.state(Files.exists(gylesDir), "'gyles' dir should exist for chamber " + id);
 
+        // @formatter:off
         try (Stream<Path> stream = Files.walk(gylesDir, 1)) {
             List<Path> dirs = stream
                     .filter(path -> Files.isDirectory(path))
                     .filter(path -> StringUtils.isNumeric(path.getFileName().toString()))
                     .filter(path -> Files.exists(path.resolve("gyle.json")))
                     .collect(Collectors.toList());
+            // @formatter:on
 
             Collections.sort(dirs, new Comparator<Path>() {
                 @Override
@@ -144,9 +147,7 @@ public class Chamber extends ChamberDto {
     }
 
     public synchronized List<Gyle> getGyles() {
-        return gyleDirs.stream()
-                .map(gDir -> new Gyle(this, gDir))
-                .collect(Collectors.toList());
+        return gyleDirs.stream().map(gDir -> new Gyle(this, gDir)).collect(Collectors.toList());
     }
 
     public int getId() {
@@ -161,16 +162,26 @@ public class Chamber extends ChamberDto {
         return latestGyle;
     }
 
+    public void setLatestChamberReadings(ChamberReadings readings) {
+        latestChamberReadings = readings;
+    }
+
+    public ChamberReadings getLatestChamberReadings() {
+        return latestChamberReadings;
+    }
+
     /**
      * Returns ChamberParameters sans gyleAgeHours, tTarget, tTargetNext and mode.
      * Serves as a sub for Gyle.getChamberParameters() when there is no
      * active/latest gyle.
      */
     public ChamberParameters getPartialChamberParameters() {
+        // @formatter:off
         return new ChamberParameters(0, 0, 0,
                 this.gettMin(), this.gettMax(), this.isHasHeater(),
                 this.getFridgeMinOnTimeMins(), this.getFridgeMinOffTimeMins(), this.getFridgeSwitchOnLagMins(),
                 this.getKp(), this.getKi(), this.getKd(), Mode.MONITOR_ONLY);
+        // @formatter:on
     }
 
 }

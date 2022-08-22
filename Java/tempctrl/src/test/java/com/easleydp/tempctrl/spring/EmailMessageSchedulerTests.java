@@ -247,7 +247,7 @@ class EmailMessageSchedulerTests {
     private static Date buildUtcDate(int year, int month /* zero based! */, int date, int hourOfDay, int minute) {
         Calendar c = Calendar.getInstance();
         c.setTimeZone(TimeZone.getTimeZone("UTC"));
-        c.set(year, month - 1, date, hourOfDay, minute);
+        c.set(year, month - 1, date, hourOfDay, minute, 0);
         return c.getTime();
     }
 

@@ -1,6 +1,7 @@
 package com.easleydp.tempctrl.spring;
 
 import static com.easleydp.tempctrl.domain.PropertyUtils.getInteger;
+import static com.easleydp.tempctrl.domain.Utils.roundToNearestHour;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -81,7 +82,7 @@ public class EmailMessageScheduler {
 
             long millisUntilTrigger = crashStartPoint.getMillisSinceStart() - priorNoticeMillis - millisSinceStart;
             if (millisUntilTrigger > 0 && millisUntilTrigger < periodMillis) {
-                Date when = new Date(timeNowMs + millisUntilTrigger + priorNoticeMillis);
+                Date when = roundToNearestHour(new Date(timeNowMs + millisUntilTrigger + priorNoticeMillis));
                 emailService.sendSimpleMessage("Plan to dry hop this gyle on " + dayOfWeek(when) + "?",
                         chamber.getName() + "'s gyle \"" + latestGyle.getName() + "\" is due to cold crash on "
                                 + on(when) + " at " + at(when) + ".");
@@ -101,7 +102,7 @@ public class EmailMessageScheduler {
 
             long millisUntilTrigger = crashEndPoint.getMillisSinceStart() + postCrashDwellMillis - millisSinceStart;
             if (millisUntilTrigger > 0 && millisUntilTrigger < periodMillis) {
-                Date when = new Date(timeNowMs + millisUntilTrigger);
+                Date when = roundToNearestHour(new Date(timeNowMs + millisUntilTrigger));
                 emailService.sendSimpleMessage("Bottle this gyle on " + dayOfWeek(when) + "?",
                         chamber.getName() + "'s gyle \"" + latestGyle.getName() + "\" could be bottled on " + on(when)
                                 + " at " + at(when) + ".");

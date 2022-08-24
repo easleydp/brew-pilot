@@ -70,9 +70,13 @@ public class Gyle extends GyleDto {
     private ChamberReadings latestChamberReadings;
 
     private long fileLastModified;
+    @JsonIgnore
     public final Chamber chamber;
+    @JsonIgnore
     public final Path gyleDir;
+    @JsonIgnore
     public final int id;
+    @JsonIgnore
     public final Path logsDir;
 
     private LogAnalysis logAnalysis;
@@ -96,10 +100,11 @@ public class Gyle extends GyleDto {
         refresh();
     }
 
-    public int getId() {
-        return id;
-    }
+    // public int getId() {
+    // return id;
+    // }
 
+    @JsonIgnore
     public long getFileLastModified() {
         return fileLastModified;
     }
@@ -123,6 +128,7 @@ public class Gyle extends GyleDto {
         return new TemperatureProfile(dto);
     }
 
+    @JsonIgnore
     public boolean isActive() {
         return getDtStarted() != null && getDtEnded() == null;
     }
@@ -244,13 +250,9 @@ public class Gyle extends GyleDto {
         Path jsonFile = gyleDir.resolve("gyle.json");
         ObjectMapper mapper = new ObjectMapper();
         ObjectWriter writer = mapper.writer(new DefaultPrettyPrinter());
-        writer.writeValue(jsonFile.toFile(), this.toDto());
+        writer.writeValue(jsonFile.toFile(), this);
         // We don't need to do anything special having updated the JSON file;
         // CollectReadingsScheduler will detect.
-    }
-
-    public GyleDto toDto() {
-        return new GyleDto(getName(), getTemperatureProfile(), getDtStarted(), getDtEnded(), getMode());
     }
 
     private class LogAnalysis {

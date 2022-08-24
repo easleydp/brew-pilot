@@ -1,9 +1,17 @@
 package com.easleydp.tempctrl.domain;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 
 public class TemperatureProfileTests {
     private TemperatureProfile profile;
@@ -86,5 +94,31 @@ public class TemperatureProfileTests {
         profile.addPoint(3, -1);
         assertEquals(profile.getPoints().get(3), profile.getCrashEndPoint(),
                 "Last point should still be end of crash.");
+    }
+
+    @Test
+    /**
+     * Prove a TemperatureProfile object (which is a TemperatureProfileDto) can be
+     * serialised to a JSON representation of the DTO and then deserialised to a
+     * TemperatureProfileDto without issue. Thereby prove there is no need for a
+     * `toDto()` method.
+     *
+     * If this test fails it probably means you recently added a new field or getter
+     * to the domain object and forgot to annotate `@JsonIgnore`.
+     */
+    public void testDomainObjectSerialisation() throws JsonProcessingException {
+        profile = new TemperatureProfile();
+        profile.addPoint(0, 175);
+        profile.addPoint(1, 0);
+
+        // Serialise
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectWriter writer = mapper.writer(new DefaultPrettyPrinter());
+        String json = writer.writeValueAsString(profile);
+
+        // Deserialise
+        TemperatureProfileDto dto = mapper.readValue(json, TemperatureProfileDto.class);
+
+        assertTrue(dto.equals(profile));
     }
 }

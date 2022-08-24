@@ -90,13 +90,13 @@ public class Chamber extends ChamberDto {
         Gyle _latestGyle = determineLatestGyleIfAny();
         if (_latestGyle == null || latestGyle == null) {
             latestGyle = _latestGyle;
-        } else if (_latestGyle.getId() != latestGyle.getId()) {
-            logger.info("**** Chamber " + id + "'s latest gyle (" + latestGyle.getId() + ") superseded: now "
-                    + _latestGyle.getId());
+        } else if (_latestGyle.id != latestGyle.id) {
+            logger.info(
+                    "**** Chamber " + id + "'s latest gyle (" + latestGyle.id + ") superseded: now " + _latestGyle.id);
             latestGyle.close();
             latestGyle = _latestGyle;
         } else if (_latestGyle.getFileLastModified() > latestGyle.getFileLastModified()) {
-            logger.info("**** Chamber " + id + "'s latest gyle (" + latestGyle.getId() + ") updated.");
+            logger.info("**** Chamber " + id + "'s latest gyle (" + latestGyle.id + ") updated.");
             latestGyle.refresh();
         }
     }

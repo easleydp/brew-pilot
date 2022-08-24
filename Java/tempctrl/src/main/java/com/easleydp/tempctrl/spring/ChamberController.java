@@ -117,8 +117,8 @@ public class ChamberController {
         Assert.state(latestGyle != null, "No latest gyle for chamber " + chamberId);
         // @formatter:off
         return new LatestGyleDetails(PropertyUtils.getReadingsTimestampResolutionMillis(),
-                PropertyUtils.getReadingsPeriodMillis(), chamber.getName(), chamber.isHasHeater(), latestGyle.getId(),
-                latestGyle.getName(), latestGyle.getTemperatureProfile().toDto(), latestGyle.getDtStarted(),
+                PropertyUtils.getReadingsPeriodMillis(), chamber.getName(), chamber.isHasHeater(), latestGyle.id,
+                latestGyle.getName(), latestGyle.getTemperatureProfile(), latestGyle.getDtStarted(),
                 latestGyle.getDtEnded(), latestGyle.getRecentReadings(),
                 latestGyle.getReadingsLogFilePaths().stream()
                         .map(path -> path.getFileName().toString().replace(".ndjson", ""))
@@ -197,7 +197,7 @@ public class ChamberController {
      */
     @GetMapping("/guest/chamber/{chamberId}/latest-gyle-profile")
     public TemperatureProfileDto getLatestGyleProfile(@PathVariable("chamberId") int chamberId) {
-        return getLatestGyleForChamber(chamberId).getTemperatureProfile().toDto();
+        return getLatestGyleForChamber(chamberId).getTemperatureProfile();
     }
 
     @PostMapping("/admin/chamber/{chamberId}/latest-gyle-profile")
@@ -205,7 +205,7 @@ public class ChamberController {
             @RequestBody TemperatureProfileDto profile) {
         logger.info("POST latest-gyle-profile, " + chamberId + ",\n\t" + profile);
         Gyle latestGyle = getLatestGyleForChamber(chamberId);
-        TemperatureProfileDto currentProfile = latestGyle.getTemperatureProfile().toDto();
+        TemperatureProfileDto currentProfile = latestGyle.getTemperatureProfile();
         if (currentProfile.equals(profile)) { // optimisation
             logger.info(" ... no change.");
             return;
@@ -222,7 +222,7 @@ public class ChamberController {
 
     @GetMapping("/guest/chamber/{chamberId}/latest-gyle")
     public GyleDto getLatestGyle(@PathVariable("chamberId") int chamberId) {
-        return getLatestGyleForChamber(chamberId).toDto();
+        return getLatestGyleForChamber(chamberId);
     }
 
     @PostMapping("/admin/chamber/{chamberId}/latest-gyle")

@@ -1,9 +1,12 @@
 package com.easleydp.tempctrl.domain;
 
-import static com.easleydp.tempctrl.domain.Utils.*;
-import static org.apache.commons.io.FileUtils.*;
-import static org.apache.commons.lang3.time.DateUtils.*;
-import static org.junit.jupiter.api.Assertions.*;
+import static com.easleydp.tempctrl.domain.Utils.reduceUtcMillisPrecision;
+import static org.apache.commons.io.FileUtils.listFiles;
+import static org.apache.commons.lang3.time.DateUtils.addMinutes;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -25,8 +28,11 @@ import org.springframework.util.Assert;
 import org.springframework.util.FileSystemUtils;
 
 import com.easleydp.tempctrl.domain.Gyle.LogFileDescriptor;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 
 public class GyleTests {
     private MockChamberManager chamberManagerSim;
@@ -292,6 +298,27 @@ public class GyleTests {
             timeNow = addMinutes(timeNow, 1);
             collectReadings();
         }
+    }
+
+    @Test
+    /**
+     * Prove a Gyle object (which is a GyleDto) can be serialised to a JSON
+     * representation of the DTO and then deserialised to a GyleDto without issue.
+     * Thereby prove there is no need for a `toDto()` method.
+     *
+     * If this test fails it probably means you recently added a new field or getter
+     * to the domain object and forgot to annotate `@JsonIgnore`.
+     */
+    public void testDomainObjectSerialisation() throws JsonProcessingException {
+        // Serialise
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectWriter writer = mapper.writer(new DefaultPrettyPrinter());
+        String json = writer.writeValueAsString(gyle);
+
+        // Deserialise
+        GyleDto dto = mapper.readValue(json, GyleDto.class);
+
+        assertTrue(dto.equals(gyle));
     }
 
 }

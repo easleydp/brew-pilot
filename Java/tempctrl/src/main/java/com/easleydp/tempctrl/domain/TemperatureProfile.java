@@ -149,8 +149,4 @@ public class TemperatureProfile extends TemperatureProfileDto {
     public PointDto getCrashEndPoint() {
         return getCrashStartPoint() != null ? points.get(points.size() - 1) : null;
     }
-
-    public TemperatureProfileDto toDto() {
-        return new TemperatureProfileDto(points);
-    }
 }

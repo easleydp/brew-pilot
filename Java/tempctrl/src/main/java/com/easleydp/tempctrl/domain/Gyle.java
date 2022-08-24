@@ -443,7 +443,7 @@ public class Gyle extends GyleDto {
             this.smoother = smoother;
         }
 
-        /** Jackson needs a default ctor */
+        // Default ctor needed for Jackson deserialisation
         public Buffer() {
         }
 

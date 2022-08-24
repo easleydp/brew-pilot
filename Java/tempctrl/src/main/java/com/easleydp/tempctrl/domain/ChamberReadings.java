@@ -5,13 +5,11 @@ import java.util.Date;
 import org.springframework.util.Assert;
 
 import com.easleydp.tempctrl.domain.optimise.Smoother.IntPropertyAccessor;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 /**
- * Value object representing a set of readings from a chamber. This is the class
- * that represents a serialised readings record. The ChamberParameters field,
- * however, is only held for consistency checking and is not serialised.
+ * Value object representing a serialised readings record (set of readings from
+ * a chamber).
  */
 public class ChamberReadings {
     /*
@@ -20,7 +18,7 @@ public class ChamberReadings {
      */
 
     public ChamberReadings(Date timeNow, int tTarget, int tBeer, int tExternal, int tChamber, int tPi,
-            Integer heaterOutput, boolean fridgeOn, Mode mode, ChamberParameters chamberParameters) {
+            Integer heaterOutput, boolean fridgeOn, Mode mode) {
         Assert.isTrue(timeNow != null, "timeNow is required");
 
         this.dt = Utils.reduceUtcMillisPrecision(timeNow);
@@ -34,11 +32,11 @@ public class ChamberReadings {
         this.heaterOutput = heaterOutput;
         this.fridgeOn = fridgeOn;
         this.mode = mode;
-        this.chamberParameters = chamberParameters;
     }
 
+    // Default ctor needed for Jackson deserialisation
     public ChamberReadings() {
-    } // Default ctor needed for Jackson deserialisation
+    }
 
     private int dt;
 
@@ -53,9 +51,8 @@ public class ChamberReadings {
 
     /**
      * Ordinarily, tTarget simply reflects the target temperature set by this
-     * application. But if mode is `HOLD` (or for some reason the ChamberParameters
-     * haven't been set) tTarget specifies the beer temperature as it was when the
-     * present mode was engaged.
+     * application. But if mode is `HOLD`tTarget specifies the beer temperature as
+     * it was when the present mode was engaged.
      */
     private Integer tTarget;
     /** Temperature of the beer */
@@ -104,16 +101,8 @@ public class ChamberReadings {
     public String toString() {
         return "[dt=" + dt + ", tTarget=" + tTarget + ", tBeer=" + tBeer + ", tExternal=" + tExternal + ", tChamber="
                 + tChamber + ", tPi=" + tPi + ", heaterOutput=" + heaterOutput + ", fridgeOn=" + fridgeOn + ", mode="
-                + mode + ", chamberParameters=" + chamberParameters.toString() + "]";
+                + mode + "]";
     }
-
-    /**
-     * Reflects the ChamberParameters set by this application, or null if none.
-     * Enables a sanity check between the controlling application and the chamber
-     * manager (Arduino).
-     */
-    @JsonIgnore // ChamberReadings is serialised to JSON. We don't want to include this.
-    public ChamberParameters chamberParameters;
 
     public int getDt() {
         return dt;

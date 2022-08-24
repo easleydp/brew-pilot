@@ -62,7 +62,7 @@ public class DummyChamberManager implements ChamberManager {
         boolean fridgeOn = heaterOutput == 0;
         Mode mode = Mode.AUTO;
         return new ChamberReadings(timeNow, tTarget, tBeer, tExternal, tChamber, tPi,
-                params.hasHeater ? heaterOutput : null, fridgeOn, mode, params);
+                params.hasHeater ? heaterOutput : null, fridgeOn, mode);
     }
 
     private static int getDayOfMonthFromDate(Date d) {

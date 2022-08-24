@@ -17,7 +17,7 @@ public class MockChamberManager implements ChamberManager {
 
     /**
      * When the temperatureProfile should be considered to have started.
-     * 
+     *
      * @param startTime
      *            Some point in time >= startTime
      */
@@ -62,7 +62,7 @@ public class MockChamberManager implements ChamberManager {
         int heaterOutput = getDayOfMonthFromDate(nowTime) % 2 == 0 ? randomInt(1, 100) : 0;
         boolean fridgeOn = heaterOutput == 0;
         return new ChamberReadings(timeNow, tTarget, tBeer, tExternal, tChamber, tPi,
-                params.hasHeater ? heaterOutput : null, fridgeOn, Mode.AUTO, params);
+                params.hasHeater ? heaterOutput : null, fridgeOn, Mode.AUTO);
     }
 
     private Integer lastTExternal = null;
@@ -124,7 +124,7 @@ public class MockChamberManager implements ChamberManager {
      * simulator doesn't operate in real time. Rather, it must be told where it is
      * in the preprogrammed story. This principle allows tests to run faster than
      * real time.
-     * 
+     *
      * @param now
      *            Some point in time >= startTime
      */

@@ -147,8 +147,7 @@ public class ArduinoChamberManager implements ChamberManager {
         }
 
         return new ChamberReadings(timeNow, tTarget, tBeer, tExternal, tChamber, tPi, hasHeater ? heaterOutput : null,
-                fridgeOn, mode, new ChamberParameters(gyleAgeHours, tTarget, tTargetNext, tMin, tMax, hasHeater,
-                        fridgeMinOnTimeMins, fridgeMinOffTimeMins, fridgeSwitchOnLagMins, Kp, Ki, Kd, mode));
+                fridgeOn, mode);
     }
 
     @Override

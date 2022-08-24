@@ -139,6 +139,53 @@ Seriously, unless you really know what you're doing it's a good idea to get an e
 **Branched sensor cable**:
 <br>![chart](README.resources/branched-cable.png)
 
+## Installation
+
+For the Spring Boot app, you should review and modify as necessary all the properties in
+`application-local.properties`. The properties in `application.properties` generally don't need to be changed but but you
+are free to override them in your `application-local.properties`.
+Best to install the app as a service. (In my case the `init.d` service file is `/lib/systemd/system/brewpilot.service`.)
+Your paths may vary but here are the commands I use:
+
+```
+# Build on the dev machine
+cd ~/brew-pilot/Java/tempctrl && ./gradlew bootJar
+
+# On the server, stop the Java app if necessary
+sudo systemctl stop brewpilot
+
+# From the dev machine, copy files to server:
+cd ~/brew-pilot/Java/tempctrl/build/libs && mv tempctrl*.jar app.jar && rsync -a --delete . david@raspberrypi:~/brew-pilot/Java/tempctrl/build/libs && rm app.jar
+
+# On the server, start the Java app
+sudo systemctl start brewpilot
+```
+
+Install the front-end app as per any standard React app, i.e. run `npm run build` then copy the contents of the `build` folder to the server. The command I use is:
+
+```
+cd ~/brew-pilot/frontend && npm run build && rsync -a --delete ~/brew-pilot/frontend/build/ david@raspberrypi:~/brew-pilot/frontend
+
+```
+
+The Arduino code is compiled and loaded in standard fashion. Your paths may vary but here are the commands I use (assumes you have `arduino-cli` installed on the server):
+
+```
+# On the server, stop the Java app
+sudo systemctl stop brewpilot
+
+# From the dev machine, copy files to server:
+rsync -a --delete ~/brew-pilot/Arduino/ david@raspberrypi:~/brew-pilot/Arduino
+
+# Now, on server, compile and load:
+~/bin/arduino-cli compile -p /dev/ttyUSB0 -b arduino:avr:uno -u -t ~/brew-pilot/Arduino/ChamberController
+
+# On the server, start the Java app
+sudo systemctl start brewpilot
+```
+
+Nginx config is as standard. Two files are provided in the `nginx` folder: `default` (goes in `/etc/nginx/sites-available`) and `nginx.conf` (goes in `/etc/nginx`). If nginx is already being used for something else, you'll need to merge the provided `default` file with your existing one.
+
 ## Demo
 
 An actual BrewPilot installation may be live here: https://brewpilot.ml/ (username: `guest`; password: `BeerIsGood!`)

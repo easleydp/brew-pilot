@@ -1,15 +1,6 @@
 // https://medium.com/simply/state-management-with-react-hooks-and-context-api-at-10-lines-of-code-baf6be8302c
 // https://stackoverflow.com/a/54667477/65555
 import React, { Dispatch, createContext, useContext, useReducer } from 'react';
-import Cookies from 'universal-cookie';
-
-const cookies = new Cookies();
-const removeIsAdminCookie = () => {
-  cookies.remove('isAdmin');
-};
-const setIsAdminCookie = (isAdmin: boolean) => {
-  cookies.set('isAdmin', isAdmin ? 'true' : 'false', { path: '/' });
-};
 
 export enum Auth {
   LoggedIn,
@@ -41,11 +32,9 @@ export const reducer = (state: AppState, action: Actions) => {
   switch (action.type) {
     case 'LOGOUT':
       console.debug('LOGOUT action executing');
-      removeIsAdminCookie();
       return { ...state, isAuth: Auth.NotLoggedIn, isAdmin: false };
     case 'LOGIN':
       console.debug('LOGIN action executing');
-      setIsAdminCookie(action.isAdmin);
       return { ...state, isAuth: Auth.LoggedIn, isAdmin: action.isAdmin };
   }
 };

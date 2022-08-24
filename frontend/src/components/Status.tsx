@@ -4,7 +4,6 @@ import axios from 'axios';
 import { useAppState, Auth } from './state';
 import { useHistory, useLocation } from 'react-router-dom';
 import ILocationState from '../api/ILocationState';
-import Cookies from 'universal-cookie';
 import Loading from './Loading';
 
 const syntaxHighlight = (json: string) => {

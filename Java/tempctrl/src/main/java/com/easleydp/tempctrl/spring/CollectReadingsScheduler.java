@@ -40,10 +40,13 @@ public class CollectReadingsScheduler {
         logger.debug("collectReadings called");
 
         Date timeNow = new Date();
-        chamberRepository.getChambers().stream().forEach(ch -> {
-            ch.checkForUpdates();
-            collectReadingsForChamber(ch, timeNow);
-        });
+        // @formatter:off
+        chamberRepository.getChambers()
+            .forEach(ch -> {
+                ch.checkForUpdates();
+                collectReadingsForChamber(ch, timeNow);
+            });
+        // @formatter:on
 
         logDuration((int) (System.currentTimeMillis() - timeNow.getTime()));
     }

@@ -30,9 +30,13 @@ public class ChamberRepository {
         chambersDir = dataDir.resolve("chambers");
         Assert.state(Files.exists(chambersDir), "chambers dir should exist");
 
-        getChamberDirs().stream().map(cd -> new Chamber(cd)).forEach(c -> {
-            chambers.add(c);
-        });
+        // @formatter:off
+        getChamberDirs().stream()
+            .map(cd -> new Chamber(cd))
+            .forEach(c -> {
+                chambers.add(c);
+            });
+        // @formatter:on
     }
 
     /** Finds chamber dirs in order (1, 2, ...) */
@@ -62,9 +66,11 @@ public class ChamberRepository {
     }
 
     public Chamber getChamberById(int id) {
+        // @formatter:off
         return chambers.stream()
-                .filter(ch -> ch.getId() == id)
-                .findFirst()
-                .orElseThrow();
+            .filter(ch -> ch.getId() == id)
+            .findFirst()
+            .orElseThrow();
+            // @formatter:on
     }
 }

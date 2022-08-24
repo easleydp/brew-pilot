@@ -7,6 +7,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.util.Assert;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 /**
  * Represents a temperature profile defined by a user.
  * <li>The first point represents the start temperature; must have
@@ -105,6 +107,7 @@ public class TemperatureProfile extends TemperatureProfileDto {
      *         where the gradient is at least 0.5°C/hr and temp drop is at least
      *         5°C.
      */
+    @JsonIgnore // In case this DTO subclass is ever serialised
     public PointDto getCrashStartPoint() {
         if (points.size() < 3) {
             return null;
@@ -142,6 +145,7 @@ public class TemperatureProfile extends TemperatureProfileDto {
      *         Specifically, we first check for the presence of a crashStartPoint,
      *         then, if found return the last point in the profile.
      */
+    @JsonIgnore // In case this DTO subclass is ever serialised
     public PointDto getCrashEndPoint() {
         return getCrashStartPoint() != null ? points.get(points.size() - 1) : null;
     }

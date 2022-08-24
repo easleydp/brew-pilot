@@ -212,6 +212,7 @@ public class Gyle extends GyleDto {
         }
     }
 
+    @JsonIgnore // In case this DTO subclass is ever serialised
     public ChamberReadings getLatestReadings() {
         return latestChamberReadings;
     }
@@ -219,6 +220,7 @@ public class Gyle extends GyleDto {
     /**
      * Returns the recent (i.e. buffered) readings in chronological order.
      */
+    @JsonIgnore // In case this DTO subclass is ever serialised
     public List<ChamberReadings> getRecentReadings() {
         return buffer != null ? unmodifiableList(buffer.readingsList) : emptyList();
     }
@@ -226,11 +228,16 @@ public class Gyle extends GyleDto {
     /**
      * Returns the readings log file paths in chronological order.
      */
+    @JsonIgnore // In case this DTO subclass is ever serialised
     public List<Path> getReadingsLogFilePaths() {
         if (logAnalysis == null)
             logAnalysis = new LogAnalysis();
 
-        return logAnalysis.logFileDescriptors.stream().map(lfd -> lfd.logFile).collect(Collectors.toList());
+        // @formatter:off
+        return logAnalysis.logFileDescriptors.stream()
+            .map(lfd -> lfd.logFile)
+            .collect(Collectors.toList());
+        // @formatter:on
     }
 
     public void persist() throws IOException {
@@ -379,7 +386,11 @@ public class Gyle extends GyleDto {
         }
 
         private List<LogFileDescriptor> getGenNDescriptors(int gen) {
-            return logFileDescriptors.stream().filter(ld -> ld.generation == gen).collect(Collectors.toList());
+            // @formatter:off
+            return logFileDescriptors.stream()
+                .filter(ld -> ld.generation == gen)
+                .collect(Collectors.toList());
+            // @formatter:on
         }
     }
 
@@ -441,7 +452,7 @@ public class Gyle extends GyleDto {
             lastAddedAt = addedAt;
         }
 
-        @JsonIgnore
+        @JsonIgnore // In case this DTO subclass is ever serialised
         public boolean isReadyToBeFlushed() {
             return readingsList.size() >= config.gen1ReadingsCount;
         }

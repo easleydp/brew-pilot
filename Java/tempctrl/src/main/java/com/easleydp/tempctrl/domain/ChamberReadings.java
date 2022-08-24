@@ -9,19 +9,18 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 /**
- * Value object representing a set of readings from a chamber.
+ * Value object representing a set of readings from a chamber. This is the class
+ * that represents a serialised readings record. The ChamberParameters field,
+ * however, is only held for consistency checking and is not serialised.
  */
-public class ChamberReadings
-{
+public class ChamberReadings {
     /*
-     * NOTE: All temperature values are degrees x 10, e.g. a value of 175 represents 17.5 degrees.
+     * NOTE: All temperature values are degrees x 10, e.g. a value of 175 represents
+     * 17.5 degrees.
      */
 
-    public ChamberReadings(
-            Date timeNow, int tTarget, int tBeer, int tExternal, int tChamber, int tPi,
-            Integer heaterOutput, boolean fridgeOn, Mode mode,
-            ChamberParameters chamberParameters)
-    {
+    public ChamberReadings(Date timeNow, int tTarget, int tBeer, int tExternal, int tChamber, int tPi,
+            Integer heaterOutput, boolean fridgeOn, Mode mode, ChamberParameters chamberParameters) {
         Assert.isTrue(timeNow != null, "timeNow is required");
 
         this.dt = Utils.reduceUtcMillisPrecision(timeNow);
@@ -38,8 +37,8 @@ public class ChamberReadings
         this.chamberParameters = chamberParameters;
     }
 
-    public ChamberReadings() {}  // Default ctor needed for Jackson deserialisation
-
+    public ChamberReadings() {
+    } // Default ctor needed for Jackson deserialisation
 
     private int dt;
 
@@ -48,14 +47,15 @@ public class ChamberReadings
      *
      * These aren't final because they may need to be smoothed.
      *
-     * `Integer` only because they may be nulled-out to signify same value as the previous
-     * reading. In readings fresh from the chamber they will never be null.
+     * `Integer` only because they may be nulled-out to signify same value as the
+     * previous reading. In readings fresh from the chamber they will never be null.
      */
 
     /**
-     * Ordinarily, tTarget simply reflects the target temperature set by this application.
-     * But if mode is `HOLD` (or for some reason the ChamberParameters haven't been set)
-     * tTarget specifies the beer temperature as it was when the present mode was engaged.
+     * Ordinarily, tTarget simply reflects the target temperature set by this
+     * application. But if mode is `HOLD` (or for some reason the ChamberParameters
+     * haven't been set) tTarget specifies the beer temperature as it was when the
+     * present mode was engaged.
      */
     private Integer tTarget;
     /** Temperature of the beer */
@@ -68,208 +68,195 @@ public class ChamberReadings
     private Integer tPi;
 
     /**
-     * Percentage of heater power x 100 (i.e. 0 <= value <= 100), 0 signifying heater off.
+     * Percentage of heater power x 100 (i.e. 0 <= value <= 100), 0 signifying
+     * heater off.
      *
-     * `Integer` only because it may be nulled-out to signify same value as the previous
-     * reading, or when no heater. In readings fresh from a chamber equipped with a heater
-     * it will never be null.
+     * `Integer` only because it may be nulled-out to signify same value as the
+     * previous reading, or when no heater. In readings fresh from a chamber
+     * equipped with a heater it will never be null.
      */
     private Integer heaterOutput;
 
     /**
      * Whether the cooler is on or off.
      *
-     * `Boolean` only because it may be nulled-out to signify same value as the previous
-     * reading. In readings fresh from the chamber it will never be null.
+     * `Boolean` only because it may be nulled-out to signify same value as the
+     * previous reading. In readings fresh from the chamber it will never be null.
      */
     private Boolean fridgeOn;
 
     /**
      * Current mode for the chamber / active gyle.
      *
-     * `null` signifies same value as the previous reading. In readings fresh from the
-     * chamber it will never be null.
+     * `null` signifies same value as the previous reading. In readings fresh from
+     * the chamber it will never be null.
      */
     private Mode mode;
 
+    private static final String[] nullablePropertyNames = new String[] { "tTarget", "tBeer", "tExternal", "tChamber",
+            "tPi", "heaterOutput", "fridgeOn", "mode" };
 
-    private static final String[] nullablePropertyNames = new String[] {
-            "tTarget", "tBeer", "tExternal", "tChamber", "tPi",
-            "heaterOutput", "fridgeOn", "mode"
-    };
-    public static String[] getNullablePropertyNames()
-    {
+    public static String[] getNullablePropertyNames() {
         return nullablePropertyNames;
     }
 
-
     @Override
-    public String toString()
-    {
-        return "[dt=" + dt + ", tTarget=" + tTarget + ", tBeer=" + tBeer
-                + ", tExternal=" + tExternal + ", tChamber=" + tChamber + ", tPi=" + tPi
-                + ", heaterOutput=" + heaterOutput + ", fridgeOn=" + fridgeOn + ", mode=" + mode
-                + ", chamberParameters=" + chamberParameters.toString() + "]";
+    public String toString() {
+        return "[dt=" + dt + ", tTarget=" + tTarget + ", tBeer=" + tBeer + ", tExternal=" + tExternal + ", tChamber="
+                + tChamber + ", tPi=" + tPi + ", heaterOutput=" + heaterOutput + ", fridgeOn=" + fridgeOn + ", mode="
+                + mode + ", chamberParameters=" + chamberParameters.toString() + "]";
     }
-
 
     /**
      * Reflects the ChamberParameters set by this application, or null if none.
-     * Enables a sanity check between the controlling application and the chamber manager (Arduino).
+     * Enables a sanity check between the controlling application and the chamber
+     * manager (Arduino).
      */
-    @JsonIgnore
+    @JsonIgnore // ChamberReadings is serialised to JSON. We don't want to include this.
     public ChamberParameters chamberParameters;
 
-
-    public int getDt()
-    {
+    public int getDt() {
         return dt;
     }
+
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public Integer gettTarget()
-    {
+    public Integer gettTarget() {
         return tTarget;
     }
-    public void settTarget(Integer tTarget)
-    {
+
+    public void settTarget(Integer tTarget) {
         this.tTarget = tTarget;
     }
+
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public Integer gettBeer()
-    {
+    public Integer gettBeer() {
         return tBeer;
     }
-    public void settBeer(Integer tBeer)
-    {
+
+    public void settBeer(Integer tBeer) {
         this.tBeer = tBeer;
     }
+
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public Integer gettExternal()
-    {
+    public Integer gettExternal() {
         return tExternal;
     }
-    public void settExternal(Integer tExternal)
-    {
+
+    public void settExternal(Integer tExternal) {
         this.tExternal = tExternal;
     }
+
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public Integer gettChamber()
-    {
+    public Integer gettChamber() {
         return tChamber;
     }
-    public void settChamber(Integer tChamber)
-    {
+
+    public void settChamber(Integer tChamber) {
         this.tChamber = tChamber;
     }
+
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public Integer gettPi()
-    {
+    public Integer gettPi() {
         return tPi;
     }
-    public void settPi(Integer tPi)
-    {
+
+    public void settPi(Integer tPi) {
         this.tPi = tPi;
     }
-    @JsonInclude(JsonInclude.Include.NON_NULL) // Note: we deliberately include zero since non-inclusion generally signifies 'same as previous value'.
-    public Integer getHeaterOutput()
-    {
+
+    @JsonInclude(JsonInclude.Include.NON_NULL) // Note: we deliberately include zero since non-inclusion generally
+                                               // signifies 'same as previous value'.
+    public Integer getHeaterOutput() {
         return heaterOutput;
     }
-    public void setHeaterOutput(Integer heaterOutput)
-    {
+
+    public void setHeaterOutput(Integer heaterOutput) {
         this.heaterOutput = heaterOutput;
     }
-    @JsonInclude(JsonInclude.Include.NON_NULL) // Note: we deliberately include false since non-inclusion generally signifies 'same as previous value'.
-    public Boolean getFridgeOn()
-    {
+
+    @JsonInclude(JsonInclude.Include.NON_NULL) // Note: we deliberately include false since non-inclusion generally
+                                               // signifies 'same as previous value'.
+    public Boolean getFridgeOn() {
         return fridgeOn;
     }
-    public void setFridgeOn(Boolean fridgeOn)
-    {
+
+    public void setFridgeOn(Boolean fridgeOn) {
         this.fridgeOn = fridgeOn;
     }
+
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public Mode getMode()
-    {
+    public Mode getMode() {
         return mode;
     }
-    public void setMode(Mode mode)
-    {
+
+    public void setMode(Mode mode) {
         this.mode = mode;
     }
 
+    /*
+     * Provide IntPropertyAccessor for each temperature to support smoothing using
+     * the Smoother class
+     */
 
-    /* Provide IntPropertyAccessor for each temperature to support smoothing using the Smoother class */
-
-    public static IntPropertyAccessor tTargetAccessor = new IntPropertyAccessor()
-    {
+    public static IntPropertyAccessor tTargetAccessor = new IntPropertyAccessor() {
         @Override
-        public int getValue(Object record)
-        {
+        public int getValue(Object record) {
             return ((ChamberReadings) record).tTarget;
         }
+
         @Override
-        public void setValue(Object record, int value)
-        {
+        public void setValue(Object record, int value) {
             ((ChamberReadings) record).tTarget = value;
         }
     };
 
-    public static IntPropertyAccessor tBeerAccessor = new IntPropertyAccessor()
-    {
+    public static IntPropertyAccessor tBeerAccessor = new IntPropertyAccessor() {
         @Override
-        public int getValue(Object record)
-        {
+        public int getValue(Object record) {
             return ((ChamberReadings) record).tBeer;
         }
+
         @Override
-        public void setValue(Object record, int value)
-        {
+        public void setValue(Object record, int value) {
             ((ChamberReadings) record).tBeer = value;
         }
     };
 
-    public static IntPropertyAccessor tExternalAccessor = new IntPropertyAccessor()
-    {
+    public static IntPropertyAccessor tExternalAccessor = new IntPropertyAccessor() {
         @Override
-        public int getValue(Object record)
-        {
+        public int getValue(Object record) {
             return ((ChamberReadings) record).tExternal;
         }
+
         @Override
-        public void setValue(Object record, int value)
-        {
+        public void setValue(Object record, int value) {
             ((ChamberReadings) record).tExternal = value;
         }
     };
-    public static IntPropertyAccessor tChamberAccessor = new IntPropertyAccessor()
-    {
+    public static IntPropertyAccessor tChamberAccessor = new IntPropertyAccessor() {
         @Override
-        public int getValue(Object record)
-        {
+        public int getValue(Object record) {
             return ((ChamberReadings) record).tChamber;
         }
+
         @Override
-        public void setValue(Object record, int value)
-        {
+        public void setValue(Object record, int value) {
             ((ChamberReadings) record).tChamber = value;
         }
     };
-    public static IntPropertyAccessor tPiAccessor = new IntPropertyAccessor()
-    {
+    public static IntPropertyAccessor tPiAccessor = new IntPropertyAccessor() {
         @Override
-        public int getValue(Object record)
-        {
+        public int getValue(Object record) {
             return ((ChamberReadings) record).tPi;
         }
+
         @Override
-        public void setValue(Object record, int value)
-        {
+        public void setValue(Object record, int value) {
             ((ChamberReadings) record).tPi = value;
         }
     };
 
-    public static IntPropertyAccessor[] allTemperatureAccessors = new IntPropertyAccessor[] {
-            tTargetAccessor, tBeerAccessor, tExternalAccessor, tChamberAccessor, tPiAccessor};
+    public static IntPropertyAccessor[] allTemperatureAccessors = new IntPropertyAccessor[] { tTargetAccessor,
+            tBeerAccessor, tExternalAccessor, tChamberAccessor, tPiAccessor };
 
 }

@@ -163,9 +163,12 @@ public class GyleTests {
     }
 
     private List<LogFileDescriptor> listLogFiles() {
+        // @formatter:off
         List<LogFileDescriptor> fileDescs = new ArrayList<>(
                 listFiles(gyle.logsDir.toFile(), new String[] { "ndjson" }, false)).stream()
-                        .map(f -> new LogFileDescriptor(f.toPath())).collect(Collectors.toList());
+                        .map(f -> new LogFileDescriptor(f.toPath()))
+                        .collect(Collectors.toList());
+        // @formatter:on
 
         // Sort chronologically
         fileDescs.sort(new Comparator<LogFileDescriptor>() {

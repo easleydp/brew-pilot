@@ -147,7 +147,11 @@ public class Chamber extends ChamberDto {
     }
 
     public synchronized List<Gyle> getGyles() {
-        return gyleDirs.stream().map(gDir -> new Gyle(this, gDir)).collect(Collectors.toList());
+        // @formatter:off
+        return gyleDirs.stream()
+            .map(gDir -> new Gyle(this, gDir))
+            .collect(Collectors.toList());
+        // @formatter:on
     }
 
     public int getId() {

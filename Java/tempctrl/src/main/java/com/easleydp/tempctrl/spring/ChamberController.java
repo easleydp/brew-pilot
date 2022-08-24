@@ -43,12 +43,16 @@ public class ChamberController {
      */
     @GetMapping("/guest/chamber-summaries-and-user-type")
     public ChamberSummariesAndUserType getChamberSummaries(HttpServletRequest request) {
-        List<ChamberSummary> chamberSummaries = chamberRepository.getChambers().stream().map(c -> {
-            Gyle lg = c.getLatestGyle();
-            ChamberReadings readings = lg != null ? lg.getLatestReadings() : null;
-            Integer tTarget = readings != null && lg.isActive() ? readings.gettTarget() : null;
-            return new ChamberSummary(c.getId(), c.getName(), tTarget);
-        }).collect(Collectors.toList());
+        // @formatter:off
+        List<ChamberSummary> chamberSummaries = chamberRepository.getChambers().stream()
+            .map(c -> {
+                Gyle lg = c.getLatestGyle();
+                ChamberReadings readings = lg != null ? lg.getLatestReadings() : null;
+                Integer tTarget = readings != null && lg.isActive() ? readings.gettTarget() : null;
+                return new ChamberSummary(c.getId(), c.getName(), tTarget);
+            })
+            .collect(Collectors.toList());
+        // @formatter:on
 
         return new ChamberSummariesAndUserType(chamberSummaries, request.isUserInRole("ADMIN"));
     }
@@ -111,13 +115,15 @@ public class ChamberController {
         Chamber chamber = chamberRepository.getChamberById(chamberId); // throws if not found
         Gyle latestGyle = chamber.getLatestGyle();
         Assert.state(latestGyle != null, "No latest gyle for chamber " + chamberId);
+        // @formatter:off
         return new LatestGyleDetails(PropertyUtils.getReadingsTimestampResolutionMillis(),
                 PropertyUtils.getReadingsPeriodMillis(), chamber.getName(), chamber.isHasHeater(), latestGyle.getId(),
-                latestGyle.getName(), latestGyle.getTemperatureProfile(), latestGyle.getDtStarted(),
+                latestGyle.getName(), latestGyle.getTemperatureProfile().toDto(), latestGyle.getDtStarted(),
                 latestGyle.getDtEnded(), latestGyle.getRecentReadings(),
                 latestGyle.getReadingsLogFilePaths().stream()
                         .map(path -> path.getFileName().toString().replace(".ndjson", ""))
                         .collect(Collectors.toList()));
+        // @formatter:on
     }
 
     private static final class LatestGyleDetails {
@@ -178,7 +184,11 @@ public class ChamberController {
     public List<ChamberReadings> getLatestGyleRecentReadings(@PathVariable("chamberId") int chamberId,
             @RequestParam(value = "sinceDt", required = true) int sinceDt) {
         Gyle latestGyle = getLatestGyleForChamber(chamberId);
-        return latestGyle.getRecentReadings().stream().filter(cr -> cr.getDt() > sinceDt).collect(Collectors.toList());
+        // @formatter:off
+        return latestGyle.getRecentReadings().stream()
+            .filter(cr -> cr.getDt() > sinceDt)
+            .collect(Collectors.toList());
+        // @formatter:on
     }
 
     /**
@@ -195,7 +205,7 @@ public class ChamberController {
             @RequestBody TemperatureProfileDto profile) {
         logger.info("POST latest-gyle-profile, " + chamberId + ",\n\t" + profile);
         Gyle latestGyle = getLatestGyleForChamber(chamberId);
-        TemperatureProfileDto currentProfile = latestGyle.getTemperatureProfile();
+        TemperatureProfileDto currentProfile = latestGyle.getTemperatureProfile().toDto();
         if (currentProfile.equals(profile)) { // optimisation
             logger.info(" ... no change.");
             return;
@@ -231,13 +241,16 @@ public class ChamberController {
     @PreDestroy
     public void destroy() {
         logger.info("**** destroy ****");
-        chamberRepository.getChambers().stream().forEach(chamber -> {
-            Gyle latestGyle = chamber.getLatestGyle();
-            if (latestGyle != null && latestGyle.isActive()) {
-                logger.info("Closing chamber " + chamber.getId() + ", gyle " + latestGyle.id);
-                latestGyle.close();
-            }
-        });
+        // @formatter:off
+        chamberRepository.getChambers().stream()
+            .forEach(chamber -> {
+                Gyle latestGyle = chamber.getLatestGyle();
+                if (latestGyle != null && latestGyle.isActive()) {
+                    logger.info("Closing chamber " + chamber.getId() + ", gyle " + latestGyle.id);
+                    latestGyle.close();
+                }
+            });
+        // @formatter:on
     }
 
 }

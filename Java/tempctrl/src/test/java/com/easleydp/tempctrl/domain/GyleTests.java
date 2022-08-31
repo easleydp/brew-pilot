@@ -54,7 +54,6 @@ public class GyleTests {
     }
 
     private void collectReadings(ReadingsMassager massager) throws IOException {
-        chamberManagerSim.setNowTime(timeNow);
         ChamberReadings latestReadings = chamberManagerSim.collectReadings(chamber.getId(), timeNow);
         chamber.setLatestChamberReadings(massager != null ? massager.massage(latestReadings) : latestReadings);
         gyle.logLatestReadings(latestReadings, timeNow);

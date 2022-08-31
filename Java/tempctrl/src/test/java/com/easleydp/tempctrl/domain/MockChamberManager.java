@@ -35,10 +35,10 @@ public class MockChamberManager implements ChamberManager {
     public ChamberReadings collectReadings(int chamberId, Date timeNow) {
         random = new Random(timeNow.hashCode() + chamberId * 3);
 
-        Assert.state(nowTime != null, "nowTime should be set before calling this method.");
+        Assert.state(timeNow != null, "timeNow must be supplied.");
         Assert.state(startTime != null, "startTime should be set before calling this method.");
-        long millisSinceStart = nowTime.getTime() - startTime.getTime();
-        Assert.state(millisSinceStart >= 0, "nowTime should not be before startTime.");
+        long millisSinceStart = timeNow.getTime() - startTime.getTime();
+        Assert.state(millisSinceStart >= 0, "timeNow should not be before startTime.");
         Assert.state(temperatureProfile != null, "temperatureProfile should be set before calling this method.");
 
         int tTarget, tTargetNext, tMin, tMax;
@@ -59,7 +59,7 @@ public class MockChamberManager implements ChamberManager {
         int tExternal = lastTExternal = getExternalTempFromDate(timeNow, lastTExternal);
         int tChamber = ((tBeer + tExternal) / 2) + randomInt(-20, 20);
         int tPi = tExternal + randomInt(50, 70);
-        int heaterOutput = getDayOfMonthFromDate(nowTime) % 2 == 0 ? randomInt(1, 100) : 0;
+        int heaterOutput = getDayOfMonthFromDate(timeNow) % 2 == 0 ? randomInt(1, 100) : 0;
         boolean fridgeOn = heaterOutput == 0;
         return new ChamberReadings(timeNow, tTarget, tBeer, tExternal, tChamber, tPi,
                 params.hasHeater ? heaterOutput : null, fridgeOn, Mode.AUTO);
@@ -116,21 +116,6 @@ public class MockChamberManager implements ChamberManager {
     private final TemperatureProfile temperatureProfile;
     /** startTime provides the reference for when temperatureProfile was started. */
     private final Date startTime;
-    /** nowTime - startTime is used when interpolating temperatureProfile. */
-    private Date nowTime = null;
-
-    /**
-     * Whereas a genuine ChamberManager impl simply returns current values, this
-     * simulator doesn't operate in real time. Rather, it must be told where it is
-     * in the preprogrammed story. This principle allows tests to run faster than
-     * real time.
-     *
-     * @param now
-     *            Some point in time >= startTime
-     */
-    public void setNowTime(Date now) {
-        this.nowTime = now;
-    }
 
     @Override
     public void slurpLogMessages() {

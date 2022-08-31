@@ -30,7 +30,6 @@ public class GyleDataGenerator {
     private static final int maxGenerations = 3;
 
     private void collectReadings() throws IOException {
-        chamberManagerSim.setNowTime(timeNow);
         ChamberReadings latestReadings = chamberManagerSim.collectReadings(chamber.getId(), timeNow);
         chamber.setLatestChamberReadings(latestReadings);
         gyle.logLatestReadings(latestReadings, timeNow);
@@ -51,7 +50,7 @@ public class GyleDataGenerator {
                 FileSystemUtils.deleteRecursively(g.gyleDir.resolve("logs"));
     }
 
-    // @Test // Slow test. Only enable when needed.
+    // @Test // SLOW TEST - only enable when needed.
     /** From 4 weeks ago up until now. */
     public void shouldGenerateRealisticDataFor4WeekGyle() throws Exception {
         Date endTime = new Date();

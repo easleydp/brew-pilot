@@ -47,7 +47,7 @@ public class ChamberController {
         List<ChamberSummary> chamberSummaries = chamberRepository.getChambers().stream()
             .map(c -> {
                 Gyle lg = c.getLatestGyle();
-                ChamberReadings readings = lg != null ? lg.getLatestReadings() : null;
+                ChamberReadings readings = lg != null ? lg.getLatestReadingsRecord() : null;
                 Integer tTarget = readings != null && lg.isActive() ? readings.gettTarget() : null;
                 return new ChamberSummary(c.getId(), c.getName(), tTarget);
             })
@@ -119,7 +119,7 @@ public class ChamberController {
         return new LatestGyleDetails(PropertyUtils.getReadingsTimestampResolutionMillis(),
                 PropertyUtils.getReadingsPeriodMillis(), chamber.getName(), chamber.isHasHeater(), latestGyle.id,
                 latestGyle.getName(), latestGyle.getTemperatureProfile(), latestGyle.getDtStarted(),
-                latestGyle.getDtEnded(), latestGyle.getRecentReadings(),
+                latestGyle.getDtEnded(), latestGyle.getRecentReadingsList(),
                 latestGyle.getReadingsLogFilePaths().stream()
                         .map(path -> path.getFileName().toString().replace(".ndjson", ""))
                         .collect(Collectors.toList()));
@@ -185,7 +185,7 @@ public class ChamberController {
             @RequestParam(value = "sinceDt", required = true) int sinceDt) {
         Gyle latestGyle = getLatestGyleForChamber(chamberId);
         // @formatter:off
-        return latestGyle.getRecentReadings().stream()
+        return latestGyle.getRecentReadingsList().stream()
             .filter(cr -> cr.getDt() > sinceDt)
             .collect(Collectors.toList());
         // @formatter:on

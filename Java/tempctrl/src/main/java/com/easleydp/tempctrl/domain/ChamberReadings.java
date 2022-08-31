@@ -2,6 +2,7 @@ package com.easleydp.tempctrl.domain;
 
 import java.util.Date;
 
+import org.springframework.beans.BeanUtils;
 import org.springframework.util.Assert;
 
 import com.easleydp.tempctrl.domain.optimise.Smoother.IntPropertyAccessor;
@@ -16,6 +17,10 @@ public class ChamberReadings {
      * NOTE: All temperature values are degrees x 10, e.g. a value of 175 represents
      * 17.5 degrees.
      */
+
+    // Default ctor needed for Jackson deserialisation
+    public ChamberReadings() {
+    }
 
     public ChamberReadings(Date timeNow, int tTarget, int tBeer, int tExternal, int tChamber, int tPi,
             Integer heaterOutput, boolean fridgeOn, Mode mode) {
@@ -34,8 +39,16 @@ public class ChamberReadings {
         this.mode = mode;
     }
 
-    // Default ctor needed for Jackson deserialisation
-    public ChamberReadings() {
+    public ChamberReadings(ChamberReadings cr) {
+        this.dt = cr.dt;
+        this.tTarget = cr.tTarget;
+        this.tBeer = cr.tBeer;
+        this.tExternal = cr.tExternal;
+        this.tChamber = cr.tChamber;
+        this.tPi = cr.tPi;
+        this.heaterOutput = cr.heaterOutput;
+        this.fridgeOn = cr.fridgeOn;
+        this.mode = cr.mode;
     }
 
     private int dt;
@@ -106,6 +119,10 @@ public class ChamberReadings {
 
     public int getDt() {
         return dt;
+    }
+
+    public void setDt(int dt) {
+        this.dt = dt;
     }
 
     @JsonInclude(JsonInclude.Include.NON_NULL)

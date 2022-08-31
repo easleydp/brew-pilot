@@ -209,10 +209,9 @@ void initChamberData() {
     ChamberParams& params = cd.params;
     MovingChamberParams& mParams = cd.mParams;
 
-    // These values will typically be replaced by the value from EEPROM
-    mParams.tTarget = mParams.tTargetNext = 160;
-    mParams.gyleAgeHours = -1;  // -1 signifies beer fridge, in which case this value won't be incremented by MCU
     // These values will typically be replaced by the value from EEPROM then later by values from RPi
+    mParams.tTarget = mParams.tTargetNext = 160;
+    mParams.gyleAgeHours = 0;
     params.tMin = -10;
     params.tMax = 400;
     params.hasHeater = true;

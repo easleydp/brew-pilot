@@ -48,7 +48,7 @@ public class MockChamberManager implements ChamberManager {
             tTargetNext = temperatureProfile.getTargetTempAt(millisSinceStart + 1000L * 60 * 60);
             tMin = -5 * 10;
             tMax = 40 * 10;
-            int gyleAgeHours = (int) (millisSinceStart / (1000L * 60 * 60));
+            int gyleAgeHours = (int) (millisSinceStart / 1000L / 60 / 60);
             params = new ChamberParameters(gyleAgeHours, tTarget, tTargetNext, tMin, tMax, true, 10, 10, 0, 1.2, 2.3,
                     3.4, Mode.AUTO);
         } else {

@@ -62,7 +62,7 @@ public class GyleDataGenerator {
         assertNotNull(gyle, "Chamber 2 gyle 1 should be found"); // Actually, getGyleById will already have checked not
                                                                  // null.
         gyle.setDtStarted(startTime.getTime()); // So now it's the active gyle
-        chamberManagerSim = new MockChamberManager(startTime, gyle.getTemperatureProfile(), env);
+        chamberManagerSim = new MockChamberManager(startTime, gyle.getTemperatureProfileDomain(), env);
 
         timeNow = startTime;
         while (timeNow.getTime() < endTime.getTime()) {

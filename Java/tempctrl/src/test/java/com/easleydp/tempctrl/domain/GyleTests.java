@@ -6,6 +6,7 @@ import static org.apache.commons.lang3.time.DateUtils.addMinutes;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -27,6 +28,7 @@ import org.springframework.mock.env.MockEnvironment;
 import org.springframework.util.Assert;
 import org.springframework.util.FileSystemUtils;
 
+import com.easleydp.tempctrl.domain.Gyle.LeftSwitchedOffDetectionAction;
 import com.easleydp.tempctrl.domain.Gyle.LogFileDescriptor;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
@@ -48,10 +50,19 @@ public class GyleTests {
     private static final int maxGenerations = 3;
 
     private void collectReadings() throws IOException {
+        collectReadings(null);
+    }
+
+    private void collectReadings(ReadingsMassager massager) throws IOException {
         chamberManagerSim.setNowTime(timeNow);
         ChamberReadings latestReadings = chamberManagerSim.collectReadings(chamber.getId(), timeNow);
-        chamber.setLatestChamberReadings(latestReadings);
+        chamber.setLatestChamberReadings(massager != null ? massager.massage(latestReadings) : latestReadings);
         gyle.logLatestReadings(latestReadings, timeNow);
+    }
+
+    interface ReadingsMassager {
+        // Returns the supplied value to support chaining.
+        ChamberReadings massage(ChamberReadings chamberReadings);
     }
 
     @BeforeEach
@@ -67,6 +78,11 @@ public class GyleTests {
         env.setProperty("readings.optimise.nullOutRedundantValues", "" + false);
         env.setProperty("readings.optimise.removeRedundantIntermediate", "" + false);
         env.setProperty("readings.staggerFirstReadings", "" + false);
+        env.setProperty("switchedOffCheck.periodMinutes", "" + 5);
+        env.setProperty("switchedOffCheck.ignoreFirstHours", "" + 4);
+        env.setProperty("switchedOffCheck.fridgeOnTimeMins", "" + 5);
+        env.setProperty("switchedOffCheck.heaterOnTimeMins", "" + 10);
+
         PropertyUtils.setEnv(env);
 
         Path dataDir = Paths.get(".", "src/test/resources/testData");
@@ -83,16 +99,16 @@ public class GyleTests {
         startTime = c.getTime();
 
         chamber = chambers.getChamberById(2);
-        assertNotNull(chamber, "Chamber 2 should be found"); // Actually, getChamberById will already have checked not
-                                                             // null.
+        // Actually, getChamberById will already have checked not null.
+        assertNotNull(chamber, "Chamber 2 should be found");
         Gyle latestGyle = chamber.getLatestGyle();
         assertNotNull(latestGyle, "There should be a latest gyle");
         assertFalse(latestGyle.isActive(), "There should be no active gyle");
         gyle = chamber.getGyleById(1);
-        assertNotNull(gyle, "Chamber 2 gyle 1 should be found"); // Actually, getGyleById will already have checked not
-                                                                 // null.
+        // Actually, getGyleById will already have checked not null.
+        assertNotNull(gyle, "Chamber 2 gyle 1 should be found");
         gyle.setDtStarted(startTime.getTime()); // So now it's the active gyle
-        chamberManagerSim = new MockChamberManager(startTime, gyle.getTemperatureProfile(), env);
+        chamberManagerSim = new MockChamberManager(startTime, gyle.getTemperatureProfileDomain(), env);
     }
 
     /**
@@ -301,6 +317,129 @@ public class GyleTests {
     }
 
     @Test
+    public void leftFridgeOff() throws Exception {
+        timeNow = startTime;
+
+        final int tTarget = 0;
+        int[] tChamber = { 0 };
+        boolean[] fridgeOn = { false };
+        ReadingsMassager massager = new ReadingsMassager() {
+            @Override
+            public ChamberReadings massage(ChamberReadings chamberReadings) {
+                chamberReadings.setFridgeOn(fridgeOn[0]);
+                chamberReadings.setHeaterOutput(0);
+                chamberReadings.settTarget(tTarget);
+                chamberReadings.settChamber(tChamber[0]);
+                return chamberReadings;
+            }
+        };
+
+        // First off we need to accumulate a few hours worth of readings because these
+        // will be ignored by the analysis.
+        int minutes = PropertyUtils.getInt("switchedOffCheck.ignoreFirstHours") * 60;
+        for (int i = 0; i < minutes; i++) {
+            timeNow = addMinutes(timeNow, 1);
+            collectReadings(massager);
+        }
+
+        assertNull(gyle.checkLeftSwitchedOff(timeNow));
+
+        // Next, run for a few minutes with fridge ON and tChamber ramping upwards
+        // despite fridge being on.
+        minutes = PropertyUtils.getInt("switchedOffCheck.fridgeOnTimeMins") - 1;
+
+        fridgeOn[0] = true;
+        for (int i = 0; i < minutes; i++) {
+            tChamber[0]++;
+            timeNow = addMinutes(timeNow, 1);
+            collectReadings(massager);
+        }
+        assertNull(gyle.checkLeftSwitchedOff(timeNow));
+
+        // One more minute should trigger
+        tChamber[0]++;
+        timeNow = addMinutes(timeNow, 1);
+        collectReadings(massager);
+        assertEquals(LeftSwitchedOffDetectionAction.SEND_FRIDGE_LEFT_OFF, gyle.checkLeftSwitchedOff(timeNow));
+
+        assertNull(gyle.checkLeftSwitchedOff(timeNow), "Action notification should NOT be sticky");
+
+        for (int i = 0; i < minutes; i++) {
+            tChamber[0]--;
+            timeNow = addMinutes(timeNow, 1);
+            collectReadings(massager);
+        }
+        // One final reading with fridge off
+        fridgeOn[0] = false;
+        timeNow = addMinutes(timeNow, 1);
+        collectReadings(massager);
+        assertEquals(LeftSwitchedOffDetectionAction.SEND_FRIDGE_NO_LONGER_LEFT_OFF, gyle.checkLeftSwitchedOff(timeNow));
+
+        assertNull(gyle.checkLeftSwitchedOff(timeNow), "Action notification should NOT be sticky");
+    }
+
+    @Test
+    public void leftHeaterOff() throws Exception {
+        timeNow = startTime;
+
+        final int tTarget = 0;
+        int[] tChamber = { 0 };
+        int[] heaterOutput = { 0 };
+        ReadingsMassager massager = new ReadingsMassager() {
+            @Override
+            public ChamberReadings massage(ChamberReadings chamberReadings) {
+                chamberReadings.setHeaterOutput(heaterOutput[0]);
+                chamberReadings.setFridgeOn(false);
+                chamberReadings.settTarget(tTarget);
+                chamberReadings.settChamber(tChamber[0]);
+                return chamberReadings;
+            }
+        };
+
+        // First off we need to accumulate a few hours worth of readings because these
+        // will be ignored by the analysis.
+        int minutes = PropertyUtils.getInt("switchedOffCheck.ignoreFirstHours") * 60;
+        for (int i = 0; i < minutes; i++) {
+            timeNow = addMinutes(timeNow, 1);
+            collectReadings(massager);
+        }
+
+        assertNull(gyle.checkLeftSwitchedOff(timeNow));
+
+        // Next, run for a several minutes with heater ON and tChamber ramping downwards
+        // despite heater being on.
+        minutes = PropertyUtils.getInt("switchedOffCheck.heaterOnTimeMins") - 1;
+
+        heaterOutput[0] = 30;
+        for (int i = 0; i < minutes; i++) {
+            tChamber[0]--;
+            timeNow = addMinutes(timeNow, 1);
+            collectReadings(massager);
+        }
+        assertNull(gyle.checkLeftSwitchedOff(timeNow));
+
+        // One more minute should trigger
+        tChamber[0]++;
+        timeNow = addMinutes(timeNow, 1);
+        collectReadings(massager);
+        assertEquals(LeftSwitchedOffDetectionAction.SEND_HEATER_LEFT_OFF, gyle.checkLeftSwitchedOff(timeNow));
+
+        assertNull(gyle.checkLeftSwitchedOff(timeNow), "Action notification should NOT be sticky");
+
+        for (int i = 0; i < minutes; i++) {
+            tChamber[0]++;
+            timeNow = addMinutes(timeNow, 1);
+            collectReadings(massager);
+        }
+        // One final reading with heater below threshold
+        heaterOutput[0] = 29;
+        timeNow = addMinutes(timeNow, 1);
+        collectReadings(massager);
+        assertEquals(LeftSwitchedOffDetectionAction.SEND_HEATER_NO_LONGER_LEFT_OFF, gyle.checkLeftSwitchedOff(timeNow));
+
+        assertNull(gyle.checkLeftSwitchedOff(timeNow), "Action notification should NOT be sticky");
+    }
+
     /**
      * Prove a Gyle object (which is a GyleDto) can be serialised to a JSON
      * representation of the DTO and then deserialised to a GyleDto without issue.
@@ -309,6 +448,7 @@ public class GyleTests {
      * If this test fails it probably means you recently added a new field or getter
      * to the domain object and forgot to annotate `@JsonIgnore`.
      */
+    @Test
     public void testDomainObjectSerialisation() throws JsonProcessingException {
         // Serialise
         ObjectMapper mapper = new ObjectMapper();

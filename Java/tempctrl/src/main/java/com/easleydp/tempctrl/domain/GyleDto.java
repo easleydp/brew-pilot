@@ -6,15 +6,15 @@ import java.util.Objects;
 /**
  * Marries-up with the the contents of gyle.json
  */
-public class GyleDto
-{
+public class GyleDto {
     private String name;
     private TemperatureProfileDto temperatureProfile;
-    private Long dtStarted;  // Null if not started. -ve value (typically -1) indicates beer fridge.
-    private Long dtEnded;  // Null if not ended
+    private Long dtStarted; // Null if not started
+    private Long dtEnded; // Null if not ended
     private Mode mode;
 
-    public GyleDto() {}
+    public GyleDto() {
+    }
 
     public GyleDto(String name, TemperatureProfileDto temperatureProfile, Long dtStarted, Long dtEnded, Mode mode) {
         if (name == null)
@@ -30,8 +30,7 @@ public class GyleDto
         this.mode = mode;
     }
 
-    private static void validateTemperatureProfile(TemperatureProfileDto profile)
-    {
+    private static void validateTemperatureProfile(TemperatureProfileDto profile) {
         if (profile == null) {
             throw new IllegalArgumentException("temperatureProfile is required");
         }
@@ -48,48 +47,48 @@ public class GyleDto
         // See PointDto for further validation
     }
 
-    public String getName()
-    {
+    public String getName() {
         return name;
     }
-    public void setName(String name)
-    {
+
+    public void setName(String name) {
         if (name == null)
             throw new IllegalArgumentException("name is required");
         this.name = name;
     }
-    public TemperatureProfileDto getTemperatureProfile()
-    {
+
+    public TemperatureProfileDto getTemperatureProfile() {
         return temperatureProfile;
     }
-    public void setTemperatureProfile(TemperatureProfileDto temperatureProfile)
-    {
+
+    public void setTemperatureProfile(TemperatureProfileDto temperatureProfile) {
         validateTemperatureProfile(temperatureProfile);
         this.temperatureProfile = temperatureProfile;
     }
-    public Long getDtStarted()
-    {
+
+    public Long getDtStarted() {
         return dtStarted;
     }
-    public void setDtStarted(Long dtStarted)
-    {
+
+    public void setDtStarted(Long dtStarted) {
         this.dtStarted = dtStarted;
     }
-    public Long getDtEnded()
-    {
+
+    public Long getDtEnded() {
         return dtEnded;
     }
-    public void setDtEnded(Long dtEnded)
-    {
+
+    public void setDtEnded(Long dtEnded) {
         this.dtEnded = dtEnded;
     }
-    public Mode getMode()
-    {
+
+    public Mode getMode() {
         return mode;
     }
-    public void setMode(Mode mode)
-    {
-    	// For the sake of backwards compatibility, if mode is not specified default to 'AUTO'
+
+    public void setMode(Mode mode) {
+        // For the sake of backwards compatibility, if mode is not specified default to
+        // 'AUTO'
         this.mode = mode != null ? mode : Mode.AUTO;
     }
 
@@ -101,11 +100,13 @@ public class GyleDto
             return false;
         }
         GyleDto gyleDto = (GyleDto) o;
+        // @formatter:off
         return Objects.equals(name, gyleDto.name)
             && Objects.equals(temperatureProfile, gyleDto.temperatureProfile)
             && Objects.equals(dtStarted, gyleDto.dtStarted)
             && Objects.equals(dtEnded, gyleDto.dtEnded)
             && Objects.equals(mode, gyleDto.mode);
+        // @formatter:on
     }
 
     @Override
@@ -115,6 +116,7 @@ public class GyleDto
 
     @Override
     public String toString() {
+        // @formatter:off
         return "{" +
             " name='" + getName() + "'" +
             ", temperatureProfile=" + getTemperatureProfile() +
@@ -122,5 +124,6 @@ public class GyleDto
             ", dtEnded=" + getDtEnded() +
             ", mode=" + getMode() +
             "}";
+        // @formatter:on
     }
 }

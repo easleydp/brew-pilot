@@ -96,7 +96,6 @@ public class TemperatureProfileTests {
                 "Last point should still be end of crash.");
     }
 
-    @Test
     /**
      * Prove a TemperatureProfile object (which is a TemperatureProfileDto) can be
      * serialised to a JSON representation of the DTO and then deserialised to a
@@ -106,6 +105,7 @@ public class TemperatureProfileTests {
      * If this test fails it probably means you recently added a new field or getter
      * to the domain object and forgot to annotate `@JsonIgnore`.
      */
+    @Test
     public void testDomainObjectSerialisation() throws JsonProcessingException {
         profile = new TemperatureProfile();
         profile.addPoint(0, 175);

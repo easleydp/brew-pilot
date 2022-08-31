@@ -26,11 +26,20 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.BeanUtils;
+import org.springframework.util.Assert;
 
 import com.easleydp.tempctrl.domain.optimise.Smoother;
 import com.easleydp.tempctrl.domain.optimise.Smoother.IntPropertyAccessor;
@@ -39,13 +48,6 @@ import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.SequenceWriter;
-
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.BeanUtils;
-import org.springframework.util.Assert;
 
 /**
  * NOTE: This is a stateful bean since it contains buffered readings.
@@ -64,8 +66,9 @@ public class Gyle extends GyleDto {
             .withRootValueSeparator(NDJSON_NEWLINE_DELIM);
 
     private Smoother smoother;
-    private BufferConfig bufferConfig;
-    private Buffer buffer;
+    private LogBufferConfig logBufferConfig;
+    private LogBuffer logBuffer;
+    private TrendBuffer trendBuffer;
     private boolean firstReadingsCollected = false;
     private ChamberReadings latestChamberReadings;
 
@@ -81,6 +84,8 @@ public class Gyle extends GyleDto {
 
     private LogAnalysis logAnalysis;
 
+    // NOTE: Keep this ctor lightweight since it's called more regularly than you
+    // might imagine, i.e. via `Chamber.checkForGyleUpdates()`.
     public Gyle(Chamber chamber, Path gyleDir) {
         this.chamber = chamber;
         this.gyleDir = gyleDir;
@@ -92,17 +97,13 @@ public class Gyle extends GyleDto {
         smoother = thresholdWidths == null ? new Smoother(thresholdHeight)
                 : new Smoother(thresholdHeight, thresholdWidths);
 
-        bufferConfig = new BufferConfig(getInteger("readings.gen1.readingsCount", 30),
+        logBufferConfig = new LogBufferConfig(getInteger("readings.gen1.readingsCount", 30),
                 getBoolean("readings.optimise.smoothTemperatureReadings", true),
                 getBoolean("readings.optimise.nullOutRedundantValues", true),
                 getBoolean("readings.optimise.removeRedundantIntermediate", true));
 
         refresh();
     }
-
-    // public int getId() {
-    // return id;
-    // }
 
     @JsonIgnore
     public long getFileLastModified() {
@@ -122,9 +123,9 @@ public class Gyle extends GyleDto {
         }
     }
 
-    @Override
-    public TemperatureProfile getTemperatureProfile() {
-        TemperatureProfileDto dto = super.getTemperatureProfile();
+    @JsonIgnore
+    public TemperatureProfile getTemperatureProfileDomain() {
+        TemperatureProfileDto dto = getTemperatureProfile();
         return new TemperatureProfile(dto);
     }
 
@@ -136,11 +137,11 @@ public class Gyle extends GyleDto {
     public ChamberParameters getChamberParameters(Date timeNow) {
         Long dtStarted = getDtStarted();
         long timeNowMs = timeNow.getTime();
-        long millisSinceStart = dtStarted == null || dtStarted < 0 ? 0 : timeNowMs - dtStarted;
+        long millisSinceStart = dtStarted == null ? 0 : timeNowMs - dtStarted;
         logger.debug(
                 "millisSinceStart: " + millisSinceStart + "(timeNowMs=" + timeNowMs + ", dtStarted=" + dtStarted + ")");
-        TemperatureProfile tp = getTemperatureProfile();
-        int gyleAgeHours = dtStarted == null ? -1 : (int) (millisSinceStart / (1000L * 60 * 60));
+        TemperatureProfile tp = getTemperatureProfileDomain();
+        int gyleAgeHours = (int) (millisSinceStart / 1000L / 60 / 60);
         return new ChamberParameters(gyleAgeHours, tp.getTargetTempAt(millisSinceStart),
                 tp.getTargetTempAt(millisSinceStart + 1000 * 60 * 60), chamber.gettMin(), chamber.gettMax(),
                 chamber.isHasHeater(), chamber.getFridgeMinOnTimeMins(), chamber.getFridgeMinOffTimeMins(),
@@ -180,10 +181,10 @@ public class Gyle extends GyleDto {
 
         // If the memory buffer is ready to be flushed, flush & release, and consolidate
         // log files as necessary.
-        if (buffer != null) {
-            if (buffer.isReadyToBeFlushed()) {
-                buffer.flush(logsDir, logAnalysis);
-                buffer = null;
+        if (logBuffer != null) {
+            if (logBuffer.isReadyToBeFlushed()) {
+                logBuffer.flush(logsDir, logAnalysis);
+                logBuffer = null;
                 logAnalysis.maybeConsolidateLogFiles();
             } else {
                 // Now that a little time has passed since the last consolidation, the redundant
@@ -193,33 +194,39 @@ public class Gyle extends GyleDto {
         }
 
         // Ensure we have a buffer and write the readings to it.
-        if (buffer == null) {
+        if (logBuffer == null) {
             if (!firstReadingsCollected && PropertyUtils.getBoolean("readings.staggerFirstReadings", true)) {
                 // Stagger each active gyle storing its first buffer by inflating the initial
                 // reading count.
-                buffer = new Buffer(timeNow, bufferConfig.withInflatedReadingsCount(chamberId), smoother);
+                logBuffer = new LogBuffer(timeNow, logBufferConfig.withInflatedReadingsCount(chamberId), smoother);
             } else {
-                buffer = new Buffer(timeNow, bufferConfig, smoother);
+                logBuffer = new LogBuffer(timeNow, logBufferConfig, smoother);
             }
         }
-        buffer.add(chamberReadings, timeNow);
+        logBuffer.add(chamberReadings, timeNow);
+
+        // Lazy init rather than use ctor because ctor is called frequently (to see
+        // whether latest gyle has been superseded).
+        if (trendBuffer == null)
+            trendBuffer = new TrendBuffer(chamber);
+        trendBuffer.add(chamberReadings);
 
         firstReadingsCollected = true;
     }
 
     /** Forces flush and consolidation. */
     public void close() {
-        if (buffer != null && !buffer.readingsList.isEmpty()) {
-            logger.debug("Force flushing " + buffer.readingsList.size() + " readings");
-            buffer.flush(logsDir, logAnalysis);
-            buffer = null;
+        if (logBuffer != null && !logBuffer.readingsList.isEmpty()) {
+            logger.debug("Force flushing " + logBuffer.readingsList.size() + " readings");
+            logBuffer.flush(logsDir, logAnalysis);
+            logBuffer = null;
             logAnalysis.maybeConsolidateLogFiles();
             logAnalysis.performAnyPostConsolidationCleanup();
         }
     }
 
     @JsonIgnore // In case this DTO subclass is ever serialised
-    public ChamberReadings getLatestReadings() {
+    public ChamberReadings getLatestReadingsRecord() {
         return latestChamberReadings;
     }
 
@@ -227,8 +234,8 @@ public class Gyle extends GyleDto {
      * Returns the recent (i.e. buffered) readings in chronological order.
      */
     @JsonIgnore // In case this DTO subclass is ever serialised
-    public List<ChamberReadings> getRecentReadings() {
-        return buffer != null ? unmodifiableList(buffer.readingsList) : emptyList();
+    public List<ChamberReadings> getRecentReadingsList() {
+        return logBuffer != null ? unmodifiableList(logBuffer.readingsList) : emptyList();
     }
 
     /**
@@ -253,6 +260,97 @@ public class Gyle extends GyleDto {
         writer.writeValue(jsonFile.toFile(), this);
         // We don't need to do anything special having updated the JSON file;
         // CollectReadingsScheduler will detect.
+    }
+
+    /*
+     * Support the sending of some kind of notification when it looks like the
+     * fridge (or the heater if there is one) has been left switched off. Likewise,
+     * sending a follow-up notification when this condition has cleared.
+     *
+     * The details of how the user is actually notified is left to the bean that
+     * invokes this functionality.
+     */
+
+    private static final int IGNORE_FIRST_HOURS = PropertyUtils.getInteger("switchedOffCheck.ignoreFirstHours", 4);
+    private static final int FRIDGE_ON_TIME_MINS = PropertyUtils.getInteger("switchedOffCheck.fridgeOnTimeMins", 5);
+    private static final int HEATER_ON_TIME_MINS = PropertyUtils.getInteger("switchedOffCheck.heaterOnTimeMins", 10);
+
+    // The return value for our `checkLeftSwitchedOff()` method.
+    public enum LeftSwitchedOffDetectionAction {
+        SEND_FRIDGE_LEFT_OFF, SEND_FRIDGE_NO_LONGER_LEFT_OFF, SEND_HEATER_LEFT_OFF, SEND_HEATER_NO_LONGER_LEFT_OFF
+    }
+
+    // Values for our internal state machine (see member variable
+    // `leftSwitchedOffState`) that governs the lifecycle of values returned
+    // from our checkSwitchedOff() method.
+    private enum LeftSwitchedOffState {
+        FRIDGE_LEFT_OFF, HEATER_LEFT_OFF, NEITHER_LEFT_OFF
+    }
+
+    private LeftSwitchedOffState leftSwitchedOffState = LeftSwitchedOffState.NEITHER_LEFT_OFF;
+
+    /**
+     * Checks whether it looks like the fridge or heater has been left switched off.
+     * Principle of operation: if the fridge or heater has been on for a while then
+     * there should have been a sympathetic change in the chamber temperature over
+     * that period.
+     *
+     * @return An 'action' value if a notification needs to be sent, otherwise null.
+     *         Note that while any given condition persists, this method returns
+     *         null until that condition has changed.
+     */
+    public LeftSwitchedOffDetectionAction checkLeftSwitchedOff(Date timeNow) {
+        Assert.state(isActive(), "checkLeftSwitchedOff() should only be called on active gyle");
+        long dtStarted = getDtStarted();
+        long timeNowMs = timeNow.getTime();
+        long millisSinceStart = timeNowMs - dtStarted;
+        int gyleAgeHours = (int) (millisSinceStart / 1000L / 60 / 60);
+        if (gyleAgeHours >= IGNORE_FIRST_HOURS) {
+
+            if (latestChamberReadings.getFridgeOn()) {
+                // Fridge should be ON (as far as this app is concerned) but has it been left
+                // OFF?
+                if (leftSwitchedOffState != LeftSwitchedOffState.FRIDGE_LEFT_OFF) {
+                    if (trendBuffer.getFridgeOnTimeMins() >= FRIDGE_ON_TIME_MINS + chamber.getFridgeSwitchOnLagMins()
+                            && trendBuffer.gettChamberTrend(FRIDGE_ON_TIME_MINS) != Trend.DOWNWARDS) {
+                        leftSwitchedOffState = LeftSwitchedOffState.FRIDGE_LEFT_OFF;
+                        return LeftSwitchedOffDetectionAction.SEND_FRIDGE_LEFT_OFF;
+                    }
+                }
+            } else {
+                // This app has switched the fridge OFF.
+                // If state is FRIDGE_LEFT_OFF then we can now transition to NEITHER_LEFT_OFF
+                // and signal that the condition has cleared.
+                if (leftSwitchedOffState == LeftSwitchedOffState.FRIDGE_LEFT_OFF) {
+                    leftSwitchedOffState = LeftSwitchedOffState.NEITHER_LEFT_OFF;
+                    return LeftSwitchedOffDetectionAction.SEND_FRIDGE_NO_LONGER_LEFT_OFF;
+                }
+            }
+
+            if (chamber.isHasHeater()) {
+                final int heaterThresholdPercent = 30;
+                if (latestChamberReadings.getHeaterOutput() >= heaterThresholdPercent) {
+                    // Heater should be ON (as far as this app is concerned) but is it switched OFF?
+                    if (leftSwitchedOffState != LeftSwitchedOffState.HEATER_LEFT_OFF) {
+                        if (trendBuffer.getHeaterOnTimeMins(heaterThresholdPercent) >= HEATER_ON_TIME_MINS
+                                && trendBuffer.gettChamberTrend(HEATER_ON_TIME_MINS) != Trend.UPWARDS) {
+                            leftSwitchedOffState = LeftSwitchedOffState.HEATER_LEFT_OFF;
+                            return LeftSwitchedOffDetectionAction.SEND_HEATER_LEFT_OFF;
+                        }
+                    }
+                } else {
+                    // This app has switched the heater OFF.
+                    // If state is HEATER_OFF_DETECTED then we can now signal that the condition has
+                    // cleared.
+                    if (leftSwitchedOffState == LeftSwitchedOffState.HEATER_LEFT_OFF) {
+                        leftSwitchedOffState = LeftSwitchedOffState.NEITHER_LEFT_OFF;
+                        return LeftSwitchedOffDetectionAction.SEND_HEATER_NO_LONGER_LEFT_OFF;
+                    }
+                }
+            }
+        }
+
+        return null;
     }
 
     private class LogAnalysis {
@@ -432,21 +530,22 @@ public class Gyle extends GyleDto {
         }
     }
 
-    static class Buffer {
-        private BufferConfig config;
+    // Buffers readings ahead of being flushed to a log file.
+    static class LogBuffer {
+        private LogBufferConfig config;
         private Smoother smoother;
         private Date createdAt;
         private Date lastAddedAt;
         private List<ChamberReadings> readingsList = Collections.synchronizedList(new ArrayList<>());
 
-        public Buffer(Date createdAt, BufferConfig config, Smoother smoother) {
+        public LogBuffer(Date createdAt, LogBufferConfig config, Smoother smoother) {
             this.createdAt = createdAt;
             this.config = config;
             this.smoother = smoother;
         }
 
         // Default ctor needed for Jackson deserialisation
-        public Buffer() {
+        public LogBuffer() {
         }
 
         public void add(ChamberReadings chamberReadings, Date addedAt) {
@@ -454,7 +553,7 @@ public class Gyle extends GyleDto {
             lastAddedAt = addedAt;
         }
 
-        @JsonIgnore // In case this DTO subclass is ever serialised
+        @JsonIgnore
         public boolean isReadyToBeFlushed() {
             return readingsList.size() >= config.gen1ReadingsCount;
         }
@@ -479,7 +578,7 @@ public class Gyle extends GyleDto {
 
                 Writer writer = new StringWriter();
                 try (SequenceWriter sw = ndjsonObjectWriter.writeValues(writer)) {
-                    sw.writeAll(getReadings());
+                    sw.writeAll(readingsList);
                 }
                 String ndjson = writer.toString() + NDJSON_NEWLINE_DELIM;
                 Files.writeString(logFile, ndjson, StandardCharsets.UTF_8);
@@ -516,13 +615,13 @@ public class Gyle extends GyleDto {
         }
     }
 
-    static class BufferConfig {
+    static class LogBufferConfig {
         final int gen1ReadingsCount;
         final boolean smoothTemperatureReadings;
         final boolean nullOutRedundantValues;
         final boolean removeRedundantIntermediateReadings;
 
-        public BufferConfig(int gen1ReadingsCount, boolean smoothTemperatureReadings, boolean nullOutRedundantValues,
+        public LogBufferConfig(int gen1ReadingsCount, boolean smoothTemperatureReadings, boolean nullOutRedundantValues,
                 boolean removeRedundantIntermediateReadings) {
             this.gen1ReadingsCount = gen1ReadingsCount;
             this.smoothTemperatureReadings = smoothTemperatureReadings;
@@ -530,10 +629,169 @@ public class Gyle extends GyleDto {
             this.removeRedundantIntermediateReadings = removeRedundantIntermediateReadings;
         }
 
-        public BufferConfig withInflatedReadingsCount(int extraReadingsCount) {
-            return new BufferConfig(gen1ReadingsCount + extraReadingsCount, smoothTemperatureReadings,
+        public LogBufferConfig withInflatedReadingsCount(int extraReadingsCount) {
+            return new LogBufferConfig(gen1ReadingsCount + extraReadingsCount, smoothTemperatureReadings,
                     nullOutRedundantValues, removeRedundantIntermediateReadings);
         }
 
+    }
+
+    private enum Trend {
+        UPWARDS, STEADY, DOWNWARDS
+    }
+
+    // Saves the last several minutes worth of readings so we can (i) determine
+    // how long the fridge or heater has been switched on and (ii) analyse the
+    // temperature trend.
+    private static class TrendBuffer {
+        private List<ChamberReadings> fifo = new LinkedList<>();
+        private final int maxSize;
+
+        TrendBuffer(Chamber chamber) {
+            // The buffer is a FIFO deque of recent records, sized in terms of time.
+            int sizeInMinutes = Math.max(FRIDGE_ON_TIME_MINS + chamber.getFridgeSwitchOnLagMins(), HEATER_ON_TIME_MINS)
+                    * 2;
+            // Given our sample rate, transform that into a size in terms of number of
+            // records.
+            maxSize = sizeInMinutes * 60 * 1000 / PropertyUtils.getReadingsPeriodMillis();
+            logger.debug("TrendBuffer maxSize is {}", maxSize);
+        }
+
+        public synchronized void add(ChamberReadings chamberReadings) {
+            if (isFull()) {
+                fifo.remove(0);
+                Assert.state(!isFull(), "Removing one record should be sufficient so no longer full");
+            }
+            // Copy the record because of the potential for fields being nulled-out when
+            // records are flushed to log file.
+            fifo.add(new ChamberReadings(chamberReadings));
+            logger.debug("TrendBuffer size is {} {}", fifo.size(), isFull() ? "(full)" : "");
+        }
+
+        public synchronized boolean isFull() {
+            final int currentSize = fifo.size();
+            Assert.state(currentSize <= maxSize, "Buffer should never be over full");
+            return currentSize == maxSize;
+        }
+
+        /**
+         * Working backwards from the latest record, determines for how long the fridge
+         * has been on.
+         *
+         * If the fridge is not ON (according to the latest record), returns zero.
+         * Otherwise, returns a value of at least 1 (signifying that the fridge has been
+         * ON for a period greater than zero and <= 1 minute).
+         *
+         * If, having worked backwards from the latest record, the fridge still appears
+         * to be ON on reaching the first (earliest) record then the corresponding
+         * period is returned. A degenerate case: If the buffer is empty, returns 0.
+         *
+         * @return 0 if the fridge is not currently ON (according to the latest record),
+         *         otherwise a value of at least 1.
+         */
+        public synchronized int getFridgeOnTimeMins() {
+            if (!fifo.isEmpty()) {
+                final int size = fifo.size();
+                ChamberReadings lastRecord = fifo.get(size - 1);
+                if (lastRecord.getFridgeOn()) {
+                    ListIterator<ChamberReadings> li = fifo.listIterator(size); // Start just after the last element.
+                    ChamberReadings record = null;
+                    while (li.hasPrevious()) {
+                        record = li.previous();
+                        if (!record.getFridgeOn())
+                            break;
+                    }
+                    Assert.state(record != null, "readings should not be null"); // ... given the checks we made above
+                    return minutesDifferenceAtLeastOne(lastRecord, record);
+                }
+            } else {
+                logger.debug("FIFO is empty");
+            }
+            return 0;
+        }
+
+        /**
+         * As `getFridgeOnTimeMins()` but for heater.
+         *
+         * @param threshold
+         *            Anything below the threshold is ignored (as if OFF).
+         *
+         * @return 0 if the heater is not currently ON and >= `threshold` (according to
+         *         the latest record), otherwise a value of at least 1.
+         */
+        public synchronized int getHeaterOnTimeMins(int threshold) {
+            if (!fifo.isEmpty()) {
+                final int size = fifo.size();
+                ChamberReadings lastRecord = fifo.get(size - 1);
+                if (lastRecord.getHeaterOutput() >= threshold) {
+                    ListIterator<ChamberReadings> li = fifo.listIterator(size); // Start just after the last element.
+                    ChamberReadings record = null;
+                    while (li.hasPrevious()) {
+                        record = li.previous();
+                        if (record.getHeaterOutput() < threshold)
+                            break;
+                    }
+                    Assert.state(record != null, "readings should not be null"); // ... given the checks we made above
+                    return minutesDifferenceAtLeastOne(lastRecord, record);
+                }
+            } else {
+                logger.debug("FIFO is empty");
+            }
+            return 0;
+        }
+
+        private int minutesDifferenceAtLeastOne(ChamberReadings lastRecord, ChamberReadings earlierRecord) {
+            long periodMs = Utils.restoreUtcMillisPrecision(lastRecord.getDt() - earlierRecord.getDt());
+            int periodMins = (int) (periodMs / 1000L / 60);
+            return periodMins == 0 ? 1 : periodMins; // Always return at least 1
+        }
+
+        /**
+         * Analyses the tChamber field of the most recent accumulated records to see if
+         * there's a trend.
+         *
+         * @param periodMins
+         *            The period (starting backwards from the latest added record) over
+         *            which to analyse the trend.
+         *
+         * @return The detected trend, or `STEADY` if none. If the buffer does not
+         *         contain enough records to cover the specified period then `STEADY` is
+         *         returned.
+         *
+         *         Note: If the specified period exceeds this buffers max capacity then
+         *         an error is thrown.
+         */
+        public synchronized Trend gettChamberTrend(int periodMins) {
+            if (!fifo.isEmpty()) {
+                final int size = fifo.size();
+                ChamberReadings firstRecord = fifo.get(0);
+                ChamberReadings lastRecord = fifo.get(size - 1);
+                long maxPeriodMs = Utils.restoreUtcMillisPrecision(lastRecord.getDt() - firstRecord.getDt());
+                int maxPeriodMins = (int) (maxPeriodMs / 1000L / 60);
+                if (maxPeriodMins > periodMins) {
+                    int soughtDt = lastRecord.getDt() - Utils.reduceUtcMillisPrecision(periodMins * 1000L * 60);
+                    ListIterator<ChamberReadings> li = fifo.listIterator(size); // Start just after the last element.
+                    while (li.hasPrevious()) {
+                        ChamberReadings record = li.previous();
+                        if (record.getDt() <= soughtDt) {
+                            if (record.gettChamber() < lastRecord.gettChamber())
+                                return Trend.UPWARDS;
+                            if (record.gettChamber() > lastRecord.gettChamber())
+                                return Trend.DOWNWARDS;
+                            return Trend.STEADY;
+                        }
+                    }
+                    throw new IllegalStateException("Should never get here");
+                } else if (isFull()) {
+                    throw new IllegalStateException("Specified periodMins (" + periodMins + ") exceeds size of buffer ("
+                            + size + ", or " + maxPeriodMins + " mins)");
+                } else {
+                    logger.debug("Buffer not sufficiently full for requested period ({} mins)", periodMins);
+                }
+            } else {
+                logger.debug("FIFO is empty");
+            }
+            return Trend.STEADY;
+        }
     }
 }

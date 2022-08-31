@@ -146,7 +146,6 @@ void controlChamber(ChamberData& cd) {
   }
 
   // Assume exothermic if not beer fridge and gyle age is between 12h and 4 days.
-  // Note: gyleAgeHours is -1 for beer fridge.
   const boolean exothermic = 12 < cd.mParams.gyleAgeHours && cd.mParams.gyleAgeHours < (4 * 24);
 
   // +ve - in our favour for heating the beer; -ve - in our favour for cooling the beer
@@ -293,8 +292,7 @@ void chambersMinuteTick() {
     // gyleAgeHours also gets set from the RPi. We update it here just in case we're
     // offline. If we're not offline it'll get reset from RPi soon enough - no biggy.
     if (uptimeMins % 60 == 0)
-      if (cd.mParams.gyleAgeHours != -1) // Not beer fridge
-        cd.mParams.gyleAgeHours++;
+      cd.mParams.gyleAgeHours++;
   }
   memoMinFreeRam(3);
 }

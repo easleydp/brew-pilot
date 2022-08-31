@@ -18,6 +18,7 @@ import org.springframework.stereotype.Component;
 import com.easleydp.tempctrl.domain.Chamber;
 import com.easleydp.tempctrl.domain.ChamberRepository;
 import com.easleydp.tempctrl.domain.Gyle;
+import com.easleydp.tempctrl.domain.Gyle.LeftSwitchedOffDetectionAction;
 import com.easleydp.tempctrl.domain.PointDto;
 import com.easleydp.tempctrl.domain.PropertyUtils;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
@@ -57,9 +58,9 @@ public class EmailMessageScheduler {
     void testableSendGyleRelatedNotifications(Date timeNow) {
         for (Chamber chamber : chamberRepository.getChambers()) {
             Gyle latestGyle = chamber.getLatestGyle();
-            if (latestGyle != null) {
+            if (latestGyle != null && latestGyle.isActive()) {
                 Long dtStarted = latestGyle.getDtStarted();
-                if (dtStarted != null && dtStarted > 0 && latestGyle.getDtEnded() == null) {
+                if (dtStarted != null) {
                     long periodMillis = getInteger("coldCrashCheck.periodMinutes", 30) * 1000L * 60L;
                     long timeNowMs = timeNow.getTime();
                     long millisSinceStart = timeNowMs - dtStarted;
@@ -72,7 +73,7 @@ public class EmailMessageScheduler {
 
     private void maybeSendCrashStartNotification(long periodMillis, long timeNowMs, long millisSinceStart,
             Gyle latestGyle, Chamber chamber) {
-        PointDto crashStartPoint = latestGyle.getTemperatureProfile().getCrashStartPoint();
+        PointDto crashStartPoint = latestGyle.getTemperatureProfileDomain().getCrashStartPoint();
         if (crashStartPoint != null) {
             // Assuming the checking period is of the order of 30 minutes, we want to
             // trigger the email when the crash start time - priorNoticeHours is less than
@@ -92,7 +93,7 @@ public class EmailMessageScheduler {
 
     private void maybeSendCrashEndNotification(long periodMillis, long timeNowMs, long millisSinceStart,
             Gyle latestGyle, Chamber chamber) {
-        PointDto crashEndPoint = latestGyle.getTemperatureProfile().getCrashEndPoint();
+        PointDto crashEndPoint = latestGyle.getTemperatureProfileDomain().getCrashEndPoint();
         if (crashEndPoint != null) {
             // Assuming the checking period is of the order of 30 minutes, we want to
             // trigger the email when the crash end time + postCrashDwellHours is less than
@@ -103,7 +104,7 @@ public class EmailMessageScheduler {
             long millisUntilTrigger = crashEndPoint.getMillisSinceStart() + postCrashDwellMillis - millisSinceStart;
             if (millisUntilTrigger > 0 && millisUntilTrigger < periodMillis) {
                 Date when = roundToNearestHour(new Date(timeNowMs + millisUntilTrigger));
-                emailService.sendSimpleMessage("Bottle this gyle on " + dayOfWeek(when) + "?",
+                emailService.sendSimpleMessage("Bottle this gyle on " + dayOfWeek(when) + "? 🍺",
                         chamber.getName() + "'s gyle \"" + latestGyle.getName() + "\" could be bottled on " + on(when)
                                 + " at " + at(when) + ".");
             }
@@ -132,4 +133,40 @@ public class EmailMessageScheduler {
         sdf.setTimeZone(TimeZone.getTimeZone(TIMEZONE_LOCAL_ID));
         return sdf.format(when);
     }
+
+    @Scheduled(fixedRateString = "${switchedOffCheck.periodMinutes}", timeUnit = TimeUnit.MINUTES)
+    public void checkSwitchedOff() {
+        logger.debug("checkSwitchedOff called");
+        testableCheckSwitchedOff(new Date());
+    }
+
+    public void testableCheckSwitchedOff(Date timeNow) {
+        for (Chamber chamber : chamberRepository.getChambers()) {
+            Gyle latestGyle = chamber.getLatestGyle();
+            if (latestGyle != null && latestGyle.isActive()) {
+                LeftSwitchedOffDetectionAction action = latestGyle.checkLeftSwitchedOff(timeNow);
+                if (action != null) {
+                    switch (action) {
+                    case SEND_FRIDGE_LEFT_OFF:
+                        emailService.sendSimpleMessage("Fridge left switched off? 😟",
+                                chamber.getName() + ":\nIt looks like the fridge may have been left switched off!");
+                        break;
+                    case SEND_FRIDGE_NO_LONGER_LEFT_OFF:
+                        emailService.sendSimpleMessage("Fridge switched back on 😌",
+                                chamber.getName() + ":\nIt looks like the fridge has now been switched back on.");
+                        break;
+                    case SEND_HEATER_LEFT_OFF:
+                        emailService.sendSimpleMessage("Heater left switched off? 😟",
+                                chamber.getName() + ":\nIt looks like the heater may have been left switched off!");
+                        break;
+                    case SEND_HEATER_NO_LONGER_LEFT_OFF:
+                        emailService.sendSimpleMessage("Heater switched back on 😌",
+                                chamber.getName() + ":\nIt looks like the heater has now been switched back on.");
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
 }

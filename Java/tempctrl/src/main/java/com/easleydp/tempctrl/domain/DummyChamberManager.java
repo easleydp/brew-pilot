@@ -30,7 +30,7 @@ public class DummyChamberManager implements ChamberManager {
     @Override
     public ChamberReadings collectReadings(int chamberId, Date timeNow) {
         Gyle gyle = chamberRepository.getChamberById(chamberId).getLatestGyle();
-        TemperatureProfile temperatureProfile = gyle.getTemperatureProfile();
+        TemperatureProfile temperatureProfile = gyle.getTemperatureProfileDomain();
 
         random = new Random(timeNow.hashCode() + chamberId * 3);
 
@@ -44,7 +44,7 @@ public class DummyChamberManager implements ChamberManager {
             tTargetNext = temperatureProfile.getTargetTempAt(millisSinceStart + 1000L * 60 * 60);
             tMin = -1 * 10;
             tMax = 41 * 10;
-            int gyleAgeHours = (int) (millisSinceStart / (1000L * 60 * 60));
+            int gyleAgeHours = (int) (millisSinceStart / 1000L / 60 / 60);
             params = new ChamberParameters(gyleAgeHours, tTarget, tTargetNext, tMin, tMax, true, 10, 10, 0, 1.2, 2.3,
                     3.4, Mode.AUTO);
         } else {

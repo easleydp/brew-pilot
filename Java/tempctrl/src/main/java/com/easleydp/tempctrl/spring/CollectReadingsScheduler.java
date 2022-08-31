@@ -60,21 +60,21 @@ public class CollectReadingsScheduler {
         Gyle lg = ch.getLatestGyle();
 
         try {
-            logger.debug("================ collectReadingsForChamber(" + chamberId + ", " + timeNow + ")");
-            logger.debug("Slurping log messages BEFORE SENDING parameters to chamber " + chamberId);
+            logger.debug("================ collectReadingsForChamber({}, {})", chamberId, timeNow);
+            logger.debug("Slurping log messages BEFORE SENDING parameters to chamber {}", chamberId);
             chamberManager.slurpLogMessages();
             ChamberParameters cp = lg != null ? lg.getChamberParameters(timeNow) : ch.getPartialChamberParameters();
             chamberManager.setParameters(chamberId, cp);
-            logger.debug("Slurping log messages AFTER SENDING parameters to chamber " + chamberId);
+            logger.debug("Slurping log messages AFTER SENDING parameters to chamber {}", chamberId);
             chamberManager.slurpLogMessages();
 
-            logger.debug("Taking readings for chamber " + lg.chamber.getId());
+            logger.debug("Taking readings for chamber {}", lg.chamber.getId());
             ChamberReadings latestReadings = chamberManager.collectReadings(chamberId, timeNow);
             if (logger.isDebugEnabled()) {
-                logger.debug("Chamber " + chamberId + " readings: " + latestReadings.toString());
+                logger.debug("Chamber {} readings: {}", chamberId, latestReadings.toString());
             }
             ch.setLatestChamberReadings(latestReadings);
-            logger.debug("Slurping log messages AFTER COLLECTING readings for chamber " + chamberId);
+            logger.debug("Slurping log messages AFTER COLLECTING readings for chamber {}", chamberId);
             chamberManager.slurpLogMessages();
 
             if (lg != null && lg.isActive()) {

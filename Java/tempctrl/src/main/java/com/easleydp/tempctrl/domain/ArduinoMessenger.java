@@ -63,8 +63,8 @@ public class ArduinoMessenger implements AutoCloseable {
             logger.warn("No serial comm ports!");
         } else {
             for (SerialPort sp : serialPorts) {
-                logger.debug("Found serial comm port: " + sp.getPortDescription() + ", " + sp.getDescriptivePortName()
-                        + ", " + sp.getSystemPortName());
+                logger.debug("Found serial comm port: {}, {}, {}", sp.getPortDescription(), sp.getDescriptivePortName(),
+                        sp.getSystemPortName());
             }
             // If there's only one that mentions "USB-to-Serial" (or similar), go for that.
             // If more than one, look for the preferred port name otherwise go with first.

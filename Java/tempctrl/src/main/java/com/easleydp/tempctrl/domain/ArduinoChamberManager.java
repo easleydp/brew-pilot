@@ -75,7 +75,7 @@ public class ArduinoChamberManager implements ChamberManager {
     public ChamberReadings collectReadings(int chamberId, Date timeNow) throws IOException {
         getMessenger().sendRequest("getChRds:" + chamberId);
         String response = getMessenger().getResponse("chRds:");
-        logger.debug("Raw chRds:" + response);
+        logger.debug("Raw chRds:{}", response);
         String[] values = response.split(",");
         // Expecting:
         // gyleAgeHours,tTarget,tTargetNext,tMin,tMax,hasHeater,fridgeMinOnTimeMins,fridgeMinOffTimeMins,fridgeSwitchOnLagMins,Kp,Ki,Kd,mode,tBeer,tChamber,tExternal,tPi,heaterOutput,fridgeOn

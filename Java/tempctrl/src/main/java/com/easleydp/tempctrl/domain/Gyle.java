@@ -138,8 +138,7 @@ public class Gyle extends GyleDto {
         Long dtStarted = getDtStarted();
         long timeNowMs = timeNow.getTime();
         long millisSinceStart = dtStarted == null ? 0 : timeNowMs - dtStarted;
-        logger.debug(
-                "millisSinceStart: " + millisSinceStart + "(timeNowMs=" + timeNowMs + ", dtStarted=" + dtStarted + ")");
+        logger.debug("millisSinceStart: {} (timeNowMs={}, dtStarted={})", millisSinceStart, timeNowMs, dtStarted);
         TemperatureProfile tp = getTemperatureProfileDomain();
         int gyleAgeHours = (int) (millisSinceStart / 1000L / 60 / 60);
         return new ChamberParameters(gyleAgeHours, tp.getTargetTempAt(millisSinceStart),
@@ -166,7 +165,7 @@ public class Gyle extends GyleDto {
      */
     public void logLatestReadings(ChamberReadings chamberReadings, Date timeNow) throws IOException {
         final int chamberId = chamber.getId();
-        logger.debug("logLatestReadings() for chamber " + chamberId + " gyle " + gyleDir.getFileName());
+        logger.debug("logLatestReadings() for chamber {} gyle {}", chamberId, gyleDir.getFileName());
 
         latestChamberReadings = chamberReadings;
 
@@ -217,7 +216,7 @@ public class Gyle extends GyleDto {
     /** Forces flush and consolidation. */
     public void close() {
         if (logBuffer != null && !logBuffer.readingsList.isEmpty()) {
-            logger.debug("Force flushing " + logBuffer.readingsList.size() + " readings");
+            logger.debug("Force flushing {} readings", logBuffer.readingsList.size());
             logBuffer.flush(logsDir, logAnalysis);
             logBuffer = null;
             logAnalysis.maybeConsolidateLogFiles();
@@ -450,7 +449,7 @@ public class Gyle extends GyleDto {
         }
 
         private void consolidateLogFiles(List<LogFileDescriptor> genNDescriptors, int gen) {
-            logger.debug("Consolidating " + genNDescriptors.size() + " log files for gen " + gen);
+            logger.debug("Consolidating {} log files for gen {}", genNDescriptors.size(), gen);
             LogFileDescriptor first = genNDescriptors.get(0);
             LogFileDescriptor last = genNDescriptors.get(genNDescriptors.size() - 1);
             Path newLogFile = logsDir.resolve(buildLogFilename(gen, first.dtStart, last.dtEnd));
@@ -472,7 +471,7 @@ public class Gyle extends GyleDto {
         public void performAnyPostConsolidationCleanup() {
             if (!awaitingCleanup.isEmpty()) {
                 try {
-                    logger.debug("Performing post-consolidation cleanup for " + awaitingCleanup.size() + " log files");
+                    logger.debug("Performing post-consolidation cleanup for {} log files", awaitingCleanup.size());
                     for (LogFileDescriptor desc : awaitingCleanup) {
                         Files.delete(desc.logFile);
                         boolean removed = logFileDescriptors.remove(desc);

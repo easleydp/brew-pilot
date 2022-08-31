@@ -461,8 +461,8 @@ public class ArduinoChamberManager implements ChamberManager {
     }
 
     private static void logChamberParamMismatchError(int chamberId, String paramName, Object expected, Object actual) {
-        logger.error("Chamber params mismatch: Chamber " + chamberId + " " + paramName + " should be " + expected
-                + " but is " + actual);
+        logger.error("Chamber params mismatch: Chamber {} {} should be {} but is {}", chamberId, paramName, expected,
+                actual);
     }
 
     private ArduinoMessenger getMessenger() throws IOException {

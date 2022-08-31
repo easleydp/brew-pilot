@@ -16,7 +16,7 @@ public class EmailTestController {
 
     @PostMapping("/admin/email-test")
     public void sendEmail(@RequestBody EmailTestDto emailTest) {
-        logger.info("POST email-test\n\t" + emailTest);
+        logger.info("POST email-test\n\t{}", emailTest);
         if (emailTest.noRetry)
             emailService.sendSimpleMessage_noRetry(emailTest.subject, emailTest.text);
         else

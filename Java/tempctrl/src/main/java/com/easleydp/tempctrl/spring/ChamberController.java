@@ -203,14 +203,14 @@ public class ChamberController {
     @PostMapping("/admin/chamber/{chamberId}/latest-gyle-profile")
     public void updateLatestGyleProfile(@PathVariable("chamberId") int chamberId,
             @RequestBody TemperatureProfileDto profile) {
-        logger.info("POST latest-gyle-profile, " + chamberId + ",\n\t" + profile);
+        logger.info("POST latest-gyle-profile, {},\n\t{}", chamberId, profile);
         Gyle latestGyle = getLatestGyleForChamber(chamberId);
         TemperatureProfileDto currentProfile = latestGyle.getTemperatureProfile();
         if (currentProfile.equals(profile)) { // optimisation
             logger.info(" ... no change.");
             return;
         }
-        logger.info(" ... was:\n\t" + currentProfile);
+        logger.info(" ... was:\n\t{}", currentProfile);
         latestGyle.setTemperatureProfile(profile);
 
         try {
@@ -227,7 +227,7 @@ public class ChamberController {
 
     @PostMapping("/admin/chamber/{chamberId}/latest-gyle")
     public void updateLatestGyle(@PathVariable("chamberId") int chamberId, @RequestBody GyleDto gyle) {
-        logger.info("POST latest-gyle, " + chamberId + ", " + gyle);
+        logger.info("POST latest-gyle, {}, {}", chamberId, gyle);
         Gyle latestGyle = getLatestGyleForChamber(chamberId);
         BeanUtils.copyProperties(gyle, latestGyle);
 
@@ -246,7 +246,7 @@ public class ChamberController {
             .forEach(chamber -> {
                 Gyle latestGyle = chamber.getLatestGyle();
                 if (latestGyle != null && latestGyle.isActive()) {
-                    logger.info("Closing chamber " + chamber.getId() + ", gyle " + latestGyle.id);
+                    logger.info("Closing chamber {}, gyle {}", chamber.getId(), latestGyle.id);
                     latestGyle.close();
                 }
             });

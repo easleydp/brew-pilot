@@ -51,7 +51,7 @@ public class ArduinoMessenger implements AutoCloseable {
         comPort = findUsbSerialPort();
         if (comPort == null)
             throw new IOException("Failed to find USB serial port");
-        logger.info("Found USB serial port " + comPort.getSystemPortName());
+        logger.info("Found USB serial port {}", comPort.getSystemPortName());
         comPort.openPort();
         comPort.setBaudRate(57600);
     }
@@ -142,7 +142,7 @@ public class ArduinoMessenger implements AutoCloseable {
                     if (isPrintable(b))
                         stringBytesList.add(b);
                     else
-                        logger.warn("Non-printable character received while purging: " + b);
+                        logger.warn("Non-printable character received while purging: {}", b);
                 }
             }
         }
@@ -153,7 +153,7 @@ public class ArduinoMessenger implements AutoCloseable {
             for (Byte b : stringBytesList)
                 stringBytesArray[i++] = b;
             String purged = new String(stringBytesArray, US_ASCII);
-            logger.warn("Found unread data before sending request: " + purged);
+            logger.warn("Found unread data before sending request: {}", purged);
         }
 
         // Restore the usual blocking mode and timeouts.
@@ -190,10 +190,9 @@ public class ArduinoMessenger implements AutoCloseable {
                     } else {
                         consecutiveZeroCount = 0;
                         if (isPrintable(b))
-                            logger.warn("Expected start byte but received " + b + " ('" + Character.toString((char) b)
-                                    + "')");
+                            logger.warn("Expected start byte but received {}} ('{}')", b, Character.toString((char) b));
                         else
-                            logger.warn("Expected start byte but received " + b);
+                            logger.warn("Expected start byte but received {}", b);
                     }
                 }
             } else // collecting
@@ -203,7 +202,7 @@ public class ArduinoMessenger implements AutoCloseable {
                 if (isPrintable(b))
                     stringBytesList.add(b);
                 else
-                    logger.warn("Non-printable character received while collecting: " + b);
+                    logger.warn("Non-printable character received while collecting: {}", b);
             }
         }
 
@@ -229,7 +228,7 @@ public class ArduinoMessenger implements AutoCloseable {
             String response = getResponse(); // SerialPortTimeoutException may also end the loop
             if (expectedResponse.equals(response))
                 return;
-            logger.warn("Expected response [" + expectedResponse + "] but received [" + response + "]");
+            logger.warn("Expected response [{}] but received [{}]", expectedResponse, response);
         }
     }
 
@@ -243,7 +242,7 @@ public class ArduinoMessenger implements AutoCloseable {
             int i = response.indexOf(expectedPrefix);
             if (i == 0)
                 return response.substring(expectedPrefix.length());
-            logger.warn("Expected prefix [" + expectedPrefix + "...] but received [" + response + "]");
+            logger.warn("Expected prefix [{}...] but received [{}]", expectedPrefix, response);
         }
     }
 

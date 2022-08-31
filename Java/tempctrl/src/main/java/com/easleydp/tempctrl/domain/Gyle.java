@@ -408,7 +408,7 @@ public class Gyle extends GyleDto {
                         LogFileDescriptor fd = iter.next();
 
                         if (fd.dtEnd <= lastDtEnd) {
-                            logger.warn("Purging redundant log file on start-up: " + fd.getFilename());
+                            logger.warn("Purging redundant log file on start-up: {}", fd.getFilename());
                             Files.delete(fd.logFile);
                             iter.remove();
                         } else {
@@ -417,7 +417,7 @@ public class Gyle extends GyleDto {
                             // This would be inexplicable but let's check anyway: Having sorted by dtStart
                             // ASC, generations should implicitly be sorted DESC.
                             if (fd.generation > lastGeneration) {
-                                logger.error("Detected inexplicable log file on start-up: " + fd.getFilename());
+                                logger.error("Detected inexplicable log file on start-up: {}", fd.getFilename());
                             } else {
                                 lastGeneration = fd.generation;
                             }

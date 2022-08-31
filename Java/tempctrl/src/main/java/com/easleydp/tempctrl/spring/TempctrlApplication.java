@@ -67,7 +67,7 @@ public class TempctrlApplication {
     @Bean
     public ChamberManager chamberManager(ChamberRepository chamberRepository) {
         boolean useDummyChamberManager = PropertyUtils.getBoolean("dummy.chambers", false);
-        logger.info("Using " + (useDummyChamberManager ? "DummyChamberManager" : "ArduinoChamberManager"));
+        logger.info("Using {}", useDummyChamberManager ? "DummyChamberManager" : "ArduinoChamberManager");
         return useDummyChamberManager ? new DummyChamberManager(chamberRepository)
                 : new ArduinoChamberManager(chamberRepository);
     }
@@ -85,11 +85,11 @@ public class TempctrlApplication {
         TimeZone timeZone = TimeZone.getTimeZone("Etc/UTC");
 
         if (serverTimeZone.equals(timeZone)) {
-            logger.info("Server/application time zone is " + prettyPrintTimeZone(timeZone) + ".");
+            logger.info("Server/application time zone is {}.", prettyPrintTimeZone(timeZone));
         } else {
             TimeZone.setDefault(timeZone);
-            logger.info("Server time zone is " + prettyPrintTimeZone(serverTimeZone) + ".");
-            logger.info("Application time zone set to " + prettyPrintTimeZone(timeZone) + ".");
+            logger.info("Server time zone is {}.", prettyPrintTimeZone(serverTimeZone));
+            logger.info("Application time zone set to {}.", prettyPrintTimeZone(timeZone));
         }
 
         if (timeZone.useDaylightTime())

@@ -33,6 +33,14 @@ public class Utils {
         return new Date((ms / oneHourMs) * oneHourMs);
     }
 
+    public static void sleep(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            throw new RuntimeException("Sleep interrupted");
+        }
+    }
+
     /** Handy helper, e.g. for XHR handlers */
     public static void artificialDelayForDebugMode() {
         artificialDelayForDebugMode(500);
@@ -40,11 +48,7 @@ public class Utils {
 
     public static void artificialDelayForDebugMode(long millis) {
         if (isDebugMode()) {
-            try {
-                Thread.sleep(millis);
-            } catch (InterruptedException e) {
-                throw new RuntimeException("Sleep interrupted");
-            }
+            sleep(millis);
         }
     }
 }

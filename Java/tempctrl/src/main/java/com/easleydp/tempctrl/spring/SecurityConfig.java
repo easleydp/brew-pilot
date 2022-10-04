@@ -1,12 +1,10 @@
 package com.easleydp.tempctrl.spring;
 
 import java.io.IOException;
-import java.util.Map;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -43,10 +41,11 @@ import org.springframework.util.Assert;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.util.WebUtils;
 
+import com.easleydp.tempctrl.domain.Utils;
+
 @Configuration
 @EnableWebSecurity
-public class SecurityConfig
-{
+public class SecurityConfig {
     private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
 
     @Autowired
@@ -58,23 +57,22 @@ public class SecurityConfig
     // Hack. Allow static code to access the above Spring component.
     private static EmailService _emailService = null;
 
+    private static final int loginFailureDelayMs_lowest = 1 * 1000;
+    private static final int loginFailureDelayMs_highest = 64 * 1000; // Some power of 2 greater than lowest
+    private static int loginFailureDelayMs = loginFailureDelayMs_lowest;
+
     @Bean
-    public UserDetailsService userDetailsService() throws Exception
-    {
+    public UserDetailsService userDetailsService() throws Exception {
         InMemoryUserDetailsManager manager = new InMemoryUserDetailsManager();
 
         // For debug: String pwdHash = encoder().encode("?????");
-        String pwdHash = env.getProperty("pwdhash.guest")
-            .replaceAll("#dollar#", "\\$");  // For running from vscode
+        String pwdHash = env.getProperty("pwdhash.guest").replaceAll("#dollar#", "\\$"); // For running from vscode
         Assert.state(pwdHash != null && pwdHash.length() > 0, "Guest password not specified");
-        manager.createUser(User.withUsername("guest").password(pwdHash)
-                .roles("USER").build());
+        manager.createUser(User.withUsername("guest").password(pwdHash).roles("USER").build());
 
-        pwdHash = env.getProperty("pwdhash.admin")
-            .replaceAll("#dollar#", "\\$");  // For running from vscode
+        pwdHash = env.getProperty("pwdhash.admin").replaceAll("#dollar#", "\\$"); // For running from vscode
         Assert.state(pwdHash != null && pwdHash.length() > 0, "Admin password not specified");
-        manager.createUser(User.withUsername("admin").password(pwdHash)
-                .roles("USER", "ADMIN").build());
+        manager.createUser(User.withUsername("admin").password(pwdHash).roles("USER", "ADMIN").build());
 
         // Hack
         _emailService = emailService;
@@ -84,35 +82,32 @@ public class SecurityConfig
 
     @Configuration
     @Order(1)
-    public static class GuestConfigurationAdapter extends MyWebSecurityConfigurerAdapter
-    {
+    public static class GuestConfigurationAdapter extends MyWebSecurityConfigurerAdapter {
         @Override
-        protected void configure(HttpSecurity http) throws Exception
-        {
+        protected void configure(HttpSecurity http) throws Exception {
             configure(http, "/admin/**", "ADMIN");
         }
     }
+
     @Configuration
     @Order(2)
-    public static class AdminConfigurationAdapter extends MyWebSecurityConfigurerAdapter
-    {
+    public static class AdminConfigurationAdapter extends MyWebSecurityConfigurerAdapter {
         @Override
-        protected void configure(HttpSecurity http) throws Exception
-        {
+        protected void configure(HttpSecurity http) throws Exception {
             configure(http, "/guest/**", "USER");
         }
     }
+
     @Configuration
     @Order(3)
-    public static class ActuatorConfigurationAdapter extends MyWebSecurityConfigurerAdapter
-    {
+    public static class ActuatorConfigurationAdapter extends MyWebSecurityConfigurerAdapter {
         @Override
-        protected void configure(HttpSecurity http) throws Exception
-        {
+        protected void configure(HttpSecurity http) throws Exception {
             configure(http, "/actuator/**", "ADMIN");
         }
     }
 
+// @formatter:off
 // Uncomment this to disable authentication for actuator
 //    @Configuration
 //    @Order(3)
@@ -127,12 +122,14 @@ public class SecurityConfig
 //                    .authenticated();
 //        }
 //    }
+// @formatter:on
 
     @Configuration
     public static class FormLoginWebSecurityConfigurerAdapter extends MyWebSecurityConfigurerAdapter {
 
         @Override
         protected void configure(HttpSecurity http) throws Exception {
+            // @formatter:off
             http
                     .csrf().disable()
                     .authorizeRequests(authorizeRequests ->
@@ -150,23 +147,27 @@ public class SecurityConfig
                 .and()
                     .logout().logoutSuccessHandler((new HttpStatusReturningLogoutSuccessHandler(HttpStatus.OK)))
                 ;
+            // @formatter:on
         }
 
-        private AuthenticationSuccessHandler successHandler()
-        {
-            return new AuthenticationSuccessHandler()
-            {
+        private AuthenticationSuccessHandler successHandler() {
+            return new AuthenticationSuccessHandler() {
                 @Override
                 public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
-                        Authentication authentication) throws IOException, ServletException
-                {
+                        Authentication authentication) throws IOException, ServletException {
                     boolean isAdmin = authentication.getAuthorities().stream()
-                            .filter(auth -> auth.getAuthority().equals("ROLE_ADMIN"))
-                            .findFirst().isPresent();
+                            .filter(auth -> auth.getAuthority().equals("ROLE_ADMIN")).findFirst().isPresent();
 
                     logger.info("Successful login ({})", request.getParameter("username"));
                     if (!isAdmin) {
                         _emailService.sendSimpleMessage("BrewPilot guest login", "");
+                    }
+
+                    // We use successful logins as a hook to decay any accumulated login failure
+                    // delay.
+                    if (loginFailureDelayMs > loginFailureDelayMs_lowest) {
+                        loginFailureDelayMs = loginFailureDelayMs_lowest;
+                        logger.debug("Login failure delay reset");
                     }
 
                     response.setContentType("application/json");
@@ -176,17 +177,20 @@ public class SecurityConfig
             };
         }
 
-
-        private AuthenticationFailureHandler failureHandler()
-        {
-            return new AuthenticationFailureHandler()
-            {
+        private AuthenticationFailureHandler failureHandler() {
+            return new AuthenticationFailureHandler() {
                 @Override
                 public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response,
-                        AuthenticationException e) throws IOException, ServletException
-                {
+                        AuthenticationException e) throws IOException, ServletException {
                     logger.warn("Login failure ({})", request.getParameter("username"));
                     _emailService.sendSimpleMessage("BrewPilot login failure", request.getParameter("username"));
+
+                    // Apply an increasing delay to failed login attempts.
+                    Utils.sleep(loginFailureDelayMs);
+                    if (loginFailureDelayMs < loginFailureDelayMs_highest) {
+                        loginFailureDelayMs *= 2;
+                        logger.warn("Login failure delay increased to {}", loginFailureDelayMs);
+                    }
 
                     response.setContentType("application/json");
                     response.setStatus(401);
@@ -196,17 +200,14 @@ public class SecurityConfig
         }
     }
 
-
     @Bean
-    public PasswordEncoder encoder()
-    {
+    public PasswordEncoder encoder() {
         return new BCryptPasswordEncoder();
     }
 
-    private static abstract class MyWebSecurityConfigurerAdapter extends WebSecurityConfigurerAdapter
-    {
-        protected void configure(HttpSecurity http, String antPattern, String role) throws Exception
-        {
+    private static abstract class MyWebSecurityConfigurerAdapter extends WebSecurityConfigurerAdapter {
+        protected void configure(HttpSecurity http, String antPattern, String role) throws Exception {
+            // @formatter:off
             http
                 .antMatcher(antPattern)
                     .authorizeRequests()
@@ -216,16 +217,14 @@ public class SecurityConfig
                     .accessDeniedHandler(accessDeniedHandler())
                 .and().csrf().csrfTokenRepository(csrfTokenRepository()).and().addFilterAfter(csrfHeaderFilter(), CsrfFilter.class)
             ;
+            // @formatter:on
         }
 
-        protected AuthenticationEntryPoint authenticationEntryPoint()
-        {
-            return new AuthenticationEntryPoint()
-            {
+        protected AuthenticationEntryPoint authenticationEntryPoint() {
+            return new AuthenticationEntryPoint() {
                 @Override
                 public void commence(HttpServletRequest request, HttpServletResponse response,
-                        AuthenticationException e) throws IOException, ServletException
-                {
+                        AuthenticationException e) throws IOException, ServletException {
                     response.setContentType("application/json");
                     response.setStatus(401);
                     response.getWriter().write("{\"result\":\"UNAUTHORIZED\",\"message\":\"Not authenticated\"}");
@@ -233,15 +232,12 @@ public class SecurityConfig
             };
         }
 
-        protected AccessDeniedHandler accessDeniedHandler()
-        {
-            return new AccessDeniedHandler()
-            {
+        protected AccessDeniedHandler accessDeniedHandler() {
+            return new AccessDeniedHandler() {
 
                 @Override
-                public void handle(HttpServletRequest request, HttpServletResponse response,
-                        AccessDeniedException e) throws IOException, ServletException
-                {
+                public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException e)
+                        throws IOException, ServletException {
                     response.setContentType("application/json");
                     response.setStatus(403);
                     response.getWriter().write("{\"result\":\"FORBIDDEN\",\"message\":\"Access denied\"}");
@@ -249,23 +245,16 @@ public class SecurityConfig
             };
         }
 
-
-        private Filter csrfHeaderFilter()
-        {
-            return new OncePerRequestFilter()
-            {
+        private Filter csrfHeaderFilter() {
+            return new OncePerRequestFilter() {
                 @Override
-                protected void doFilterInternal(HttpServletRequest request,
-                        HttpServletResponse response, FilterChain filterChain)
-                        throws ServletException, IOException
-                {
+                protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
+                        FilterChain filterChain) throws ServletException, IOException {
                     CsrfToken csrf = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
-                    if (csrf != null)
-                    {
+                    if (csrf != null) {
                         Cookie cookie = WebUtils.getCookie(request, "XSRF-TOKEN");
                         String token = csrf.getToken();
-                        if (cookie == null || token != null && !token.equals(cookie.getValue()))
-                        {
+                        if (cookie == null || token != null && !token.equals(cookie.getValue())) {
                             cookie = new Cookie("XSRF-TOKEN", token);
                             cookie.setPath("/");
                             response.addCookie(cookie);
@@ -276,8 +265,7 @@ public class SecurityConfig
             };
         }
 
-        private CsrfTokenRepository csrfTokenRepository()
-        {
+        private CsrfTokenRepository csrfTokenRepository() {
             HttpSessionCsrfTokenRepository repository = new HttpSessionCsrfTokenRepository();
             repository.setHeaderName("X-XSRF-TOKEN");
             return repository;

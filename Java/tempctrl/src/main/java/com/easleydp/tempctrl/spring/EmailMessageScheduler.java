@@ -57,15 +57,17 @@ public class EmailMessageScheduler {
 
     void testableSendGyleRelatedNotifications(Date timeNow) {
         for (Chamber chamber : chamberRepository.getChambers()) {
-            Gyle latestGyle = chamber.getLatestGyle();
-            if (latestGyle != null && latestGyle.isActive()) {
-                Long dtStarted = latestGyle.getDtStarted();
-                if (dtStarted != null) {
-                    long periodMillis = getInteger("coldCrashCheck.periodMinutes", 30) * 1000L * 60L;
-                    long timeNowMs = timeNow.getTime();
-                    long millisSinceStart = timeNowMs - dtStarted;
-                    maybeSendCrashStartNotification(periodMillis, timeNowMs, millisSinceStart, latestGyle, chamber);
-                    maybeSendCrashEndNotification(periodMillis, timeNowMs, millisSinceStart, latestGyle, chamber);
+            if (chamber.isHasHeater()) { // i.e. not beer fridge
+                Gyle latestGyle = chamber.getLatestGyle();
+                if (latestGyle != null && latestGyle.isActive()) {
+                    Long dtStarted = latestGyle.getDtStarted();
+                    if (dtStarted != null) {
+                        long periodMillis = getInteger("coldCrashCheck.periodMinutes", 30) * 1000L * 60L;
+                        long timeNowMs = timeNow.getTime();
+                        long millisSinceStart = timeNowMs - dtStarted;
+                        maybeSendCrashStartNotification(periodMillis, timeNowMs, millisSinceStart, latestGyle, chamber);
+                        maybeSendCrashEndNotification(periodMillis, timeNowMs, millisSinceStart, latestGyle, chamber);
+                    }
                 }
             }
         }

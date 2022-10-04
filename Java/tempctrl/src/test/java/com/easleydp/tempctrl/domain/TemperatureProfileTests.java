@@ -35,10 +35,8 @@ public class TemperatureProfileTests {
     }
 
     @Test
-    public void testInvalid_millisSinceStartLessThanZero() {
-        assertThrows(RuntimeException.class, () -> {
-            profile.getTargetTempAt(-1);
-        });
+    public void testmillisSinceStartLessThanZero() {
+        assertEquals(150, profile.getTargetTempAt(-1));
     }
 
     @Test

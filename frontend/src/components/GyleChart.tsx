@@ -858,8 +858,8 @@ const GyleChart = () => {
             });
             aggregatedReadings.push(...gyleDetails.recentReadings);
 
-            // Drop any readings earlier than the gyle's start time.
-            // Or for beer fridge, drop any readings more than N weeks old.
+            // For beer fridge, drop any readings more than N weeks old.
+            // (We no longer drop any readings earlier than the gyle's start time.)
             const earliestReading = aggregatedReadings[0];
             const dtStarted = gyleDetails.dtStarted;
             if (earliestReading) {
@@ -873,14 +873,14 @@ const GyleChart = () => {
                 const droppedCount = totalCount - aggregatedReadings.length;
                 droppedCount &&
                   console.debug(`Dropped ${droppedCount} readings more than ${nWeeks} weeks old`);
-              } else if (restoreUtcMillisPrecision(earliestReading.dt) < dtStarted) {
-                aggregatedReadings = aggregatedReadings.filter((reading) => {
-                  return restoreUtcMillisPrecision(reading.dt) >= dtStarted;
-                });
-                const droppedCount = totalCount - aggregatedReadings.length;
-                console.debug(
-                  `Dropped ${droppedCount} readings earlier than the gyle's start time`
-                );
+                // } else if (restoreUtcMillisPrecision(earliestReading.dt) < dtStarted) {
+                //   aggregatedReadings = aggregatedReadings.filter((reading) => {
+                //     return restoreUtcMillisPrecision(reading.dt) >= dtStarted;
+                //   });
+                //   const droppedCount = totalCount - aggregatedReadings.length;
+                //   console.debug(
+                //     `Dropped ${droppedCount} readings earlier than the gyle's start time`
+                //   );
               }
             }
 

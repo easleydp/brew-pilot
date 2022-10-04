@@ -58,19 +58,20 @@ public class TemperatureProfile extends TemperatureProfileDto {
      *         If the specified millisSinceStart is between two points an
      *         interpolated value is calculated.
      *
-     *         If the specified millisSinceStart is after the last point the last
-     *         set point temperature is returned.
+     *         If the specified millisSinceStart is before/after the first/last
+     *         point the first/last set point temperature is returned.
      */
     public int getTargetTempAt(final long millisSinceStart) {
-        if (millisSinceStart < 0)
-            throw new IllegalArgumentException("millisSinceStart cannot be -ve");
-
         if (points.isEmpty())
             throw new IllegalStateException("Profile has no points");
 
-        int p0HoursSinceStart = points.get(0).getHoursSinceStart();
+        PointDto firstPoint = points.get(0);
+        int p0HoursSinceStart = firstPoint.getHoursSinceStart();
         if (p0HoursSinceStart != 0)
             throw new IllegalStateException("First profile point isn't at t0: " + p0HoursSinceStart);
+
+        if (millisSinceStart < 0)
+            return firstPoint.getTargetTemp();
 
         PointDto prevPoint = null;
         PointDto point = null;

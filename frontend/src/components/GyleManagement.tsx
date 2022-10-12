@@ -17,11 +17,15 @@ import Loading from './Loading';
 
 interface IErrors {
   formName?: string;
+  // formDtStartedOld?: string;
+  // formDtEndedOld?: string;
   formDtStarted?: string;
   formDtEnded?: string;
 }
 interface IValues {
   formName?: string;
+  // formDtStartedOld?: string;
+  // formDtEndedOld?: string;
   formDtStarted?: string;
   formDtEnded?: string;
   formMode: Mode;
@@ -68,6 +72,41 @@ const GyleManagement = () => {
     setShowError(false);
     setErrorMessage(null);
     formik.setSubmitting(false);
+  };
+
+  const reDateTime = /^(\d{4}|\d{2})[-/]([01]?\d)[-/]([0123]?\d)\s([012]?\d)[:.]([012345]?\d)$/;
+
+  const dateTimeStrIsValid = (dateTimeStr: string | null | undefined): dateTimeStr is string => {
+    return !!dateTimeStr && reDateTime.test(dateTimeStr);
+  };
+
+  const dateTimeStrToMillis = (dateTimeStr: string) => {
+    const match = dateTimeStr.match(reDateTime);
+    if (!match) throw Error('Invalid date/time string: ' + dateTimeStr);
+    const year = match[1].length === 2 ? parseInt(match[1]) + 2000 : parseInt(match[1]);
+    const date = new Date(
+      year,
+      parseInt(match[2]) - 1, // month
+      parseInt(match[3]), // day of month
+      parseInt(match[4]), // hours
+      parseInt(match[5]) // minutes
+    );
+    return date.getTime();
+  };
+
+  const millisToDateTimeStr = (ms: number) => {
+    const parts = new Intl.DateTimeFormat(['en'], {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).formatToParts(new Date(ms));
+    const part = (type: string) => {
+      return parts.find((part) => part.type === type)?.value;
+    };
+    return `${part('year')}-${part('month')}-${part('day')} ${part('hour')}:${part('minute')}`;
   };
 
   useEffect(() => {
@@ -118,14 +157,27 @@ const GyleManagement = () => {
 
   const buildForm = (gyle: IGyle) => {
     formik.setFieldValue('formName', gyle.name);
-    formik.setFieldValue('formDtStarted', gyle.dtStarted || '');
-    formik.setFieldValue('formDtEnded', gyle.dtEnded || '');
+    // formik.setFieldValue('formDtStartedOld', gyle.dtStarted || '');
+    // formik.setFieldValue('formDtEndedOld', gyle.dtEnded || '');
+
+    formik.setFieldValue(
+      'formDtStarted',
+      gyle.dtStarted || gyle.dtStarted === 0 ? millisToDateTimeStr(gyle.dtStarted) : ''
+    );
+
+    formik.setFieldValue(
+      'formDtEnded',
+      gyle.dtEnded || gyle.dtEnded === 0 ? millisToDateTimeStr(gyle.dtEnded) : ''
+    );
+
     formik.setFieldValue('formMode', gyle.mode || Mode.Auto);
   };
 
   const formik = useFormik({
     initialValues: {
       formName: '',
+      // formDtStartedOld: '',
+      // formDtEndedOld: '',
       formDtStarted: '',
       formDtEnded: '',
       formMode: Mode.Auto,
@@ -133,27 +185,52 @@ const GyleManagement = () => {
     // validate,
     validationSchema: Yup.object({
       formName: Yup.string().required('Required'),
-      formDtStarted: Yup.number()
-        .typeError('Must be an integer')
-        .integer('Must be an integer')
-        .min(1580000000000)
-        .max(2000000000000),
-      formDtEnded: Yup.number()
-        .typeError('Must be an integer')
-        .integer('Must be an integer')
-        .min(1580000000000)
-        .max(2000000000000)
+      // formDtStartedOld: Yup.number()
+      //   .typeError('Must be an integer')
+      //   .integer('Must be an integer')
+      //   .min(0) // Jan 01 1970 00:00:00 UTC
+      //   .max(2000000000000), // May 18 2033 03:33:20 UTC
+      // formDtEndedOld: Yup.number()
+      //   .typeError('Must be an integer')
+      //   .integer('Must be an integer')
+      //   .min(1580000000000) // Jan 26 2020 00:53:20 UTC
+      //   .max(2000000000000) // May 18 2033 03:33:20 UTC
+      //   .test('', 'EndedOld cannot be specified without StartedOld being set', function (val) {
+      //     return !val || this.parent['formDtStartedOld'];
+      //   })
+      //   .test('', 'EndedOld must be later than StartedOld', function (val) {
+      //     return !val || val > this.parent['formDtStartedOld'];
+      //   }),
+      formDtStarted: Yup.string().matches(reDateTime, 'Format must be: YYYY-MM-DD hh:mm'),
+      formDtEnded: Yup.string()
+        .matches(reDateTime, 'Format must be: YYYY-MM-DD hh:mm')
         .test('', 'Ended cannot be specified without Started being set', function (val) {
           return !val || this.parent['formDtStarted'];
         })
         .test('', 'Ended must be later than Started', function (val) {
-          return !val || val > this.parent['formDtStarted'];
+          var millis = val && dateTimeStrIsValid(val) ? dateTimeStrToMillis(val) : undefined;
+          return !millis || millis > dateTimeStrToMillis(this.parent['formDtStarted']);
         }),
+      // .test({
+      //   // Alternative form for when more involved validation logic is needed
+      //   test(val) {
+      //     if (dateTimeStrIsValid(val)) {
+      //       var millis = dateTimeStrToMillis(val);
+      //       if (millis <= this.parent['formDtStarted'])
+      //         return this.createError({ message: 'Ended must be later than Started' });
+      //     }
+      //     return true;
+      //   },
+      // }),
     }),
     onSubmit: (values, { setSubmitting }) => {
       gyle!.name = values.formName;
-      gyle!.dtStarted = values.formDtStarted ? parseInt(values.formDtStarted) : undefined;
-      gyle!.dtEnded = values.formDtEnded ? parseInt(values.formDtEnded) : undefined;
+      // gyle!.dtStartedOld = values.formDtStartedOld ? parseInt(values.formDtStartedOld) : undefined;
+      // gyle!.dtEndedOld = values.formDtEndedOld ? parseInt(values.formDtEndedOld) : undefined;
+      gyle!.dtStarted = values.formDtStarted
+        ? dateTimeStrToMillis(values.formDtStarted)
+        : undefined;
+      gyle!.dtEnded = values.formDtEnded ? dateTimeStrToMillis(values.formDtEnded) : undefined;
       // gyle!.mode = values.formMode; Commented-out in sympathy with form.
       // gyle.mode is currently returned as we received it
       // gyle.temperatureProfile is returned as we received it
@@ -180,9 +257,22 @@ const GyleManagement = () => {
         });
     },
   });
-  const roundMsToNearestSecond = (ms: number) => {
-    return Math.round(ms / 1000) * 1000;
+
+  const truncMsToMinute = (ms: number) => {
+    const minMillis = 1000 * 60;
+    return Math.trunc(ms / minMillis) * minMillis;
   };
+
+  // const handleDtStartedOldNow = () => {
+  //   setFieldOldNow('formDtStartedOld');
+  // };
+  // const handleDtEndedOldNow = () => {
+  //   setFieldOldNow('formDtEndedOld');
+  // };
+  // const setFieldOldNow = (field: string) => {
+  //   formik.setFieldValue(field, truncMsToMinute(Date.now()));
+  // };
+
   const handleDtStartedNow = () => {
     setFieldNow('formDtStarted');
   };
@@ -190,20 +280,35 @@ const GyleManagement = () => {
     setFieldNow('formDtEnded');
   };
   const setFieldNow = (field: string) => {
-    formik.setFieldValue(field, roundMsToNearestSecond(Date.now()));
+    formik.setFieldValue(field, millisToDateTimeStr(Date.now()));
   };
+
   const handleFormBlur = () => {
-    // If either of the two time input fields looks like a 'now' pattern, convert to ms
+    // // If either of the two old time input fields looks like a 'now' pattern, convert to ms
+    // checkForOldNowPattern('formDtStartedOld');
+    // checkForOldNowPattern('formDtEndedOld');
+
+    // If either of the two time input fields looks like a 'now' pattern, convert to date/time string
     checkForNowPattern('formDtStarted');
     checkForNowPattern('formDtEnded');
   };
+
+  // const checkForOldNowPattern = (field: string) => {
+  //   let value = formik.getFieldProps(field).value;
+  //   if (value) {
+  //     value = '' + value; // Could be integer; normalise to string
+  //     if (NowPattern.isNowPattern(value)) {
+  //       const t = NowPattern.evaluateNowPattern(value).getTime();
+  //       formik.setFieldValue(field, truncMsToMinute(t));
+  //     }
+  //   }
+  // };
   const checkForNowPattern = (field: string) => {
     let value = formik.getFieldProps(field).value;
     if (value) {
-      value = '' + value; // Could be integer; normalise to string
       if (NowPattern.isNowPattern(value)) {
         const t = NowPattern.evaluateNowPattern(value).getTime();
-        formik.setFieldValue(field, roundMsToNearestSecond(t));
+        formik.setFieldValue(field, millisToDateTimeStr(t));
       }
     }
   };
@@ -239,21 +344,84 @@ const GyleManagement = () => {
         ) : null}
       </Form.Group>
 
+      {/* <Form.Group controlId="formDtStartedOld">
+        <Form.Label>Started old</Form.Label>
+        <Row>
+          <Col>
+            <Form.Control
+              type="text"
+              placeholder="ms since epoch"
+              {...formik.getFieldProps('formDtStartedOld')}
+            />
+            {formik.errors.formDtStartedOld ? (
+              <Form.Text className="text-error">{formik.errors.formDtStartedOld}</Form.Text>
+            ) : null}
+            <Form.Text className="text-muted">
+              When temperature control should start.<br></br>Typically reset (to 'now') when yeast
+              pitched or when signs of fermentation first detected.
+            </Form.Text>
+          </Col>
+          <Col>
+            <Button variant="secondary" type="button" onClick={handleDtStartedOldNow}>
+              Now
+            </Button>
+          </Col>
+        </Row>
+      </Form.Group>
+
+      <Form.Group controlId="formDtEndedOld">
+        <Form.Label>Ended old</Form.Label>
+        <Row>
+          <Col>
+            <Form.Control
+              type="text"
+              placeholder="ms since epoch"
+              {...formik.getFieldProps('formDtEndedOld')}
+            />
+            {formik.errors.formDtEndedOld ? (
+              <Form.Text className="text-error">{formik.errors.formDtEndedOld}</Form.Text>
+            ) : null}
+            <Form.Text className="text-muted">
+              When temperature control no longer required.<br></br>Can be left blank until known.
+            </Form.Text>
+          </Col>
+          <Col>
+            <Button variant="secondary" type="button" onClick={handleDtEndedOldNow}>
+              Now
+            </Button>
+          </Col>
+        </Row>
+      </Form.Group> */}
+
       <Form.Group controlId="formDtStarted">
         <Form.Label>Started</Form.Label>
         <Row>
           <Col>
             <Form.Control
               type="text"
-              placeholder="ms since epoch"
+              placeholder="YYYY-MM-DD hh:mm"
               {...formik.getFieldProps('formDtStarted')}
             />
             {formik.errors.formDtStarted ? (
               <Form.Text className="text-error">{formik.errors.formDtStarted}</Form.Text>
             ) : null}
             <Form.Text className="text-muted">
-              When temperature control should start.<br></br>Typically reset (to 'now') when yeast
-              pitched or when signs of fermentation first detected.
+              {/* When temperature control should start. */}
+              Depending on your preferred way of working (and consistent with the configured
+              profile), either:<br></br>
+              When yeast was / is due to be pitched, OR when fermentation started / is expected to
+              start.<br></br>Note:
+              <ul>
+                <li>While blank the chamber will be inactive.</li>
+                {/* <li>
+                  Typically set to either yeast pitch time or the time when signs of fermentation
+                  are first detected.
+                </li> */}
+                <li>
+                  Can be set to a future date/time. In this case the chamber{' '}
+                  <strong>will be activated</strong> and held at the profile's start temperature.
+                </li>
+              </ul>
             </Form.Text>
           </Col>
           <Col>
@@ -270,14 +438,21 @@ const GyleManagement = () => {
           <Col>
             <Form.Control
               type="text"
-              placeholder="ms since epoch"
+              placeholder="YYYY-MM-DD hh:mm"
               {...formik.getFieldProps('formDtEnded')}
             />
             {formik.errors.formDtEnded ? (
               <Form.Text className="text-error">{formik.errors.formDtEnded}</Form.Text>
             ) : null}
             <Form.Text className="text-muted">
-              When temperature control no longer required.<br></br>Can be left blank until known.
+              When temperature control no longer required.<br></br>Note:
+              <ul>
+                <li>
+                  Can be left blank until known; when the temperature profile has ended the chamber
+                  will be held at the last set temperature.
+                </li>
+                <li>When the specified date/time passes the chamber will become inactive.</li>
+              </ul>
             </Form.Text>
           </Col>
           <Col>

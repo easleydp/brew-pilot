@@ -393,7 +393,7 @@ const GyleManagement = () => {
         </Row>
       </Form.Group> */}
 
-      <Form.Group controlId="formDtStarted">
+      <Form.Group controlId="formDtStarted" className="date-time">
         <Form.Label>Started</Form.Label>
         <Row>
           <Col>
@@ -402,6 +402,9 @@ const GyleManagement = () => {
               placeholder="YYYY-MM-DD hh:mm"
               {...formik.getFieldProps('formDtStarted')}
             />
+            <Button variant="secondary" type="button" onClick={handleDtStartedNow}>
+              Now
+            </Button>
             {formik.errors.formDtStarted ? (
               <Form.Text className="text-error">{formik.errors.formDtStarted}</Form.Text>
             ) : null}
@@ -424,15 +427,10 @@ const GyleManagement = () => {
               </ul>
             </Form.Text>
           </Col>
-          <Col>
-            <Button variant="secondary" type="button" onClick={handleDtStartedNow}>
-              Now
-            </Button>
-          </Col>
         </Row>
       </Form.Group>
 
-      <Form.Group controlId="formDtEnded">
+      <Form.Group controlId="formDtEnded" className="date-time">
         <Form.Label>Ended</Form.Label>
         <Row>
           <Col>
@@ -441,6 +439,9 @@ const GyleManagement = () => {
               placeholder="YYYY-MM-DD hh:mm"
               {...formik.getFieldProps('formDtEnded')}
             />
+            <Button variant="secondary" type="button" onClick={handleDtEndedNow}>
+              Now
+            </Button>
             {formik.errors.formDtEnded ? (
               <Form.Text className="text-error">{formik.errors.formDtEnded}</Form.Text>
             ) : null}
@@ -448,17 +449,12 @@ const GyleManagement = () => {
               When temperature control no longer required.<br></br>Note:
               <ul>
                 <li>
-                  Can be left blank until known; when the temperature profile has ended the chamber
-                  will be held at the last set temperature.
+                  Can be left blank until known; when the temperature profile has completed, the
+                  chamber will be held at the last set temperature.
                 </li>
                 <li>When the specified date/time passes the chamber will become inactive.</li>
               </ul>
             </Form.Text>
-          </Col>
-          <Col>
-            <Button variant="secondary" type="button" onClick={handleDtEndedNow}>
-              Now
-            </Button>
           </Col>
         </Row>
       </Form.Group>

@@ -336,7 +336,7 @@ const GyleManagement = () => {
         </Toast.Header>
         <Toast.Body>{errorMessage}</Toast.Body>
       </Toast>
-      <Form.Group controlId="formName">
+      <Form.Group controlId="formName" className="gyle-name">
         <Form.Label>Gyle name</Form.Label>
         <Form.Control type="text" {...formik.getFieldProps('formName')} />
         {formik.errors.formName ? (

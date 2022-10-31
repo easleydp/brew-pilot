@@ -3,6 +3,11 @@
   .text-error {
     color: rgb(199, 0, 0);
   }
+  .form-group.gyle-name {
+    input.form-control {
+      max-width: 63ch;
+    }
+  }
   .form-group.date-time {
     input.form-control {
       width: 19ch; // "YYYY-MM-DD hh:mm" = 16 characters. Plus a few extra for padding.

@@ -2,7 +2,6 @@ package com.easleydp.tempctrl.domain;
 
 import java.util.Date;
 
-import org.springframework.beans.BeanUtils;
 import org.springframework.util.Assert;
 
 import com.easleydp.tempctrl.domain.optimise.Smoother.IntPropertyAccessor;

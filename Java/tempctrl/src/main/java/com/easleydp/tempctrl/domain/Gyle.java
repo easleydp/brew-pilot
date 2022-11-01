@@ -224,11 +224,6 @@ public class Gyle extends GyleDto {
         }
     }
 
-    @JsonIgnore // In case this DTO subclass is ever serialised
-    public ChamberReadings getLatestReadingsRecord() {
-        return latestChamberReadings;
-    }
-
     /**
      * Returns the recent (i.e. buffered) readings in chronological order.
      */

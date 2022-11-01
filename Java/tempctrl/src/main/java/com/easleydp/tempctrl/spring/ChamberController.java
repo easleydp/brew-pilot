@@ -46,9 +46,13 @@ public class ChamberController {
         // @formatter:off
         List<ChamberSummary> chamberSummaries = chamberRepository.getChambers().stream()
             .map(c -> {
+
+                // FE infers chamber is inactive if tTarget is null
                 Gyle lg = c.getLatestGyle();
-                ChamberReadings readings = lg != null ? lg.getLatestReadingsRecord() : null;
-                Integer tTarget = readings != null && lg.isActive() ? readings.gettTarget() : null;
+                boolean active = lg != null && lg.isActive();
+                ChamberReadings readings = active ? c.getLatestChamberReadings() : null;
+                Integer tTarget = readings != null ? readings.gettTarget() : null;
+
                 return new ChamberSummary(c.getId(), c.getName(), tTarget);
             })
             .collect(Collectors.toList());
@@ -74,6 +78,8 @@ public class ChamberController {
         public final int id;
         @SuppressWarnings("unused")
         public final String name;
+        // Including tTarget is legit since it also serves to signify whether the
+        // chamber is active.
         @SuppressWarnings("unused")
         public final Integer tTarget;
 
@@ -87,20 +93,26 @@ public class ChamberController {
     /**
      * Polled by each home page gauge
      */
-    @GetMapping("/guest/chamber/{chamberId}/summary-status")
-    public SummaryStatus getSummaryStatus(@PathVariable("chamberId") int chamberId) {
+    @GetMapping("/guest/chamber/{chamberId}/beer-temp")
+    public BeerTemp getSummaryStatus(@PathVariable("chamberId") int chamberId) {
         Chamber chamber = chamberRepository.getChamberById(chamberId); // throws if not found
         ChamberReadings latestReadings = chamber.getLatestChamberReadings();
-        return new SummaryStatus(latestReadings.gettTarget(), latestReadings.gettBeer());
+
+        // FE infers chamber is inactive if tTarget is null
+        Gyle lg = chamber.getLatestGyle();
+        boolean active = lg != null && lg.isActive();
+        Integer tTarget = active ? latestReadings.gettTarget() : null;
+
+        return new BeerTemp(tTarget, latestReadings.gettBeer());
     }
 
-    private static final class SummaryStatus {
+    private static final class BeerTemp {
         @SuppressWarnings("unused")
-        public final Integer tTarget;
+        public final Integer tTarget; // null signifies temp control is inactive
         @SuppressWarnings("unused")
         public final Integer tBeer;
 
-        public SummaryStatus(Integer tTarget, Integer tBeer) {
+        public BeerTemp(Integer tTarget, Integer tBeer) {
             this.tTarget = tTarget;
             this.tBeer = tBeer;
         }

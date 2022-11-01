@@ -150,8 +150,8 @@ const Gauge = ({ chamberId, tTarget, handleAuthError }: GaugeProps) => {
 
       function (chart: any) {
         const point = chart.series[0].points[0];
-        function getReadings() {
-          const url = `/tempctrl/guest/chamber/${chamberId}/summary-status`;
+        function getBeerTemp() {
+          const url = `/tempctrl/guest/chamber/${chamberId}/beer-temp`;
           axios
             .get(url)
             .then(function (response) {
@@ -172,12 +172,13 @@ const Gauge = ({ chamberId, tTarget, handleAuthError }: GaugeProps) => {
             });
         }
 
-        getReadings();
-        interval = window.setInterval(getReadings, 60 * 1000);
+        getBeerTemp();
+        interval = window.setInterval(getBeerTemp, 60 * 1000);
       }
     );
 
     return () => {
+      console.debug('Gauge cleaned-up.');
       interval && clearInterval(interval);
     };
   }, [chamberId, containerId, tTarget]);

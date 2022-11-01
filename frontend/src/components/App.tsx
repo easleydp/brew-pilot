@@ -188,7 +188,7 @@ const Nested = () => {
         <Route path="/gyle-chart/:chamberId" component={GyleChart} />
         <Route path="/email-test" component={EmailTest} />
         <Route path="/">
-          <Home chamberSummaries={chamberSummaries} chamberSummariesError={chamberSummariesError} />
+          <Home errorMessage={chamberSummariesError} />
         </Route>
       </Switch>
     </div>

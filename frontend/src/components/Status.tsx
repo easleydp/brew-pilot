@@ -35,7 +35,7 @@ const syntaxHighlight = (json: string) => {
   return { __html: html };
 };
 
-const Status: React.FC = () => {
+const Status = () => {
   interface IStatusReport {
     code: number;
     desc: string;

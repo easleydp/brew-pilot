@@ -38,7 +38,7 @@
   }
 
   .highcharts-tracker > .highcharts-label > .highcharts-data-label-box {
-    fill: #f6f6f6;
+    fill: #efefef;
   }
   .highcharts-gauge-series {
     > .highcharts-dial,
@@ -47,5 +47,9 @@
     }
   }
 
-  // .highcharts-pane-group > .highcharts-pane:nth-child(3) {}
+  &.inactive {
+    .highcharts-tracker > .highcharts-label > .highcharts-data-label-box {
+      fill: #cfcfcf;
+    }
+  }
 }

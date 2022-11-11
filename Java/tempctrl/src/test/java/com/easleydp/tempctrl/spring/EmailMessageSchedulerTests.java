@@ -168,7 +168,7 @@ class EmailMessageSchedulerTests {
     private void testSendColdCrashComingSoonMessage(Date timeNow) {
         emailMessageScheduler.testableSendGyleRelatedNotifications(timeNow);
 
-        assertMessageSubjectEquals("Plan to dry hop this gyle on Wednesday?");
+        assertMessageSubjectEquals("Plan to dry hop this gyle soon?");
         // Note: Time should be presented in local time, which for us is BST.
         // Hence, 1:00am instead of 0:00am.
         assertMessageTextEquals(

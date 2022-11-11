@@ -265,9 +265,21 @@ public class Gyle extends GyleDto {
      * invokes this functionality.
      */
 
-    private static final int IGNORE_FIRST_HOURS = PropertyUtils.getInteger("switchedOffCheck.ignoreFirstHours", 4);
-    private static final int FRIDGE_ON_TIME_MINS = PropertyUtils.getInteger("switchedOffCheck.fridgeOnTimeMins", 5);
-    private static final int HEATER_ON_TIME_MINS = PropertyUtils.getInteger("switchedOffCheck.heaterOnTimeMins", 10);
+    // Using getters rather than constants for the sake of testing, i.e. certain
+    // tests may wish to override the properties from which the constants get their
+    // value, but if a prior test has already run then the value of the constant
+    // would be fixed.
+    private static int getIgnoreFirstHours() {
+        return PropertyUtils.getInteger("switchedOffCheck.ignoreFirstHours", 4);
+    }
+
+    private static int getFridgeOnTimeMins() {
+        return PropertyUtils.getInteger("switchedOffCheck.fridgeOnTimeMins", 5);
+    }
+
+    private static int getHeaterOnTimeMins() {
+        return PropertyUtils.getInteger("switchedOffCheck.heaterOnTimeMins", 10);
+    }
 
     // The return value for our `checkLeftSwitchedOff()` method.
     public enum LeftSwitchedOffDetectionAction {
@@ -299,14 +311,14 @@ public class Gyle extends GyleDto {
         long timeNowMs = timeNow.getTime();
         long millisSinceStart = timeNowMs - dtStarted;
         int gyleAgeHours = (int) (millisSinceStart / 1000L / 60 / 60);
-        if (gyleAgeHours >= IGNORE_FIRST_HOURS) {
+        if (gyleAgeHours >= getIgnoreFirstHours()) {
 
             if (latestChamberReadings.getFridgeOn()) {
                 // Fridge should be ON (as far as this app is concerned) but has it been left
                 // OFF?
                 if (leftSwitchedOffState != LeftSwitchedOffState.FRIDGE_LEFT_OFF) {
-                    if (trendBuffer.getFridgeOnTimeMins() >= FRIDGE_ON_TIME_MINS + chamber.getFridgeSwitchOnLagMins()
-                            && trendBuffer.gettChamberTrend(FRIDGE_ON_TIME_MINS) != Trend.DOWNWARDS) {
+                    if (trendBuffer.getFridgeOnTimeMins() >= getFridgeOnTimeMins() + chamber.getFridgeSwitchOnLagMins()
+                            && trendBuffer.gettChamberTrend(getFridgeOnTimeMins()) != Trend.DOWNWARDS) {
                         leftSwitchedOffState = LeftSwitchedOffState.FRIDGE_LEFT_OFF;
                         return LeftSwitchedOffDetectionAction.SEND_FRIDGE_LEFT_OFF;
                     }
@@ -326,8 +338,8 @@ public class Gyle extends GyleDto {
                 if (latestChamberReadings.getHeaterOutput() >= heaterThresholdPercent) {
                     // Heater should be ON (as far as this app is concerned) but is it switched OFF?
                     if (leftSwitchedOffState != LeftSwitchedOffState.HEATER_LEFT_OFF) {
-                        if (trendBuffer.getHeaterOnTimeMins(heaterThresholdPercent) >= HEATER_ON_TIME_MINS
-                                && trendBuffer.gettChamberTrend(HEATER_ON_TIME_MINS) != Trend.UPWARDS) {
+                        if (trendBuffer.getHeaterOnTimeMins(heaterThresholdPercent) >= getHeaterOnTimeMins()
+                                && trendBuffer.gettChamberTrend(getHeaterOnTimeMins()) != Trend.UPWARDS) {
                             leftSwitchedOffState = LeftSwitchedOffState.HEATER_LEFT_OFF;
                             return LeftSwitchedOffDetectionAction.SEND_HEATER_LEFT_OFF;
                         }
@@ -643,8 +655,8 @@ public class Gyle extends GyleDto {
 
         TrendBuffer(Chamber chamber) {
             // The buffer is a FIFO deque of recent records, sized in terms of time.
-            int sizeInMinutes = Math.max(FRIDGE_ON_TIME_MINS + chamber.getFridgeSwitchOnLagMins(), HEATER_ON_TIME_MINS)
-                    * 2;
+            int sizeInMinutes = Math.max(getFridgeOnTimeMins() + chamber.getFridgeSwitchOnLagMins(),
+                    Gyle.getHeaterOnTimeMins()) * 2;
             // Given our sample rate, transform that into a size in terms of number of
             // records.
             maxSize = sizeInMinutes * 60 * 1000 / PropertyUtils.getReadingsPeriodMillis();

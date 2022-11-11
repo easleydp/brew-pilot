@@ -86,9 +86,8 @@ public class EmailMessageScheduler {
             long millisUntilTrigger = crashStartPoint.getMillisSinceStart() - priorNoticeMillis - millisSinceStart;
             if (millisUntilTrigger > 0 && millisUntilTrigger < periodMillis) {
                 Date when = roundToNearestHour(new Date(timeNowMs + millisUntilTrigger + priorNoticeMillis));
-                emailService.sendSimpleMessage("Plan to dry hop this gyle on " + dayOfWeek(when) + "?",
-                        chamber.getName() + "'s gyle \"" + latestGyle.getName() + "\" is due to cold crash on "
-                                + on(when) + " at " + at(when) + ".");
+                emailService.sendSimpleMessage("Plan to dry hop this gyle soon?", chamber.getName() + "'s gyle \""
+                        + latestGyle.getName() + "\" is due to cold crash on " + on(when) + " at " + at(when) + ".");
             }
         }
     }

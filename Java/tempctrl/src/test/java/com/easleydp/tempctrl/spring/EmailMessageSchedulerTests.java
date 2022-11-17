@@ -224,11 +224,10 @@ class EmailMessageSchedulerTests {
     private void testSendTimeToBottleMessage(Date timeNow) {
         emailMessageScheduler.testableSendGyleRelatedNotifications(timeNow);
 
-        assertMessageSubjectEquals("Bottle this gyle on Thursday? 🍺");
+        assertMessageSubjectEquals("Bottle this gyle? 🍺");
         // Note: Time should be presented in local time, which for us is BST.
         // Hence, 7:00am instead of 6:00am.
-        assertMessageTextEquals(
-                "Fermentation chamber's gyle \"#45 Reid 1839 BPA\" could be bottled on Thursday August 18 at 7:00am.");
+        assertMessageTextEquals("Fermentation chamber's gyle \"#45 Reid 1839 BPA\" could be bottled any time now.");
     }
 
     private void testNoMessageSent(Date timeNow) {

@@ -79,7 +79,8 @@ typedef struct {
   int16_t tBeer;
   int16_t tChamber;
   uint8_t heaterOutput; // 0..100
-  boolean heaterElementOn; // Although heaterOutput is supposedly 0..100, in reality the heater element is either ON or OFF at any given point in time.
+  boolean heaterElementOn; // Although heaterOutput is supposedly 0..100, the actual heater element is either
+                           // ON or OFF at any given point in time.
   boolean fridgeOn;
 
   // PID state
@@ -88,7 +89,8 @@ typedef struct {
 
   uint8_t fridgeStateChangeMins;  // Tops out at 255 (code avoids wrapping). initChamberData() sets to 255
   uint8_t heaterElementStateChangeSecs;  // Tops out at 255 (code avoids wrapping). initChamberData() sets to 255
-  int8_t tBeerLastDelta; // The last registered change in tBeer ((priorError-error)*10), with decay each time no change. Used to detect trend (+ve signifies rising / -ve falling).
+  int8_t tBeerLastDelta; // The last registered change in tBeer ((priorError-error)*10), with decay each time no
+                         // change. Used to detect recent trend (+ve signifies rising / -ve falling).
 } ChamberData;
 
 static const char* logPrefixChamberData = "CD";

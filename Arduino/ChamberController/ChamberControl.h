@@ -13,8 +13,7 @@
 // we may avoid actively heating/cooling.
 #define T_EXTERNAL_BOOST_THRESHOLD 20 /* 2 degrees */
 
-// To guard against see-sawing between heating & cooling we only consider heating
-// if the fridge has been off for at least this long.
+// To guard against see-sawing we only consider heating if the fridge has been off for at least this long.
 #define ANTI_SEESAW_MARGIN_MINS 120
 
 static const char* logPrefixChamberControl = "CC";
@@ -151,7 +150,7 @@ void controlChamber(ChamberData& cd) {
   // +ve - in our favour for heating the beer; -ve - in our favour for cooling the beer
   int16_t tExternalBoost = tExternal - cd.tBeer;
 
-  if (tError == 0) {  // Zero error (rare!)
+  if (tError == 0) {  // Zero error
     if (cd.fridgeOn) {
       // Fridge is on. Keep it on only if hot outside and beer temp is rising.
       if (tExternal > tTarget  &&  cd.tBeerLastDelta > 0) {
@@ -160,10 +159,12 @@ void controlChamber(ChamberData& cd) {
           fSetting = ON;
       }
     } else {
-      // Continue to 'heatPidWise' if tExternal < target. In this condition we want the
-      // integral component to maintain the target temperature with a steady heater output.
-      if (tExternal < tTarget)
+      if (tExternal < tTarget  &&  !exothermic) {
+        // Although the beer temp is on target it looks like it might drop without some heating.
+        // Allow the integral component to maintain the beer temp. If the beer is exothermic
+        // however then fermentation alone can be quite sufficient to maintain the temp.
         heatPidWise = true;
+      }
     }
   } else if (tError > 0) {  // beer too cool, needs heating
     if (exothermic) {
@@ -220,22 +221,21 @@ void controlChamber(ChamberData& cd) {
       chamberId, params.Kp*tError, params.Ki*cd.mParams.integral, params.Kd*(tError - cd.priorError));
     float pidOutput = params.Kp*tError + params.Ki*cd.mParams.integral + params.Kd*(tError - cd.priorError);
     // PID output range check
-    if (pidOutput < 0.0) { // Surprising that heatPidWise is true but PID output is -ve. Can happen though, most commonly due to integral being -ve.
+    if (pidOutput < 0.0) { // Oddly, heatPidWise is true but PID output is -ve. Can happen though, most commonly due to integral being -ve.
       logMsg(LOG_WARN, logPrefixPid, '!', chamberId, pidOutput/* float */);
       hSetting = 0;
     } else if (pidOutput > 100.0) {
       // This isn't unusual if there's no heater since the beer may get significantly cooler than the target.
       logMsg(params.hasHeater ? LOG_WARN : LOG_DEBUG, logPrefixPid, '+', chamberId, pidOutput/* float */);
       hSetting = 100;
-    } else {
+    } else { // pidOutput is within normal range
       logMsg(LOG_DEBUG, logPrefixPid, '-', chamberId, pidOutput/* float */);
       hSetting = round(pidOutput);
     }
   }
 
   if (hSetting > 0) {
-    // To help avoid the possibility of see-sawing between heating & cooling, don't even consider
-    // heating if fridge has been on recently (or is on now).
+    // To help avoid the possibility of see-sawing, don't even consider heating if fridge has been on recently (or is on now).
     if (cd.fridgeOn || cd.fridgeStateChangeMins < ANTI_SEESAW_MARGIN_MINS) {
       // Heating countermanded
       logMsg(LOG_DEBUG, logPrefixChamberControl, 'C', chamberId, cd.fridgeStateChangeMins/* uint8_t */, hSetting/* byte */);

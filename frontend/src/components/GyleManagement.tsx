@@ -204,10 +204,10 @@ const GyleManagement = () => {
       formDtStarted: Yup.string().matches(reDateTime, 'Format must be: YYYY-MM-DD hh:mm'),
       formDtEnded: Yup.string()
         .matches(reDateTime, 'Format must be: YYYY-MM-DD hh:mm')
-        .test('', 'Ended cannot be specified without Started being set', function (val) {
+        .test('', 'End time cannot be specified without Start time being set', function (val) {
           return !val || this.parent['formDtStarted'];
         })
-        .test('', 'Ended must be later than Started', function (val) {
+        .test('', 'End time must be later than Start time', function (val) {
           var millis = val && dateTimeStrIsValid(val) ? dateTimeStrToMillis(val) : undefined;
           return !millis || millis > dateTimeStrToMillis(this.parent['formDtStarted']);
         }),
@@ -394,7 +394,7 @@ const GyleManagement = () => {
       </Form.Group> */}
 
       <Form.Group controlId="formDtStarted" className="date-time">
-        <Form.Label>Started</Form.Label>
+        <Form.Label>Start time</Form.Label>
         <Row>
           <Col>
             <Form.Control
@@ -422,7 +422,8 @@ const GyleManagement = () => {
                 </li> */}
                 <li>
                   Can be set to a future date/time. In this case the chamber{' '}
-                  <strong>will be activated</strong> and held at the profile's start temperature.
+                  <strong>will be activated forthwith</strong> and held at the profile's start
+                  temperature until the start time.
                 </li>
               </ul>
             </Form.Text>
@@ -431,7 +432,7 @@ const GyleManagement = () => {
       </Form.Group>
 
       <Form.Group controlId="formDtEnded" className="date-time">
-        <Form.Label>Ended</Form.Label>
+        <Form.Label>End time</Form.Label>
         <Row>
           <Col>
             <Form.Control
@@ -452,7 +453,7 @@ const GyleManagement = () => {
                   Can be left blank until known; when the temperature profile has completed, the
                   chamber will be held at the last set temperature.
                 </li>
-                <li>When the specified date/time passes the chamber will become inactive.</li>
+                <li>The chamber will be deactivated when the specified date/time is reached.</li>
               </ul>
             </Form.Text>
           </Col>

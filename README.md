@@ -155,7 +155,7 @@ cd ~/brew-pilot/Java/tempctrl && ./gradlew bootJar
 sudo systemctl stop brewpilot
 
 # From the dev machine, copy files to server:
-cd ~/brew-pilot/Java/tempctrl/build/libs && mv tempctrl*.jar app.jar && rsync -a --delete . david@raspberrypi:~/brew-pilot/Java/tempctrl/build/libs && rm app.jar
+cd ~/brew-pilot/Java/tempctrl/build/libs && mv tempctrl*.jar app.jar && rsync -a --delete . <username>@raspberrypi:~/brew-pilot/Java/tempctrl/build/libs && rm app.jar
 
 # On the server, start the Java app
 sudo systemctl start brewpilot
@@ -164,7 +164,7 @@ sudo systemctl start brewpilot
 Install the front-end app as per any standard React app, i.e. run `npm run build` then copy the contents of the `build` folder to the server. The command I use is:
 
 ```
-cd ~/brew-pilot/frontend && npm run build && rsync -a --delete ~/brew-pilot/frontend/build/ david@raspberrypi:~/brew-pilot/frontend
+cd ~/brew-pilot/frontend && npm run build && rsync -a --delete ~/brew-pilot/frontend/build/ <username>@raspberrypi:~/brew-pilot/frontend
 
 ```
 
@@ -175,7 +175,7 @@ The Arduino code is compiled and loaded in standard fashion. Your paths may vary
 sudo systemctl stop brewpilot
 
 # From the dev machine, copy files to server:
-rsync -a --delete ~/brew-pilot/Arduino/ david@raspberrypi:~/brew-pilot/Arduino
+rsync -a --delete ~/brew-pilot/Arduino/ <username>@raspberrypi:~/brew-pilot/Arduino
 
 # Now, on server, compile and load:
 ~/bin/arduino-cli compile -p /dev/ttyUSB0 -b arduino:avr:uno -u -t ~/brew-pilot/Arduino/ChamberController

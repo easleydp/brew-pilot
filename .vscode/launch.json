@@ -10,6 +10,47 @@
       "name": "Launch Chrome against localhost",
       "url": "http://localhost:3000",
       "webRoot": "${workspaceFolder}"
+    },
+    {
+      "type": "java",
+      "name": "Debug (Launch) - Current File",
+      "request": "launch",
+      "mainClass": "${file}",
+      "env": {
+        "spring.profiles.active": "local",
+        "ea": true
+      }
+    },
+    {
+      "type": "java",
+      "cwd": "${workspaceFolder}/Java/tempctrl",
+      "name": "Debug (Launch)-TempctrlApplication<tempctrl>",
+      "request": "launch",
+      "mainClass": "com.easleydp.tempctrl.spring.TempctrlApplication",
+      "projectName": "tempctrl",
+      "env": {
+        "spring.profiles.active": "local",
+        "debug": true
+      }
+    },
+    {
+      "name": "Debug Front End Tests",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "${workspaceRoot}/frontend/node_modules/.bin/react-scripts",
+      "args": ["test", "--runInBand", "--no-cache", "--env=jsdom"],
+      "cwd": "${workspaceRoot}/../frontend",
+      "protocol": "inspector",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    },
+    {
+      "type": "java",
+      "name": "Remote debug (attach)",
+      "projectName": "tempctrl",
+      "request": "attach",
+      "hostName": "raspberrypi",
+      "port": 8124
     }
   ]
 }

@@ -1,4 +1,5 @@
 {
     "java.format.settings.url": "./eclipse-java-google-style.xml",
-    "java.format.settings.profile": "GoogleStyle"
+    "java.format.settings.profile": "GoogleStyle",
+    "java.jdt.ls.java.home": "/usr/lib/jvm/jdk-19"
 }

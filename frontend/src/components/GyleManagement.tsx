@@ -10,7 +10,7 @@ import NowPattern from '../util/NowPattern';
 import Utils from '../util/Utils';
 import axios from 'axios';
 import { Form, Button, Row, Col } from 'react-bootstrap';
-import { useFormik, yupToFormErrors } from 'formik';
+import { useFormik /*, yupToFormErrors */ } from 'formik';
 import * as Yup from 'yup';
 import Toast from 'react-bootstrap/Toast';
 import Loading from './Loading';
@@ -109,70 +109,6 @@ const GyleManagement = () => {
     return `${part('year')}-${part('month')}-${part('day')} ${part('hour')}:${part('minute')}`;
   };
 
-  useEffect(() => {
-    console.info(
-      Auth[isAuth],
-      '=================== GyleManagement useEffect invoked ======================'
-    );
-
-    if (isAuth === Auth.NotLoggedIn) {
-      // The user is definitely not logged in. Go straight to signin form.
-      history.push({ pathname: '/signin', state: { from: location.pathname } });
-    } else if (isAuth === Auth.Unknown) {
-      // We assume the user has hit F5 or hand entered the URL (thus reloading the app), so we don't
-      // know whether they're logged in. The App component will be automatically be invoked when the
-      // app is loaded (whatever the URL location). This will establish whether user is logged in
-      // and update the isAuth state variable, which will cause this useEffect hook to re-execute.
-      console.debug('user has hit F5?');
-    } else {
-      getGyle().then((gyle) => {
-        setLoading(false);
-        setGyle(gyle);
-        buildForm(gyle);
-      });
-    }
-  }, [dispatch, history, isAuth]);
-
-  // Returns promise for retrieving IGyle
-  const getGyle = (): Promise<IGyle> => {
-    const url = '/tempctrl/guest/chamber/' + chamberId + '/latest-gyle';
-    return new Promise((resolve, reject) => {
-      axios
-        .get(url)
-        .then((response) => {
-          return resolve(response.data);
-        })
-        .catch((error) => {
-          console.debug(url + ' ERROR', error);
-          const status = error?.response?.status;
-          if (status === 403 || status === 401) {
-            console.debug(`Redirecting to signin after ${status}`);
-            history.push({ pathname: '/signin', state: { from: location.pathname } });
-            dispatch({ type: 'LOGOUT' });
-          }
-          reject(error);
-        });
-    });
-  };
-
-  const buildForm = (gyle: IGyle) => {
-    formik.setFieldValue('formName', gyle.name);
-    // formik.setFieldValue('formDtStartedOld', gyle.dtStarted || '');
-    // formik.setFieldValue('formDtEndedOld', gyle.dtEnded || '');
-
-    formik.setFieldValue(
-      'formDtStarted',
-      gyle.dtStarted || gyle.dtStarted === 0 ? millisToDateTimeStr(gyle.dtStarted) : ''
-    );
-
-    formik.setFieldValue(
-      'formDtEnded',
-      gyle.dtEnded || gyle.dtEnded === 0 ? millisToDateTimeStr(gyle.dtEnded) : ''
-    );
-
-    formik.setFieldValue('formMode', gyle.mode || Mode.Auto);
-  };
-
   const formik = useFormik({
     initialValues: {
       formName: '',
@@ -258,10 +194,10 @@ const GyleManagement = () => {
     },
   });
 
-  const truncMsToMinute = (ms: number) => {
-    const minMillis = 1000 * 60;
-    return Math.trunc(ms / minMillis) * minMillis;
-  };
+  // const truncMsToMinute = (ms: number) => {
+  //   const minMillis = 1000 * 60;
+  //   return Math.trunc(ms / minMillis) * minMillis;
+  // };
 
   // const handleDtStartedOldNow = () => {
   //   setFieldOldNow('formDtStartedOld');
@@ -312,6 +248,70 @@ const GyleManagement = () => {
       }
     }
   };
+
+  useEffect(() => {
+    console.info(
+      Auth[isAuth],
+      '=================== GyleManagement useEffect invoked ======================'
+    );
+
+    // Returns promise for retrieving IGyle
+    const getGyle = (): Promise<IGyle> => {
+      const url = '/tempctrl/guest/chamber/' + chamberId + '/latest-gyle';
+      return new Promise((resolve, reject) => {
+        axios
+          .get(url)
+          .then((response) => {
+            return resolve(response.data);
+          })
+          .catch((error) => {
+            console.debug(url + ' ERROR', error);
+            const status = error?.response?.status;
+            if (status === 403 || status === 401) {
+              console.debug(`Redirecting to signin after ${status}`);
+              history.push({ pathname: '/signin', state: { from: location.pathname } });
+              dispatch({ type: 'LOGOUT' });
+            }
+            reject(error);
+          });
+      });
+    };
+
+    const buildForm = (gyle: IGyle) => {
+      formik.setFieldValue('formName', gyle.name);
+      // formik.setFieldValue('formDtStartedOld', gyle.dtStarted || '');
+      // formik.setFieldValue('formDtEndedOld', gyle.dtEnded || '');
+
+      formik.setFieldValue(
+        'formDtStarted',
+        gyle.dtStarted || gyle.dtStarted === 0 ? millisToDateTimeStr(gyle.dtStarted) : ''
+      );
+
+      formik.setFieldValue(
+        'formDtEnded',
+        gyle.dtEnded || gyle.dtEnded === 0 ? millisToDateTimeStr(gyle.dtEnded) : ''
+      );
+
+      formik.setFieldValue('formMode', gyle.mode || Mode.Auto);
+    };
+
+    if (isAuth === Auth.NotLoggedIn) {
+      // The user is definitely not logged in. Go straight to signin form.
+      history.push({ pathname: '/signin', state: { from: location.pathname } });
+    } else if (isAuth === Auth.Unknown) {
+      // We assume the user has hit F5 or hand entered the URL (thus reloading the app), so we don't
+      // know whether they're logged in. The App component will be automatically be invoked when the
+      // app is loaded (whatever the URL location). This will establish whether user is logged in
+      // and update the isAuth state variable, which will cause this useEffect hook to re-execute.
+      console.debug('user has hit F5?');
+    } else {
+      getGyle().then((gyle) => {
+        setLoading(false);
+        setGyle(gyle);
+        buildForm(gyle);
+      });
+    }
+  }, [dispatch, history, isAuth, location.pathname, chamberId]); // formik deliberately not included
 
   return loading ? (
     <Loading />

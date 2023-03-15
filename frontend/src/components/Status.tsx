@@ -9,7 +9,7 @@ import Loading from './Loading';
 const syntaxHighlight = (json: string) => {
   json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const html = json.replace(
-    /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?|\,)/g,
+    /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?|,)/g,
     (match) => {
       if (match === ',') return ''; // Since the input is pretty-printed we don't need the JSON commas
       let cls;
@@ -86,7 +86,7 @@ const Status = () => {
     } else {
       fetchData();
     }
-  }, [dispatch, history, isAuth]);
+  }, [dispatch, history, isAuth, location.pathname]);
 
   return loading ? (
     <Loading />

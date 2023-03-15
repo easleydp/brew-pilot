@@ -6,7 +6,7 @@ import { useAppState, Auth } from './state';
 import Utils from '../util/Utils';
 import axios from 'axios';
 import { Form, Button, Row, Col } from 'react-bootstrap';
-import { useFormik, yupToFormErrors } from 'formik';
+import { useFormik /*, yupToFormErrors */} from 'formik';
 import * as Yup from 'yup';
 import Toast from 'react-bootstrap/Toast';
 import Loading from './Loading';
@@ -34,39 +34,6 @@ const EmailTest = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState(false);
-
-  const onCloseErrorToast = () => {
-    setShowError(false);
-    setErrorMessage(null);
-    formik.setSubmitting(false);
-  };
-
-  useEffect(() => {
-    console.info(
-      Auth[isAuth],
-      '=================== EmailTest useEffect invoked ======================'
-    );
-
-    if (isAuth === Auth.NotLoggedIn) {
-      // The user is definitely not logged in. Go straight to signin form.
-      history.push({ pathname: '/signin', state: { from: location.pathname } });
-    } else if (isAuth === Auth.Unknown) {
-      // We assume the user has hit F5 or hand entered the URL (thus reloading the app), so we don't
-      // know whether they're logged in. The App component will be automatically be invoked when the
-      // app is loaded (whatever the URL location). This will establish whether user is logged in
-      // and update the isAuth state variable, which will cause this useEffect hook to re-execute.
-      console.debug('user has hit F5?');
-    } else {
-      setLoading(false);
-      buildForm();
-    }
-  }, [dispatch, history, isAuth]);
-
-  const buildForm = () => {
-    formik.setFieldValue('formSubject', 'Test subject');
-    formik.setFieldValue('formText', 'Test message text');
-    formik.setFieldValue('formNoRetry', false);
-  };
 
   const formik = useFormik({
     initialValues: {
@@ -106,6 +73,39 @@ const EmailTest = () => {
         });
     },
   });
+
+  const onCloseErrorToast = () => {
+    setShowError(false);
+    setErrorMessage(null);
+    formik.setSubmitting(false);
+  };
+
+  useEffect(() => {
+    console.info(
+      Auth[isAuth],
+      '=================== EmailTest useEffect invoked ======================'
+    );
+
+    const buildForm = () => {
+      formik.setFieldValue('formSubject', 'Test subject');
+      formik.setFieldValue('formText', 'Test message text');
+      formik.setFieldValue('formNoRetry', false);
+    };
+  
+    if (isAuth === Auth.NotLoggedIn) {
+      // The user is definitely not logged in. Go straight to signin form.
+      history.push({ pathname: '/signin', state: { from: location.pathname } });
+    } else if (isAuth === Auth.Unknown) {
+      // We assume the user has hit F5 or hand entered the URL (thus reloading the app), so we don't
+      // know whether they're logged in. The App component will be automatically be invoked when the
+      // app is loaded (whatever the URL location). This will establish whether user is logged in
+      // and update the isAuth state variable, which will cause this useEffect hook to re-execute.
+      console.debug('user has hit F5?');
+    } else {
+      setLoading(false);
+      buildForm();
+    }
+  }, [dispatch, history, isAuth, location.pathname, formik]);
 
   return loading ? (
     <Loading />

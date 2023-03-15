@@ -9,7 +9,7 @@ import { BrowserRouter as Router, Switch, Route, NavLink } from 'react-router-do
 // import PropTypes from 'prop-types';
 // import PrivateRoute from './PrivateRoute';
 // import { LinkContainer } from 'react-router-bootstrap';
-import { Nav, Navbar, NavDropdown } from 'react-bootstrap';
+import { Nav, Navbar /*, NavDropdown */} from 'react-bootstrap';
 
 import Home from './Home';
 import GyleChart from './GyleChart';
@@ -85,14 +85,14 @@ const Nested = () => {
       );
       history.push({
         pathname: '/signin',
-        state: { from: location?.state?.from || location.pathname || '/' },
+        state: { from: location.state?.from || location.pathname || '/' },
       });
     } else {
       console.log('Calling fetchData()');
       isAuth === Auth.Unknown && console.log('  though unclear whether user is logged-in');
       fetchData();
     }
-  }, [isAuth, history, dispatch]);
+  }, [isAuth, history, dispatch, chamberSummaries.length, location.pathname]); // location deliberately not included
 
   // Approximation of https://github.com/react-bootstrap/react-bootstrap/issues/1301#issuecomment-251281488
   // NOTE: Not at all good that we're currently relying on `onMouseDown` on `Nav.Link`.

@@ -22,40 +22,6 @@ const Gauge = ({ chamberId, tTarget, handleAuthError }: GaugeProps) => {
   const containerId = 'container-' + chamberId;
   const inactive = tTarget === null;
 
-  // Hack the Highcharts generated SVG to set a custom dial background image. Liable to break on upgrading Highcharts!
-  const svgHack_addDialBgImage = (chart: any) => {
-    const gaugeDiv: HTMLElement = chart.renderTo;
-    const svgRoot = gaugeDiv.querySelector('svg.highcharts-root');
-    const svgDefs = svgRoot!.querySelector('defs');
-
-    const idAndImgName = inactive ? 'gauge-dial-bg-dis' : 'gauge-dial-bg';
-
-    // Add pattern def
-    const pattern = svgDefs!.appendChild(document.createElement('pattern'));
-    pattern.setAttribute('id', idAndImgName + chamberId); // Add chamberId in case multiple gauges with same (but shifted) image
-    pattern.setAttribute('patternUnits', 'userSpaceOnUse');
-    pattern.setAttribute('width', '400');
-    pattern.setAttribute('height', '400');
-    const image = pattern.appendChild(document.createElement('image'));
-    image.setAttribute('href', process.env.PUBLIC_URL + '/' + idAndImgName + '.jpg');
-    image.setAttribute('x', chamberId % 2 ? '20' : '-70');
-    image.setAttribute('y', chamberId % 2 ? '20' : '-70');
-    image.setAttribute('style', chamberId % 2 ? '' : 'transform: scaleY(-1) translateY(-260px)');
-    image.setAttribute('width', '400');
-    image.setAttribute('height', '400');
-
-    // Add path
-    const paneGroupPaths = svgRoot!.querySelectorAll('g.highcharts-pane-group>path');
-    // We want to insert two new paths after the last but one path. They should be based on the last but one path.
-    const insertAfterPath: Element = paneGroupPaths[paneGroupPaths.length - 2];
-    const path = insertAfterPath.cloneNode() as Element;
-    path.setAttribute('fill', `url(#${idAndImgName + chamberId})`);
-    insertAfterPath.after(path);
-
-    // Who knows why this is necessary but without it, it's as if our new defs are missing.
-    svgDefs!.innerHTML = svgDefs!.innerHTML;
-  };
-
   interface PlotBand {
     from: number;
     to: number;
@@ -64,6 +30,46 @@ const Gauge = ({ chamberId, tTarget, handleAuthError }: GaugeProps) => {
     outerRadius?: string;
   }
   useEffect(() => {
+    console.info(
+      '=================== Gauge useEffect invoked ======================',
+      chamberId
+    );
+
+
+    // Hack the Highcharts generated SVG to set a custom dial background image. Liable to break on upgrading Highcharts!
+    const svgHack_addDialBgImage = (chart: any) => {
+      const gaugeDiv: HTMLElement = chart.renderTo;
+      const svgRoot = gaugeDiv.querySelector('svg.highcharts-root');
+      const svgDefs = svgRoot!.querySelector('defs');
+
+      const idAndImgName = inactive ? 'gauge-dial-bg-dis' : 'gauge-dial-bg';
+
+      // Add pattern def
+      const pattern = svgDefs!.appendChild(document.createElement('pattern'));
+      pattern.setAttribute('id', idAndImgName + chamberId); // Add chamberId in case multiple gauges with same (but shifted) image
+      pattern.setAttribute('patternUnits', 'userSpaceOnUse');
+      pattern.setAttribute('width', '400');
+      pattern.setAttribute('height', '400');
+      const image = pattern.appendChild(document.createElement('image'));
+      image.setAttribute('href', process.env.PUBLIC_URL + '/' + idAndImgName + '.jpg');
+      image.setAttribute('x', chamberId % 2 ? '20' : '-70');
+      image.setAttribute('y', chamberId % 2 ? '20' : '-70');
+      image.setAttribute('style', chamberId % 2 ? '' : 'transform: scaleY(-1) translateY(-260px)');
+      image.setAttribute('width', '400');
+      image.setAttribute('height', '400');
+
+      // Add path
+      const paneGroupPaths = svgRoot!.querySelectorAll('g.highcharts-pane-group>path');
+      // We want to insert two new paths after the last but one path. They should be based on the last but one path.
+      const insertAfterPath: Element = paneGroupPaths[paneGroupPaths.length - 2];
+      const path = insertAfterPath.cloneNode() as Element;
+      path.setAttribute('fill', `url(#${idAndImgName + chamberId})`);
+      insertAfterPath.after(path);
+
+      // Who knows why this is necessary but without it, it's as if our new defs are missing.
+      svgDefs!.innerHTML = svgDefs!.innerHTML;
+    };
+
     const minTemp = -1;
     const maxTemp = 41;
     const plotBands: PlotBand[] = [
@@ -194,11 +200,20 @@ const Gauge = ({ chamberId, tTarget, handleAuthError }: GaugeProps) => {
             .then(function (response) {
               const status: ISummaryStatus = response.data;
               const tBeer = (status.tBeer || 0) / 10;
-              point.update(tBeer);
+              if (point.update) {
+                point.update(tBeer);
+              } else {
+                console.log('point has no update function (1)');
+              }
             })
             .catch(function (error) {
-              console.debug(-1 * chamberId, url + ' ERROR', error);
-              point.update(0);
+              console.debug('chamberId: ' + chamberId, url + ' ERROR', error);
+              if (point.update) {
+                console.log('setting point to 0 after error');
+                point.update(0);
+              } else {
+                console.log('point has no update function (2)');
+              }
               const status = error?.response?.status;
               if (status === 403 || status === 401) {
                 // Since this is just a child component, parent view must take care of the redirect.
@@ -216,7 +231,7 @@ const Gauge = ({ chamberId, tTarget, handleAuthError }: GaugeProps) => {
       console.debug('Gauge cleaned-up.');
       interval && clearInterval(interval);
     };
-  }, [chamberId, containerId, tTarget]);
+  }, [chamberId, containerId, tTarget, inactive]); // handleAuthError deliberately not included
 
   return <div className={`gauge ${inactive ? 'inactive' : ''}`} id={containerId}></div>;
 };

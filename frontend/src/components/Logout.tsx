@@ -1,6 +1,6 @@
 import './Logout.scss';
 import React, { useState, useEffect } from 'react';
-import { useHistory, useLocation } from 'react-router-dom';
+import { useHistory /*, useLocation */ } from 'react-router-dom';
 import ILocationState from '../api/ILocationState';
 import axios from 'axios';
 import { useAppState } from './state';
@@ -9,7 +9,7 @@ import Loading from './Loading';
 const Logout: React.FC = () => {
   const [errorText, setErrorText] = useState('');
   const history = useHistory<ILocationState>();
-  const location = useLocation<ILocationState>();
+  // const location = useLocation<ILocationState>();
 
   const { dispatch } = useAppState();
 

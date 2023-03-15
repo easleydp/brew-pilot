@@ -32,6 +32,29 @@ const Home = ({ errorMessage }: HomeProps) => {
 
   useEffect(() => {
     console.info(Auth[isAuth], '=================== Home useEffect invoked ======================');
+
+    // Returns promise for retrieving chamber summaries
+    const getChamberSummaries = (): Promise<IChamberSummary[]> => {
+      const url = '/tempctrl/guest/chamber-summaries-and-user-type';
+      return new Promise((resolve, reject) => {
+        axios
+          .get(url)
+          .then((response) => {
+            return resolve(response.data.chamberSummaries);
+          })
+          .catch((error) => {
+            console.debug(url + ' ERROR', error);
+            const status = error?.response?.status;
+            if (status === 403 || status === 401) {
+              console.debug(`Redirecting to signin after ${status}`);
+              history.push({ pathname: '/signin', state: { from: location.pathname } });
+              dispatch({ type: 'LOGOUT' });
+            }
+            reject(error);
+          });
+      });
+    };
+
     if (isAuth === Auth.NotLoggedIn) {
       // The user is definitely not logged in. Go straight to signin form.
       history.push({ pathname: '/signin', state: { from: '/' } });
@@ -47,29 +70,7 @@ const Home = ({ errorMessage }: HomeProps) => {
         setChamberSummaries(summaries);
       });
     }
-  }, [dispatch, history, isAuth]);
-
-  // Returns promise for retrieving chamber summaries
-  const getChamberSummaries = (): Promise<IChamberSummary[]> => {
-    const url = '/tempctrl/guest/chamber-summaries-and-user-type';
-    return new Promise((resolve, reject) => {
-      axios
-        .get(url)
-        .then((response) => {
-          return resolve(response.data.chamberSummaries);
-        })
-        .catch((error) => {
-          console.debug(url + ' ERROR', error);
-          const status = error?.response?.status;
-          if (status === 403 || status === 401) {
-            console.debug(`Redirecting to signin after ${status}`);
-            history.push({ pathname: '/signin', state: { from: location.pathname } });
-            dispatch({ type: 'LOGOUT' });
-          }
-          reject(error);
-        });
-    });
-  };
+  }, [dispatch, history, isAuth, location.pathname]);
 
   function gaugeCard(cs: IChamberSummary) {
     const instruction = `${isMobile ? 'Tap' : 'Click '} for details`;

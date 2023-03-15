@@ -1,5 +1,5 @@
 import './TemperatureProfile.scss';
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { isMobile } from 'react-device-detect';
 import { useHistory, useLocation } from 'react-router-dom';
 import ILocationState from '../api/ILocationState';
@@ -537,7 +537,7 @@ const TemperatureProfile = ({ chamberSummaries }: TemperatureProfileProps) => {
         chartRef.current = buildChart(backedUpProfileRef.current, startTimeOffsetRef.current);
       });
     }
-  }, [chamberSummaries, dispatch, history, isAuth]);
+  }, [dispatch, history, isAuth, chamberId, location.pathname]); // chamberSummaries deliberately not included
 
   const handleReset = () => {
     chartRef.current = buildChart(backedUpProfileRef.current!, startTimeOffsetRef.current);

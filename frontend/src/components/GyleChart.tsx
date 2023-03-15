@@ -127,118 +127,6 @@ const GyleChart = () => {
     return millis / getGyleDetails().readingsTimestampResolutionMillis;
   }, []);
 
-  /** Adds the supplied readings to the chart then redraws. */
-  const addBunchOfReadings = useCallback(
-    (readingsList: IReadings[], initialLoad: boolean) => {
-      const len = readingsList ? readingsList.length : 0;
-      if (len === 0) {
-        return;
-      }
-      const dt0 = readingsList[0].dt,
-        dtN = readingsList[len - 1].dt;
-      console.log(`Adding ${len} reading record(s) ranging from dt ${dt0} to ${dtN}`);
-
-      let prevReadings: IReadings | null = null;
-      const chart = getCurrentChart();
-
-      const tTargetSeries: SeriesContinuous = chart.get('tTarget') as SeriesContinuous,
-        tBeerSeries: SeriesContinuous = chart.get('tBeer') as SeriesContinuous,
-        tExternalSeries: SeriesContinuous = chart.get('tExternal') as SeriesContinuous,
-        tChamberSeries: SeriesContinuous = chart.get('tChamber') as SeriesContinuous,
-        fridgeSeries: SeriesDiscontinuous = chart.get('fridgeOn') as SeriesDiscontinuous,
-        heaterSeries: SeriesDiscontinuous = chart.get('heaterOutput') as SeriesDiscontinuous;
-
-      readingsList.forEach((readings, index) => {
-        // Sanity check. Each successive readings record should occur later in time.
-        if (prevReadings !== null && prevReadings.dt >= readings.dt) {
-          // Used to throw here but it seems that, after a power outage, the first recentReadings record
-          // can appear to be earlier than the last few records of the last ndjson file. (Haven't yet
-          // worked out how this can happen; maybe a time server issue?). So now we log, skip and continue.
-          console.warn(
-            `Skipping out of order readings with dt ${readings.dt} (prev was ${prevReadings.dt})`
-          );
-          return; // skip
-        }
-        prevReadings = readings;
-
-        const dt = restoreUtcMillisPrecision(readings.dt);
-
-        // The readings record is sparse, meaning any of the properties may be absent
-        // (undefined). A property being undefined signifies no change since the previous
-        // reading.
-        //
-        // Note that the first record in a log file is never sparse. Such 'full' records are
-        // NOT rationalised when log files are concatenated (not just here in the FE but also
-        // when the BE consolidates smaller log files), therefore we need to be circumspect
-        // on detecting a defined value.
-        //
-        // Backfilling readings: Log record consumer (FE) is aware of the sampling period
-        // (P). On finding a record with a new value it should backfill a reading at (dt - P)
-        // equal to the previous recorded value. Note, only backfill if dt - previous
-        // reading's dt > P.
-
-        // Sanity check: confirm the supplied dt is later than anything we already have.
-        const oldestDt = (chart.series as SeriesContinuous[]).reduce<number>((dt, series) => {
-          const len = series.xData.length;
-          if (len) {
-            const lastX = series.xData[len - 1];
-            if (lastX > dt) {
-              dt = lastX;
-            }
-          }
-          return dt;
-        }, 0);
-        if (oldestDt >= dt) {
-          const rogue = dropUtcMillisPrecision(dt);
-          const oldest = dropUtcMillisPrecision(oldestDt);
-          throw Error(
-            `Reading at ${rogue} is not later than our the oldest reading we already have (${oldest}).`
-          );
-        }
-
-        const { tTarget, tBeer, tExternal, tChamber, fridgeOn, heaterOutput } = readings;
-        maybeAddTemperaturePoint(dt, tTarget, tTargetSeries);
-        maybeAddTemperaturePoint(dt, tBeer, tBeerSeries);
-        maybeAddTemperaturePoint(dt, tExternal, tExternalSeries);
-        maybeAddTemperaturePoint(dt, tChamber, tChamberSeries);
-        maybeAddFridgePoint(dt, fridgeOn, fridgeSeries);
-        heaterSeries && maybeAddHeaterPoint(dt, heaterOutput, heaterSeries);
-      });
-
-      // Because of the sparse nature of the readings some series might need a final synthetic point adding
-      // or they would appear to end prematurely, i.e. before the time of the last readings record.
-      const dt = restoreUtcMillisPrecision(readingsList[readingsList.length - 1].dt);
-      maybeBackfillAFinalPoint(dt, tTargetSeries);
-      maybeBackfillAFinalPoint(dt, tBeerSeries);
-      maybeBackfillAFinalPoint(dt, tExternalSeries);
-      maybeBackfillAFinalPoint(dt, tChamberSeries);
-      maybeBackfillAFinalPoint(dt, fridgeSeries);
-      heaterSeries && maybeBackfillAFinalPoint(dt, heaterSeries);
-
-      // TODO: Remove this debug code:
-      debugCheckSeriesXOrder(tTargetSeries, 'tTargetSeries');
-      debugCheckSeriesXOrder(tBeerSeries, 'tBeerSeries');
-      debugCheckSeriesXOrder(tExternalSeries, 'tExternalSeries');
-      debugCheckSeriesXOrder(tChamberSeries, 'tChamberSeries');
-      debugCheckSeriesXOrder(fridgeSeries, 'fridgeSeries');
-      heaterSeries && debugCheckSeriesXOrder(heaterSeries, 'heaterSeries');
-
-      // Too expensive to repeat spike detection across the whole of each series for every minor update.
-      if (initialLoad) {
-        removeRogueTemperatureSpikes(tBeerSeries, 'tBeerSeries');
-        removeRogueTemperatureSpikes(tExternalSeries, 'tExternalSeries');
-        removeRogueTemperatureSpikes(tChamberSeries, 'tChamberSeries');
-
-        // TODO: Remove this debug code:
-        debugCheckSeriesXOrder(tBeerSeries, 'tBeerSeries');
-        debugCheckSeriesXOrder(tExternalSeries, 'tExternalSeries');
-        debugCheckSeriesXOrder(tChamberSeries, 'tChamberSeries');
-      }
-
-      chart.redraw();
-    },
-    [restoreUtcMillisPrecision, dropUtcMillisPrecision]
-  );
 
   // TODO: Remove this debug code:
   const debugCheckSeriesXOrder = (
@@ -406,43 +294,157 @@ const GyleChart = () => {
     }
   };
 
-  // Whiz through the temperature sensor series and remove any rogue spikes, i.e. where the temp
-  // suddenly jumps by more than (say) 1°C before returning to (near to) the prior prevailing value. We've seen
-  // spikes consisting of 4 consecutive rogue y readings, usually but not always the same rogue value.
-  //
-  // We abstract the spike detection logic into a (unit testable) helper class.
-  const spikeDetector = new SpikeDetector({
-    spikeDetectionThreshold: 1.0, // °C
-    spikeReturnToPriorTolerance: 0.2, // °C
-    readingsPeriod: readingsPeriodMillisRef.current,
-    spikeMaxPeriods: 4,
-  });
-  const removeRogueTemperatureSpikes = (series: SeriesContinuous, seriesName: string) => {
-    const spikes = spikeDetector.detectSpikes(series);
-    // Note: detectSpikes returns indices in reverse order for our convenience when it comes to removing.
-    if (spikes.length) {
-      const pointCount = spikes.reduce<number>((pointCount, spike) => {
-        pointCount += spike.length;
-        return pointCount;
-      }, 0);
-      console.log(
-        `Removing ${spikes.length} rogue sensor reading spike(s) (consisting ${pointCount} points) from ${seriesName}`
-      );
-      spikes.forEach((spike) => {
-        //TODO: Delete:
-        // if (seriesName === 'tExternalSeries') {
-        //   const tempSummary = spike.reduce<string>((str, iPoint) => {
-        //     str += ', ' + series.yData[iPoint];
-        //     return str;
-        //   }, '');
-        //   console.log('tempSummary for spike:', tempSummary);
-        // }
-        spike.forEach((iPoint) => {
-          series.removePoint(iPoint, false);
+  /** Adds the supplied readings to the chart then redraws. */
+  const addBunchOfReadings = useCallback(
+    (readingsList: IReadings[], initialLoad: boolean) => {
+
+    // Whiz through the temperature sensor series and remove any rogue spikes, i.e. where the temp
+    // suddenly jumps by more than (say) 1°C before returning to (near to) the prior prevailing value. We've seen
+    // spikes consisting of 4 consecutive rogue y readings, usually but not always the same rogue value.
+    //
+    // We abstract the spike detection logic into a (unit testable) helper class.
+    const spikeDetector = new SpikeDetector({
+      spikeDetectionThreshold: 1.0, // °C
+      spikeReturnToPriorTolerance: 0.2, // °C
+      readingsPeriod: readingsPeriodMillisRef.current,
+      spikeMaxPeriods: 4,
+    });
+    const removeRogueTemperatureSpikes = (series: SeriesContinuous, seriesName: string) => {
+      const spikes = spikeDetector.detectSpikes(series);
+      // Note: detectSpikes returns indices in reverse order for our convenience when it comes to removing.
+      if (spikes.length) {
+        const pointCount = spikes.reduce<number>((pointCount, spike) => {
+          pointCount += spike.length;
+          return pointCount;
+        }, 0);
+        console.log(
+          `Removing ${spikes.length} rogue sensor reading spike(s) (consisting ${pointCount} points) from ${seriesName}`
+        );
+        spikes.forEach((spike) => {
+          //TODO: Delete:
+          // if (seriesName === 'tExternalSeries') {
+          //   const tempSummary = spike.reduce<string>((str, iPoint) => {
+          //     str += ', ' + series.yData[iPoint];
+          //     return str;
+          //   }, '');
+          //   console.log('tempSummary for spike:', tempSummary);
+          // }
+          spike.forEach((iPoint) => {
+            series.removePoint(iPoint, false);
+          });
         });
+      }
+    };
+
+      const len = readingsList ? readingsList.length : 0;
+      if (len === 0) {
+        return;
+      }
+      const dt0 = readingsList[0].dt,
+        dtN = readingsList[len - 1].dt;
+      console.log(`Adding ${len} reading record(s) ranging from dt ${dt0} to ${dtN}`);
+
+      let prevReadings: IReadings | null = null;
+      const chart = getCurrentChart();
+
+      const tTargetSeries: SeriesContinuous = chart.get('tTarget') as SeriesContinuous,
+        tBeerSeries: SeriesContinuous = chart.get('tBeer') as SeriesContinuous,
+        tExternalSeries: SeriesContinuous = chart.get('tExternal') as SeriesContinuous,
+        tChamberSeries: SeriesContinuous = chart.get('tChamber') as SeriesContinuous,
+        fridgeSeries: SeriesDiscontinuous = chart.get('fridgeOn') as SeriesDiscontinuous,
+        heaterSeries: SeriesDiscontinuous = chart.get('heaterOutput') as SeriesDiscontinuous;
+
+      readingsList.forEach((readings, index) => {
+        // Sanity check. Each successive readings record should occur later in time.
+        if (prevReadings !== null && prevReadings.dt >= readings.dt) {
+          // Used to throw here but it seems that, after a power outage, the first recentReadings record
+          // can appear to be earlier than the last few records of the last ndjson file. (Haven't yet
+          // worked out how this can happen; maybe a time server issue?). So now we log, skip and continue.
+          console.warn(
+            `Skipping out of order readings with dt ${readings.dt} (prev was ${prevReadings.dt})`
+          );
+          return; // skip
+        }
+        prevReadings = readings;
+
+        const dt = restoreUtcMillisPrecision(readings.dt);
+
+        // The readings record is sparse, meaning any of the properties may be absent
+        // (undefined). A property being undefined signifies no change since the previous
+        // reading.
+        //
+        // Note that the first record in a log file is never sparse. Such 'full' records are
+        // NOT rationalised when log files are concatenated (not just here in the FE but also
+        // when the BE consolidates smaller log files), therefore we need to be circumspect
+        // on detecting a defined value.
+        //
+        // Backfilling readings: Log record consumer (FE) is aware of the sampling period
+        // (P). On finding a record with a new value it should backfill a reading at (dt - P)
+        // equal to the previous recorded value. Note, only backfill if dt - previous
+        // reading's dt > P.
+
+        // Sanity check: confirm the supplied dt is later than anything we already have.
+        const oldestDt = (chart.series as SeriesContinuous[]).reduce<number>((dt, series) => {
+          const len = series.xData.length;
+          if (len) {
+            const lastX = series.xData[len - 1];
+            if (lastX > dt) {
+              dt = lastX;
+            }
+          }
+          return dt;
+        }, 0);
+        if (oldestDt >= dt) {
+          const rogue = dropUtcMillisPrecision(dt);
+          const oldest = dropUtcMillisPrecision(oldestDt);
+          throw Error(
+            `Reading at ${rogue} is not later than our the oldest reading we already have (${oldest}).`
+          );
+        }
+
+        const { tTarget, tBeer, tExternal, tChamber, fridgeOn, heaterOutput } = readings;
+        maybeAddTemperaturePoint(dt, tTarget, tTargetSeries);
+        maybeAddTemperaturePoint(dt, tBeer, tBeerSeries);
+        maybeAddTemperaturePoint(dt, tExternal, tExternalSeries);
+        maybeAddTemperaturePoint(dt, tChamber, tChamberSeries);
+        maybeAddFridgePoint(dt, fridgeOn, fridgeSeries);
+        heaterSeries && maybeAddHeaterPoint(dt, heaterOutput, heaterSeries);
       });
-    }
-  };
+
+      // Because of the sparse nature of the readings some series might need a final synthetic point adding
+      // or they would appear to end prematurely, i.e. before the time of the last readings record.
+      const dt = restoreUtcMillisPrecision(readingsList[readingsList.length - 1].dt);
+      maybeBackfillAFinalPoint(dt, tTargetSeries);
+      maybeBackfillAFinalPoint(dt, tBeerSeries);
+      maybeBackfillAFinalPoint(dt, tExternalSeries);
+      maybeBackfillAFinalPoint(dt, tChamberSeries);
+      maybeBackfillAFinalPoint(dt, fridgeSeries);
+      heaterSeries && maybeBackfillAFinalPoint(dt, heaterSeries);
+
+      // TODO: Remove this debug code:
+      debugCheckSeriesXOrder(tTargetSeries, 'tTargetSeries');
+      debugCheckSeriesXOrder(tBeerSeries, 'tBeerSeries');
+      debugCheckSeriesXOrder(tExternalSeries, 'tExternalSeries');
+      debugCheckSeriesXOrder(tChamberSeries, 'tChamberSeries');
+      debugCheckSeriesXOrder(fridgeSeries, 'fridgeSeries');
+      heaterSeries && debugCheckSeriesXOrder(heaterSeries, 'heaterSeries');
+
+      // Too expensive to repeat spike detection across the whole of each series for every minor update.
+      if (initialLoad) {
+        removeRogueTemperatureSpikes(tBeerSeries, 'tBeerSeries');
+        removeRogueTemperatureSpikes(tExternalSeries, 'tExternalSeries');
+        removeRogueTemperatureSpikes(tChamberSeries, 'tChamberSeries');
+
+        // TODO: Remove this debug code:
+        debugCheckSeriesXOrder(tBeerSeries, 'tBeerSeries');
+        debugCheckSeriesXOrder(tExternalSeries, 'tExternalSeries');
+        debugCheckSeriesXOrder(tChamberSeries, 'tChamberSeries');
+      }
+
+      chart.redraw();
+    },
+    [restoreUtcMillisPrecision, dropUtcMillisPrecision]
+  );
 
   // const utcMsFromDaysAndHours = function(days: number, hours: number) {
   //   return Date.UTC(1970, 0, days + 1, hours);
@@ -861,7 +863,7 @@ const GyleChart = () => {
             // For beer fridge, drop any readings more than N weeks old.
             // (We no longer drop any readings earlier than the gyle's start time.)
             const earliestReading = aggregatedReadings[0];
-            const dtStarted = gyleDetails.dtStarted;
+            // const dtStarted = gyleDetails.dtStarted;
             if (earliestReading) {
               const totalCount = aggregatedReadings.length;
               if (isBeerFridge) {
@@ -928,7 +930,7 @@ const GyleChart = () => {
           getCurrentChart().hideLoading();
         });
     }
-  }, [dispatch, history, chamberId, isAuth, addBunchOfReadings]);
+  }, [dispatch, history, chamberId, isAuth, addBunchOfReadings, location.pathname, restoreUtcMillisPrecision]);
 
   useInterval(() => {
     if (!getGyleDetails().dtEnded) {

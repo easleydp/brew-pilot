@@ -14,7 +14,7 @@ repositories {
 }
 
 configurations {
-	// We'll use Undertow instead of Tamcat
+	// We'll use Undertow instead of Tomcat
     compile.exclude module: 'spring-boot-starter-tomcat'
 }
 

@@ -5,6 +5,7 @@ import ILocationState from '../api/ILocationState';
 import { useAppState, Auth } from './state';
 import { useParams } from 'react-router-dom';
 import IGyle from '../api/IGyle';
+import ITemperatureProfile from '../api/ITemperatureProfile';
 import { Mode } from '../api/Mode';
 import NowPattern from '../util/NowPattern';
 import Utils from '../util/Utils';
@@ -116,6 +117,7 @@ const GyleManagement = () => {
       // formDtEndedOld: '',
       formDtStarted: '',
       formDtEnded: '',
+      formTemperatureProfile: '',
       formMode: Mode.Auto,
     },
     // validate,
@@ -147,19 +149,49 @@ const GyleManagement = () => {
           var millis = val && dateTimeStrIsValid(val) ? dateTimeStrToMillis(val) : undefined;
           return !millis || millis > dateTimeStrToMillis(this.parent['formDtStarted']);
         }),
-      // .test({
-      //   // Alternative form for when more involved validation logic is needed
-      //   test(val) {
-      //     if (dateTimeStrIsValid(val)) {
-      //       var millis = dateTimeStrToMillis(val);
-      //       if (millis <= this.parent['formDtStarted'])
-      //         return this.createError({ message: 'Ended must be later than Started' });
-      //     }
-      //     return true;
-      //   },
-      // }),
+      formTemperatureProfile: Yup.string()
+        .test({
+          test(val) {
+            if (val) {
+              const lines = val.split(/\r?\n|\r|\n/g);
+              let lastHours = Number.MIN_SAFE_INTEGER;
+              for (let i = 0; i < lines.length; i++) {
+                const trimmedLine = lines[i].trim();
+                // Ignore blank lines (while maintaining correct line numbering in eror messages)
+                if (!trimmedLine.length) continue;
+                const match = trimmedLine.match(/^(\d+)\s*,\s*(-?\d+)\s*,?$/); // note: we tolerate a trailing comma
+                if (!match) {
+                  return this.createError({ message: `Line ${i + 1} is invalid: ${trimmedLine}` });
+                }
+                const hours = parseInt(match[1], 10);
+                if (lastHours === Number.MIN_SAFE_INTEGER && hours !== 0) {
+                  return this.createError({ message: `First profile point's hoursSinceStart must be 0 (rather than ${hours})`});
+                }
+                if (hours <= lastHours) {
+                  return this.createError({ message: `Line ${i + 1}'s hoursSinceStart (${hours}) must be greater than that of the previous line (${lastHours})` });
+                }
+                lastHours = hours;
+              }
+            }
+            return true;
+          }
+        }),
     }),
     onSubmit: (values, { setSubmitting }) => {
+      const temperatureProfileTextToJson = (text: string): ITemperatureProfile => {
+        const wsStrippedLines = text.split(/\r?\n|\r|\n/g)
+          // Strip whitespace
+          .map(line => line.replace(/\s+/g, ''))
+          // Ignore any blank lines
+          .filter(line => line.length);
+        return {points: wsStrippedLines.map(line => {
+          const wsStrippedLine = line.replace(/\s+/g, '');
+          const match = wsStrippedLine.match(/^(\d+),(-?\d+),?$/); // note: we tolerate a trailing comma
+          // Should have been validated already so we expect it to match
+          if (!match) throw Error('Invalid pre-validated temperature profile line: ' + line);
+          return {hoursSinceStart: parseInt(match[1], 10), targetTemp: parseInt(match[2], 10)};
+        })};
+      };
       gyle!.name = values.formName;
       // gyle!.dtStartedOld = values.formDtStartedOld ? parseInt(values.formDtStartedOld) : undefined;
       // gyle!.dtEndedOld = values.formDtEndedOld ? parseInt(values.formDtEndedOld) : undefined;
@@ -169,7 +201,7 @@ const GyleManagement = () => {
       gyle!.dtEnded = values.formDtEnded ? dateTimeStrToMillis(values.formDtEnded) : undefined;
       // gyle!.mode = values.formMode; Commented-out in sympathy with form.
       // gyle.mode is currently returned as we received it
-      // gyle.temperatureProfile is returned as we received it
+      gyle!.temperatureProfile = temperatureProfileTextToJson(values.formTemperatureProfile);
       setSubmitting(true);
       const url = '/tempctrl/admin/chamber/' + chamberId + '/latest-gyle';
       axios
@@ -277,6 +309,10 @@ const GyleManagement = () => {
       });
     };
 
+    const temperatureProfileJsonToText = (tp: ITemperatureProfile) => {
+      return tp.points.map(pt => pt.hoursSinceStart + ', ' + pt.targetTemp).join('\n');
+    };
+
     const buildForm = (gyle: IGyle) => {
       formik.setFieldValue('formName', gyle.name);
       // formik.setFieldValue('formDtStartedOld', gyle.dtStarted || '');
@@ -290,6 +326,11 @@ const GyleManagement = () => {
       formik.setFieldValue(
         'formDtEnded',
         gyle.dtEnded || gyle.dtEnded === 0 ? millisToDateTimeStr(gyle.dtEnded) : ''
+      );
+
+      formik.setFieldValue(
+        'formTemperatureProfile',
+        gyle.temperatureProfile ? temperatureProfileJsonToText(gyle.temperatureProfile) : ''
       );
 
       formik.setFieldValue('formMode', gyle.mode || Mode.Auto);
@@ -455,6 +496,29 @@ const GyleManagement = () => {
                 </li>
                 <li>The chamber will be deactivated when the specified date/time is reached.</li>
               </ul>
+            </Form.Text>
+          </Col>
+        </Row>
+      </Form.Group>
+
+      <Form.Group controlId="formTemperatureProfile" className="temperature-profile">
+        <Form.Label>Temperature profile</Form.Label>
+        <Row>
+          <Col>
+            <Form.Control
+              as="textarea"
+              rows={9}
+              {...formik.getFieldProps('formTemperatureProfile')}
+            />
+            {formik.errors.formTemperatureProfile ? (
+              <Form.Text className="text-error">{formik.errors.formTemperatureProfile}</Form.Text>
+            ) : null}
+            <Form.Text className="text-muted">
+              One line per profile point, each consisting of two integers separated by a comma:
+              <ol>
+                <li>Hours since start (for the first profile point this must be zero),</li>
+                <li>Target temperature x10 (e.g. 175 for 17.5°C).</li>
+              </ol>
             </Form.Text>
           </Col>
         </Row>

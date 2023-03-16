@@ -23,6 +23,17 @@
       max-width: 80ch;
     }
   }
+  .form-group.temperature-profile {
+    background-color: unset; // needed due to unfortunate conflict with TemperatureProfile page
+    textarea {
+      width: 19ch;
+      font-family: monospace;
+    }
+    .form-text {
+      clear: both;
+      max-width: 80ch;
+    }
+  }
 
   // Standard placeholder colour isn't much lighter than our input text colour. Lighten a tad.
   // TODO: Move to site wide SCSS file.

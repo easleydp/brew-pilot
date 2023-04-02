@@ -6,7 +6,17 @@ import static com.easleydp.tempctrl.util.StringUtils.substringBetween;
 import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.util.Enumeration;
 import java.util.concurrent.TimeUnit;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import com.easleydp.tempctrl.domain.ChamberManager;
 import com.easleydp.tempctrl.domain.ChamberManagerStatus;
@@ -21,15 +31,8 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
-
 @RestController
-public class StatusController
-{
+public class StatusController {
     private static final Logger logger = LoggerFactory.getLogger(StatusController.class);
 
     @Autowired
@@ -43,52 +46,43 @@ public class StatusController
 
     Supplier<ChamberManagerStatus> chamberManagerStatusSupplier;
 
-    public StatusController()
-    {
+    public StatusController() {
         chamberManagerStatusSupplier = Suppliers.memoizeWithExpiration(
                 new Supplier<ChamberManagerStatus>() {
                     @Override
                     public ChamberManagerStatus get() {
-                        try
-                        {
+                        try {
                             return chamberManager.getChamberManagerStatus();
-                        }
-                        catch (IOException e)
-                        {
+                        } catch (IOException e) {
                             logger.error(e.getMessage(), e);
                             return null;
                         }
                     }
-                  }, 10, TimeUnit.SECONDS);
+                }, 10, TimeUnit.SECONDS);
     }
 
     private static final String VCGEN_CMD = "/opt/vc/bin/vcgencmd";
 
     @GetMapping("/guest/log-chart/status")
-    public StatusReportResponse getStatusReport() throws IOException
-    {
+    public StatusReportResponse getStatusReport() throws IOException {
         return buildStatusReportResponse();
     }
 
     // Called by getStatusReport() above and also by StillAliveMessageScheduler
     StatusReportResponse buildStatusReportResponse() {
         return new StatusReportResponse(
-            new PiStats(),
-            chamberManagerStatusSupplier.get(),
-            collectReadingsScheduler.getReadingsCollectionDurationStats()
-        );
+                new PiStats(),
+                chamberManagerStatusSupplier.get(),
+                collectReadingsScheduler.getReadingsCollectionDurationStats());
     }
 
     @JsonPropertyOrder({ "garageTemperature", "projectBoxTemperature" })
-    private static final class StatusReportResponse
-    {
-        public BigDecimal getGarageTemperature()
-        {
+    private static final class StatusReportResponse {
+        public BigDecimal getGarageTemperature() {
             return arduino != null ? arduino.getGarageTemperature() : null;
         }
 
-        public BigDecimal getProjectBoxTemperature()
-        {
+        public BigDecimal getProjectBoxTemperature() {
             return arduino != null ? arduino.getProjectBoxTemperature() : null;
         }
 
@@ -96,23 +90,21 @@ public class StatusController
         public final ChamberManagerStatus arduino;
         public final ReadingsCollectionDurationStats readingsCollectionDurationStats;
 
-        public StatusReportResponse(PiStats piStats, ChamberManagerStatus arduino, ReadingsCollectionDurationStats readingsCollectionDurationStats)
-        {
+        public StatusReportResponse(PiStats piStats, ChamberManagerStatus arduino,
+                ReadingsCollectionDurationStats readingsCollectionDurationStats) {
             this.raspberryPi = piStats;
             this.arduino = arduino;
             this.readingsCollectionDurationStats = readingsCollectionDurationStats;
         }
 
         @JsonInclude(Include.NON_NULL)
-        public Boolean getArduinoIsOffline()
-        {
+        public Boolean getArduinoIsOffline() {
             return arduino == null ? true : null;
         }
     }
 
-    @JsonPropertyOrder({ "uptime", "socTemperature", "cpuTemperature", "clockMHz" })
-    private static class PiStats
-    {
+    @JsonPropertyOrder({ "uptime", "socTemperature", "cpuTemperature", "clockMHz", "localIP", "macAddress" })
+    private static class PiStats {
         private static boolean mockPi = new File(VCGEN_CMD).exists() == false;
 
         private final String uptime;
@@ -131,8 +123,8 @@ public class StatusController
         private final String clock;
 
         // Handy for testing
-        public PiStats(String uptime, MemoryStatsPi memory, MemoryStatsFileSystem fileSystem, JvmStatus jvm, String socTemperature, String cpuTemperature, String volts, String clock)
-        {
+        public PiStats(String uptime, MemoryStatsPi memory, MemoryStatsFileSystem fileSystem, JvmStatus jvm,
+                String socTemperature, String cpuTemperature, String volts, String clock) {
             this.uptime = uptime;
             this.memory = memory;
             this.fileSystem = fileSystem;
@@ -143,35 +135,33 @@ public class StatusController
             this.clock = clock;
         }
 
-        public PiStats()
-        {
+        public PiStats() {
             this(
-                OsCommandExecuter.execute("uptime", "-p"),
-                new MemoryStatsPi(),
-                new MemoryStatsFileSystem(File.listRoots()[0]),
-                new JvmStatus(),
-                mockPi ? "temp=30.2'C" : OsCommandExecuter.execute(VCGEN_CMD, "measure_temp"),
-                mockPi ? "30280" : OsCommandExecuter.execute("cat", "/sys/class/thermal/thermal_zone0/temp"),
-                mockPi ? "volt=0.8765V" : OsCommandExecuter.execute(VCGEN_CMD, "measure_volts", "core"),
-                mockPi ? "frequency(48)=750199232" : OsCommandExecuter.execute(VCGEN_CMD, "measure_clock", "arm"));
+                    OsCommandExecuter.execute("uptime", "-p"),
+                    new MemoryStatsPi(),
+                    new MemoryStatsFileSystem(File.listRoots()[0]),
+                    new JvmStatus(),
+                    mockPi ? "temp=30.2'C" : OsCommandExecuter.execute(VCGEN_CMD, "measure_temp"),
+                    mockPi ? "30280" : OsCommandExecuter.execute("cat", "/sys/class/thermal/thermal_zone0/temp"),
+                    mockPi ? "volt=0.8765V" : OsCommandExecuter.execute(VCGEN_CMD, "measure_volts", "core"),
+                    mockPi ? "frequency(48)=750199232" : OsCommandExecuter.execute(VCGEN_CMD, "measure_clock", "arm"));
         }
 
         @JsonInclude(Include.NON_NULL)
-        public String getUptime()
-        {
+        public String getUptime() {
             // e.g. "up 19 hours, 31 minutes"
             return uptime != null ? substringAfter(uptime, "up ") : null;
         }
 
         @JsonInclude(Include.NON_NULL)
-        public BigDecimal getSocTemperature()
-        {
+        public BigDecimal getSocTemperature() {
             if (socTemperature == null)
                 return null;
             // e.g. "temp=41.0'C"
             return new BigDecimal(substringBetween(socTemperature, "=", "'"));
         }
 
+        // @formatter:off
         // Seems this is never significantly different from socTemperature, so omit for now.
         // @JsonInclude(Include.NON_NULL)
         // public BigDecimal getCpuTemperature()
@@ -193,16 +183,50 @@ public class StatusController
         //     // e.g. "volt=0.8563V"
         //     return new BigDecimal(substringBetween(volts, "=", "V"));
         // }
+        // @formatter:on
 
         @JsonInclude(Include.NON_NULL)
-        public BigDecimal getClockMHz()
-        {
+        public BigDecimal getClockMHz() {
             if (clock == null)
                 return null;
             // e.g. "frequency(48)=750199232"
             return BigDecimal
-                .valueOf(((double) Integer.parseInt(substringAfter(clock, "="), 10)) / 1_000_000)
-                .setScale(1, java.math.RoundingMode.HALF_UP);
+                    .valueOf(((double) Integer.parseInt(substringAfter(clock, "="), 10)) / 1_000_000)
+                    .setScale(1, java.math.RoundingMode.HALF_UP);
+        }
+
+        @JsonInclude(Include.NON_NULL)
+        public String getLocalIP() {
+            // Credit: https://stackoverflow.com/a/38342964/65555
+            try (final DatagramSocket socket = new DatagramSocket()) {
+                socket.connect(InetAddress.getByName("8.8.8.8"), 10002);
+                return socket.getLocalAddress().getHostAddress();
+            } catch (IOException e) {
+                logger.error(e.getMessage(), e);
+                return null;
+            }
+        }
+
+        @JsonInclude(Include.NON_NULL)
+        public String getMacAddress() {
+            // Credit: https://stackoverflow.com/a/26667426/65555
+            try {
+                Enumeration<NetworkInterface> netInfs = NetworkInterface.getNetworkInterfaces();
+                if (!netInfs.hasMoreElements()) {
+                    logger.warn("NetworkInterface.getNetworkInterfaces() returned no interfaces!");
+                    return null;
+                }
+                final NetworkInterface netInf = netInfs.nextElement();
+                final byte[] mac = netInf.getHardwareAddress();
+                final StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < mac.length; i++) {
+                    sb.append(String.format("%02X%s", mac[i], (i < mac.length - 1) ? "-" : ""));
+                }
+                return sb.toString();
+            } catch (IOException e) {
+                logger.error(e.getMessage(), e);
+                return null;
+            }
         }
     }
 

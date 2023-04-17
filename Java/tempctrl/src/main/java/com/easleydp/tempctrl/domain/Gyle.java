@@ -102,7 +102,7 @@ public class Gyle extends GyleDto {
                 getBoolean("readings.optimise.nullOutRedundantValues", true),
                 getBoolean("readings.optimise.removeRedundantIntermediate", true));
 
-        refresh();
+        refreshFromJson();
     }
 
     @JsonIgnore
@@ -110,7 +110,7 @@ public class Gyle extends GyleDto {
         return fileLastModified;
     }
 
-    public void refresh() {
+    public void refreshFromJson() {
         Path jsonFile = gyleDir.resolve("gyle.json");
         Assert.state(Files.exists(jsonFile), "gyle.json should exist");
         fileLastModified = jsonFile.toFile().lastModified();
@@ -154,13 +154,13 @@ public class Gyle extends GyleDto {
      *
      * @param gyle
      * @param timeNow
-     *            - Supplied by caller for the sake of testability. In real life it
-     *            will be equal to the actual time now.
+     *                - Supplied by caller for the sake of testability. In real life
+     *                it will be equal to the actual time now.
      *
-     *            Note: Recent readings are stored buffered in memory. When the
-     *            buffer size limit is reached they're flushed to persistent storage
-     *            (files on disk). The set of data files for the gyle are
-     *            consolidated once in a while.
+     *                Note: Recent readings are stored buffered in memory. When the
+     *                buffer size limit is reached they're flushed to persistent
+     *                storage (files on disk). The set of data files for the gyle
+     *                are consolidated once in a while.
      * @throws IOException
      */
     public void logLatestReadings(ChamberReadings chamberReadings, Date timeNow) throws IOException {
@@ -247,7 +247,7 @@ public class Gyle extends GyleDto {
         // @formatter:on
     }
 
-    public void persist() throws IOException {
+    public void updateJsonFile() throws IOException {
         Path jsonFile = gyleDir.resolve("gyle.json");
         ObjectMapper mapper = new ObjectMapper();
         ObjectWriter writer = mapper.writer(new DefaultPrettyPrinter());
@@ -720,7 +720,7 @@ public class Gyle extends GyleDto {
          * As `getFridgeOnTimeMins()` but for heater.
          *
          * @param threshold
-         *            Anything below the threshold is ignored (as if OFF).
+         *                  Anything below the threshold is ignored (as if OFF).
          *
          * @return 0 if the heater is not currently ON and >= `threshold` (according to
          *         the latest record), otherwise a value of at least 1.
@@ -757,8 +757,8 @@ public class Gyle extends GyleDto {
          * there's a trend.
          *
          * @param periodMins
-         *            The period (starting backwards from the latest added record) over
-         *            which to analyse the trend.
+         *                   The period (starting backwards from the latest added
+         *                   record) over which to analyse the trend.
          *
          * @return The detected trend, or `STEADY` if none. If the buffer does not
          *         contain enough records to cover the specified period then `STEADY` is

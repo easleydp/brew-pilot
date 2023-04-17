@@ -1,8 +1,9 @@
-import './EmailTest.scss';
+import './CreateGyle.scss';
 import React, { useEffect, useState } from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
 import ILocationState from '../api/ILocationState';
 import { useAppState, Auth } from './state';
+import { useParams } from 'react-router-dom';
 import Utils from '../util/Utils';
 import axios from 'axios';
 import { Form, Button, Row, Col } from 'react-bootstrap';
@@ -12,17 +13,21 @@ import Toast from 'react-bootstrap/Toast';
 import Loading from './Loading';
 
 interface IErrors {
-  formName?: string;
-  formDtStarted?: string;
-  formDtEnded?: string;
+  formGyleId?: string;
 }
 interface IValues {
-  formSubject?: string;
-  formText?: string;
-  formNoRetry?: boolean;
+  formGyleId?: string;
 }
 
-const EmailTest = () => {
+interface IGyleNameIdDuration {
+  id: number;
+  name: string;
+  durationHrs: number;
+  startTemp: number;
+  maxTemp: number;
+}
+
+const CreateGyle = () => {
   const history = useHistory<ILocationState>();
   const location = useLocation<ILocationState>();
   const { state, dispatch } = useAppState();
@@ -30,6 +35,9 @@ const EmailTest = () => {
   const isLoggedIn = isAuth === Auth.LoggedIn;
   const isAdmin = isLoggedIn && state.isAdmin;
 
+  const { chamberId } = useParams<{ chamberId: string }>();
+
+  const [recentGyles, setRecentGyles] = useState<IGyleNameIdDuration[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -37,26 +45,24 @@ const EmailTest = () => {
 
   const formik = useFormik({
     initialValues: {
-      formSubject: '',
-      formText: '',
-      formNoRetry: false,
+      formGyleId: ''
     },
     // validate,
     validationSchema: Yup.object({
-      formSubject: Yup.string().required('Required'),
+      formGyleId: Yup.string().required('Required'),
     }),
     onSubmit: (values, { setSubmitting }) => {
       setSubmitting(true);
-      const url = '/tempctrl/admin/email-test';
+      const url = '/tempctrl/admin/chamber/' + chamberId + '/create-gyle';
       axios
         .post(url, {
-          subject: values.formSubject,
-          text: values.formText,
-          noRetry: values.formNoRetry,
+          gyleToCopyId: values.formGyleId,
+          newName: 'TODO **** Choose a name ****'
         })
         .then((response) => {
           setShowSuccess(true);
           setSubmitting(false);
+          history.push({ pathname: `/gyle-management/${chamberId}` });
         })
         .catch((error) => {
           console.debug(url + ' ERROR', error, error.response.data);
@@ -83,13 +89,35 @@ const EmailTest = () => {
   useEffect(() => {
     console.info(
       Auth[isAuth],
-      '=================== EmailTest useEffect invoked ======================'
+      '=================== CreateGyle useEffect invoked ======================'
     );
 
+    // Returns promise for recent gyles (for chamber identified by chamberId)
+    const getRecentGyles = (): Promise<[IGyleNameIdDuration]> => {
+      const url = '/tempctrl/guest/chamber/' + chamberId + '/recent-gyles';
+      return new Promise((resolve, reject) => {
+        axios
+          .get(url, {
+            params: { max: 12 }
+          })
+          .then((response) => {
+            return resolve(response.data);
+          })
+          .catch((error) => {
+            console.debug(url + ' ERROR', error);
+            const status = error?.response?.status;
+            if (status === 403 || status === 401) {
+              console.debug(`Redirecting to signin after ${status}`);
+              history.push({ pathname: '/signin', state: { from: location.pathname } });
+              dispatch({ type: 'LOGOUT' });
+            }
+            reject(error);
+          });
+      });
+    };
+
     const buildForm = () => {
-      formik.setFieldValue('formSubject', 'Test subject');
-      formik.setFieldValue('formText', 'Test message text');
-      formik.setFieldValue('formNoRetry', false);
+      formik.setFieldValue('formGyleId', '');
     };
   
     if (isAuth === Auth.NotLoggedIn) {
@@ -102,28 +130,19 @@ const EmailTest = () => {
       // and update the isAuth state variable, which will cause this useEffect hook to re-execute.
       console.debug('user has hit F5?');
     } else {
-      setLoading(false);
-      buildForm();
+      getRecentGyles().then((recentGyles) => {
+        setRecentGyles(recentGyles);
+        buildForm();
+        setLoading(false);
+      });
     }
   }, [dispatch, history, isAuth, location.pathname]); // formik deliberately not included
 
   return loading ? (
     <Loading />
   ) : (
-    <Form className="email-test" onSubmit={formik.handleSubmit}>
-      <h1>Email test</h1>
-      <Toast
-        className="success"
-        onClose={() => setShowSuccess(false)}
-        show={showSuccess}
-        delay={2000}
-        autohide
-      >
-        <Toast.Header closeButton={false}>
-          <strong className="mr-auto">Email sent</strong>
-          <small></small>
-        </Toast.Header>
-      </Toast>
+    <Form className="create-gyle" onSubmit={formik.handleSubmit}>
+      {/* <h1>Create a new latest gyle</h1> */}
       <Toast className="error" onClose={onCloseErrorToast} show={showError}>
         <Toast.Header>
           <strong className="mr-auto">Error</strong>
@@ -131,36 +150,24 @@ const EmailTest = () => {
         </Toast.Header>
         <Toast.Body>{errorMessage}</Toast.Body>
       </Toast>
-      <Form.Group controlId="formSubject">
-        <Form.Label>Subject</Form.Label>
-        <Form.Control type="text" {...formik.getFieldProps('formSubject')} />
-        {formik.errors.formSubject ? (
-          <Form.Text className="text-error">{formik.errors.formSubject}</Form.Text>
-        ) : null}
-      </Form.Group>
-      <Form.Group controlId="formText">
-        <Form.Label>Message text</Form.Label>
-        <Form.Control as="textarea" rows={5} {...formik.getFieldProps('formText')} />
-        {formik.errors.formText ? (
-          <Form.Text className="text-error">{formik.errors.formText}</Form.Text>
-        ) : null}
-      </Form.Group>
-      <Form.Group controlId="formNoRetry">
-        <Form.Label>No retry</Form.Label>
+      <Form.Group controlId="formGyleId" className="gyle-id">
         <Form.Control
-          type="checkbox"
-          className="formNoRetry"
-          {...formik.getFieldProps('formNoRetry')}
-        />
-        {formik.errors.formNoRetry ? (
-          <Form.Text className="text-error">{formik.errors.formNoRetry}</Form.Text>
-        ) : null}
+          as="select"
+          {...formik.getFieldProps('formGyleId')}
+        >
+          <option className="d-none" value="">
+                Select a recent gyle to copy ...
+          </option>
+          {recentGyles.map(gyle => (
+                <option key={gyle.id} value={gyle.id}>{gyle.name}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[start temp {gyle.startTemp / 10}°C, max temp {gyle.maxTemp / 10}°C, {gyle.durationHrs} hrs]</option>
+          ))}
+        </Form.Control>
       </Form.Group>
 
       <Row>
         <Col>
-          <Button variant="primary" type="submit" disabled={!isAdmin || formik.isSubmitting}>
-            Send
+          <Button variant="primary" type="submit" disabled={!isAdmin || !formik.isValid || formik.isSubmitting}>
+            Copy
           </Button>
         </Col>
       </Row>
@@ -168,4 +175,4 @@ const EmailTest = () => {
   );
 };
 
-export default EmailTest;
+export default CreateGyle;

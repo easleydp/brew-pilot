@@ -30,6 +30,12 @@ public class GyleDto {
         this.mode = mode;
     }
 
+    // Convenience copy ctor.
+    // Note: The supplied GyleDto could of course be a subclass.
+    public GyleDto(GyleDto gyle) {
+        this(gyle.name, gyle.temperatureProfile, gyle.dtStarted, gyle.dtEnded, gyle.mode);
+    }
+
     private static void validateTemperatureProfile(TemperatureProfileDto profile) {
         if (profile == null) {
             throw new IllegalArgumentException("temperatureProfile is required");

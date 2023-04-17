@@ -1,19 +1,13 @@
 package com.easleydp.tempctrl.spring;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.Comparator;
 
 import javax.annotation.PreDestroy;
 import javax.servlet.http.HttpServletRequest;
-
-import com.easleydp.tempctrl.domain.Chamber;
-import com.easleydp.tempctrl.domain.ChamberReadings;
-import com.easleydp.tempctrl.domain.ChamberRepository;
-import com.easleydp.tempctrl.domain.Gyle;
-import com.easleydp.tempctrl.domain.GyleDto;
-import com.easleydp.tempctrl.domain.PropertyUtils;
-import com.easleydp.tempctrl.domain.TemperatureProfileDto;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,6 +20,15 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.easleydp.tempctrl.domain.Chamber;
+import com.easleydp.tempctrl.domain.ChamberReadings;
+import com.easleydp.tempctrl.domain.ChamberRepository;
+import com.easleydp.tempctrl.domain.Gyle;
+import com.easleydp.tempctrl.domain.GyleDto;
+import com.easleydp.tempctrl.domain.PointDto;
+import com.easleydp.tempctrl.domain.PropertyUtils;
+import com.easleydp.tempctrl.domain.TemperatureProfileDto;
 
 @RestController
 public class ChamberController {
@@ -226,7 +229,7 @@ public class ChamberController {
         latestGyle.setTemperatureProfile(profile);
 
         try {
-            latestGyle.persist();
+            latestGyle.updateJsonFile();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -244,10 +247,60 @@ public class ChamberController {
         BeanUtils.copyProperties(gyle, latestGyle);
 
         try {
-            latestGyle.persist();
+            latestGyle.updateJsonFile();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @GetMapping("/guest/chamber/{chamberId}/recent-gyles")
+    public List<GyleNameIdDuration> getRecentGyles(@PathVariable("chamberId") int chamberId,
+            @RequestParam("max") Integer max) {
+        Chamber chamber = chamberRepository.getChamberById(chamberId); // throws if not found
+        return chamber.getGyles(max).stream()
+                .map(g -> new GyleNameIdDuration(g))
+                .collect(Collectors.toList());
+    }
+
+    private static final class GyleNameIdDuration {
+        @SuppressWarnings("unused")
+        public final String name;
+        @SuppressWarnings("unused")
+        public final int id;
+        @SuppressWarnings("unused")
+        public final int durationHrs;
+        @SuppressWarnings("unused")
+        public final int startTemp;
+        @SuppressWarnings("unused")
+        public final int maxTemp;
+
+        public GyleNameIdDuration(Gyle gyle) {
+            this.name = gyle.getName();
+            this.id = gyle.id;
+
+            List<PointDto> points = gyle.getTemperatureProfile().getPoints();
+            this.durationHrs = points.get(points.size() - 1).getHoursSinceStart();
+            this.startTemp = points.get(0).getTargetTemp();
+            this.maxTemp = Collections.max(points, Comparator.comparing(PointDto::getTargetTemp)).getTargetTemp();
+        }
+    }
+
+    @PostMapping("/admin/chamber/{chamberId}/create-gyle")
+    public void createGyle(@PathVariable("chamberId") int chamberId, @RequestBody CreateGyleDto createGyle) {
+        logger.info("POST create-gyle, {}, {}, {}", chamberId, createGyle.gyleToCopyId, createGyle.newName);
+        Chamber chamber = chamberRepository.getChamberById(chamberId);
+        Gyle gyleToCopy = chamber.getGyleById(createGyle.gyleToCopyId);
+
+        try {
+            chamber.constructNextGyle(gyleToCopy, "#%d - " + createGyle.newName);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static final class CreateGyleDto {
+        public int gyleToCopyId;
+        public String newName;
     }
 
     @PreDestroy

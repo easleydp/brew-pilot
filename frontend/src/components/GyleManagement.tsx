@@ -1,6 +1,6 @@
 import './GyleManagement.scss';
 import React, { useEffect, useState } from 'react';
-import { useHistory, useLocation } from 'react-router-dom';
+import { Route, Router, useHistory, useLocation } from 'react-router-dom';
 import ILocationState from '../api/ILocationState';
 import { useAppState, Auth } from './state';
 import { useParams } from 'react-router-dom';
@@ -74,6 +74,17 @@ const GyleManagement = () => {
     setErrorMessage(null);
     formik.setSubmitting(false);
   };
+
+  const onClickCreateNextGyle = () => {
+    if (gyle?.dtStarted && !gyle?.dtEnded) {
+      setErrorMessage('A new gyle cannot be created while this gyle is still active.');
+      formik.setSubmitting(true);
+      setShowError(true);
+      formik.setSubmitting(false);
+    } else {
+      history.push({ pathname: `/create-gyle/${chamberId}` });
+    }
+};
 
   const reDateTime = /^(\d{4}|\d{2})[-/]([01]?\d)[-/]([0123]?\d)\s([012]?\d)[:.]([012345]?\d)$/;
 
@@ -541,6 +552,11 @@ const GyleManagement = () => {
         <Col>
           <Button variant="primary" type="submit" disabled={!isAdmin || formik.isSubmitting}>
             Update
+          </Button>
+        </Col>
+        <Col>
+          <Button variant="secondary" type="button" onClick={onClickCreateNextGyle} disabled={!isAdmin || formik.isSubmitting}>
+            Create next gyle...
           </Button>
         </Col>
       </Row>

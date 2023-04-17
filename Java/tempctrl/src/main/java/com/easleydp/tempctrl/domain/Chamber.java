@@ -20,7 +20,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.util.Assert;
 
+import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 
 /**
  * NOTE: This is a stateful bean since it wraps a 'latest Gyle' which is itself
@@ -32,7 +34,7 @@ public class Chamber extends ChamberDto {
     private final int id;
     private final Path chamberDir;
     private List<Path> gyleDirs; // In reverse order by ID
-    private Map<Integer, Path> gyleDirsById; // In reverse order by ID
+    private Map<Integer, Path> gyleDirsById;
     private Gyle latestGyle;
     private Path jsonFile;
     private Long jsonFileLastModified;
@@ -95,7 +97,7 @@ public class Chamber extends ChamberDto {
             latestGyle = _latestGyle;
         } else if (_latestGyle.getFileLastModified() > latestGyle.getFileLastModified()) {
             logger.info("**** Chamber {}'s latest gyle ({}) updated.", id, latestGyle.id);
-            latestGyle.refresh();
+            latestGyle.refreshFromJson();
         }
     }
 
@@ -144,12 +146,47 @@ public class Chamber extends ChamberDto {
         return new Gyle(this, gyleDir);
     }
 
-    public synchronized List<Gyle> getGyles() {
+    /** @returns gyles, latest first. */
+    public synchronized List<Gyle> getGyles(Integer max) {
+        if (max == null)
+            return Collections.emptyList();
+        List<Path> gDirs = max != null && max < gyleDirs.size() ? gyleDirs.subList(0, max) : gyleDirs;
         // @formatter:off
-        return gyleDirs.stream()
+        return gDirs.stream()
             .map(gDir -> new Gyle(this, gDir))
             .collect(Collectors.toList());
         // @formatter:on
+    }
+
+    /** Convenience overload. @returns all gyles, latest first. */
+    public List<Gyle> getGyles() {
+        return getGyles(null);
+    }
+
+    /**
+     * @param newName - assumed to have a %d placeholder for String.format() to
+     *                insert the gyle ID, which will be the (new) latest gyle ID.
+     */
+    public synchronized Gyle constructNextGyle(GyleDto gyleToCopy, String newName) throws IOException {
+        GyleDto newGyle = new GyleDto(gyleToCopy);
+        int nextId = latestGyle.id + 1;
+        newGyle.setName(String.format(newName, nextId));
+        newGyle.setDtStarted(null);
+        newGyle.setDtEnded(null);
+
+        // Create the new gyle dir
+        Path gyleDir = chamberDir.resolve("gyles/" + nextId);
+        Files.createDirectories(gyleDir);
+
+        // Serialise to a (new) gyle.json
+        Path jsonFile = gyleDir.resolve("gyle.json");
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectWriter writer = mapper.writer(new DefaultPrettyPrinter());
+        writer.writeValue(jsonFile.toFile(), newGyle);
+
+        checkForGyleUpdates(); // This will cause a new Gyle to be constructed and assigned to latestGyle
+        Assert.state(latestGyle.id == nextId, "latestGyle should have been updated");
+        return latestGyle;
     }
 
     public int getId() {

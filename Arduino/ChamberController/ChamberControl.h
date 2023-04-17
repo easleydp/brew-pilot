@@ -144,8 +144,8 @@ void controlChamber(ChamberData& cd) {
     tExternal = tTarget;
   }
 
-  // Assume exothermic if not beer fridge and gyle age is between 12h and 4 days.
-  const boolean exothermic = 12 < cd.mParams.gyleAgeHours && cd.mParams.gyleAgeHours < (4 * 24);
+  // Assume exothermic if not beer fridge and gyle age is between 2h and 4 days.
+  const boolean exothermic = 2 < cd.mParams.gyleAgeHours && cd.mParams.gyleAgeHours < (4 * 24);
 
   // +ve - in our favour for heating the beer; -ve - in our favour for cooling the beer
   int16_t tExternalBoost = tExternal - cd.tBeer;

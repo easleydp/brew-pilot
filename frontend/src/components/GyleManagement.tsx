@@ -462,21 +462,17 @@ const GyleManagement = () => {
             ) : null}
             <Form.Text className="text-muted">
               {/* When temperature control should start. */}
-              Depending on your preferred way of working (and consistent with the configured
-              profile), either:<br></br>
-              When yeast was / is due to be pitched, OR when fermentation started / is expected to
-              start.<br></br>Note:
+              When fermentation started / is expected to start.<br></br>Note:
               <ul>
                 <li>While blank the chamber will be inactive.</li>
-                {/* <li>
-                  Typically set to either yeast pitch time or the time when signs of fermentation
-                  are first detected.
-                </li> */}
                 <li>
                   Can be set to a future date/time. In this case the chamber{' '}
                   <strong>will be activated forthwith</strong> and held at the profile's start
                   temperature until the start time.
                 </li>
+                <li>If setting in advance,
+                  set it to your best guess initially (e.g. 24hrs after yeast pitch) then reset
+                  once signs of fermentation are detected.</li>
               </ul>
             </Form.Text>
           </Col>

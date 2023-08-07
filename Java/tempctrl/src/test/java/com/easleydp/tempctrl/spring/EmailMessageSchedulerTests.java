@@ -119,6 +119,65 @@ class EmailMessageSchedulerTests {
         assertMessageTextEquals(null);
     }
 
+    // 1659830400000 + (240*60*60*1000)=1660694400000
+    // 1659830400000 + (120*60*60*1000)=1660262400000
+
+    /**
+     * EmailMessageScheduler - midFermentation tests.
+     *
+     * beforeEach sets "dtStarted" to 1659830400000 (2022/08/07 00:00 UTC).
+     * "hoursSinceStart" of the profile point at the start of the cold crash is 240,
+     * so midpoint occurs after 120 hours,
+     * so this maps to a dt of 1660262400000 (Fri 2022/08/12 00:00 UTC).
+     *
+     * Given that in this test suite we have set the properties as follows:
+     * <ul>
+     * <li>"coldCrashCheck.periodMinutes: 20"
+     * </ul>
+     * emails should be triggered at:
+     * <ul>
+     * <li>[Test case 1] 19 minutes prior to dt
+     * <li>[Test case 2] 1 minute prior to dt
+     * </ul>
+     * and emails should not be triggered at:
+     * <ul>
+     * <li>[Test case 3] 21 minutes prior to dt
+     * <li>[Test case 4] 1 minute after to dt
+     * </ul>
+     */
+
+    private static final Date midFermentationTime = buildUtcDate(2022, 8, 12, 0, 0);
+
+    @Test
+    void testSendMidFermentationMessage_case1() {
+        testSendMidFermentationMessage(
+                new Date(midFermentationTime.getTime() - hoursAndMinutesInMillis(0, 19)));
+    }
+
+    @Test
+    void testSendMidFermentationMessage_case2() {
+        testSendMidFermentationMessage(
+                new Date(midFermentationTime.getTime() - hoursAndMinutesInMillis(0, 1)));
+    }
+
+    @Test
+    void testSendMidFermentationMessage_case3() {
+        testNoMessageSent(new Date(midFermentationTime.getTime() - hoursAndMinutesInMillis(0, 21)));
+    }
+
+    @Test
+    void testSendMidFermentationMessage_case4() {
+        testNoMessageSent(new Date(midFermentationTime.getTime() - hoursAndMinutesInMillis(0, -1)));
+    }
+
+    private void testSendMidFermentationMessage(Date timeNow) {
+        emailMessageScheduler.testableSendGyleRelatedNotifications(timeNow);
+
+        assertMessageSubjectEquals("Mid-fermentation. Add Aromazyme? 💉");
+        assertMessageTextEquals(
+                "If needed, Fermentation chamber's gyle \"#45 Reid 1839 BPA\" could be dosed with Aromazyme now.");
+    }
+
     /**
      * EmailMessageScheduler - crashStartPoint tests.
      *
@@ -225,8 +284,6 @@ class EmailMessageSchedulerTests {
         emailMessageScheduler.testableSendGyleRelatedNotifications(timeNow);
 
         assertMessageSubjectEquals("Bottle this gyle? 🍺");
-        // Note: Time should be presented in local time, which for us is BST.
-        // Hence, 7:00am instead of 6:00am.
         assertMessageTextEquals("Fermentation chamber's gyle \"#45 Reid 1839 BPA\" could be bottled any time now.");
     }
 

@@ -188,7 +188,8 @@ Nginx config is as standard. Two files are provided in the `nginx` folder: `defa
 
 ## Demo
 
-An actual BrewPilot installation may be live here: https://pilot.homebrewer.org/ (username: `guest`; password: `BeerIsGood!`)
+An actual BrewPilot installation may be live here: https://pilot.homebrewer.org/ (username: `guest`; password: `BeerIsGood!`).
+<br>Thanks to [Free DNS](https://freedns.afraid.org/) for the subdomain.
 
 ## Contact
 

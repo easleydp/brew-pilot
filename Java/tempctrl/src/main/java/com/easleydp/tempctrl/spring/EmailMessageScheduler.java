@@ -49,6 +49,8 @@ public class EmailMessageScheduler {
         emailService.sendSimpleMessage("BrewPilot server status report", json);
     }
 
+    // TODO: rename coldCrashCheck.periodMinutes to something like
+    // checkSendGyleRelatedNotifications.periodMinutes
     @Scheduled(fixedRateString = "${coldCrashCheck.periodMinutes}", timeUnit = TimeUnit.MINUTES)
     public void sendGyleRelatedNotifications() {
         logger.debug("sendGyleRelatedNotifications called");
@@ -64,6 +66,8 @@ public class EmailMessageScheduler {
                     long periodMillis = getInteger("coldCrashCheck.periodMinutes", 30) * 1000L * 60L;
                     long timeNowMs = timeNow.getTime();
                     long millisSinceStart = timeNowMs - dtStarted;
+                    maybeSendMidFermentationNotification(periodMillis, timeNowMs, millisSinceStart, latestGyle,
+                            chamber);
                     maybeSendCrashStartNotification(periodMillis, timeNowMs, millisSinceStart, latestGyle, chamber);
                     maybeSendCrashEndNotification(periodMillis, timeNowMs, millisSinceStart, latestGyle, chamber);
                 }
@@ -102,9 +106,25 @@ public class EmailMessageScheduler {
 
             long millisUntilTrigger = crashEndPoint.getMillisSinceStart() + postCrashDwellMillis - millisSinceStart;
             if (millisUntilTrigger > 0 && millisUntilTrigger < periodMillis) {
-                Date when = roundToNearestHour(new Date(timeNowMs + millisUntilTrigger));
                 emailService.sendSimpleMessage("Bottle this gyle? 🍺",
                         chamber.getName() + "'s gyle \"" + latestGyle.getName() + "\" could be bottled any time now.");
+            }
+        }
+    }
+
+    private void maybeSendMidFermentationNotification(long periodMillis, long timeNowMs, long millisSinceStart,
+            Gyle latestGyle, Chamber chamber) {
+        PointDto crashStartPoint = latestGyle.getTemperatureProfileDomain().getCrashStartPoint();
+        if (crashStartPoint != null) {
+            // We'll take it that 'mid-fermentation' is the mid-point between profile start
+            // and crash start.
+            long midPointMillis = crashStartPoint.getMillisSinceStart() / 2;
+
+            long millisUntilTrigger = midPointMillis - millisSinceStart;
+            if (millisUntilTrigger > 0 && millisUntilTrigger < periodMillis) {
+                emailService.sendSimpleMessage("Mid-fermentation. Add Aromazyme? 💉",
+                        "If needed, " + chamber.getName() + "'s gyle \"" + latestGyle.getName()
+                                + "\" could be dosed with Aromazyme now.");
             }
         }
     }
@@ -145,22 +165,22 @@ public class EmailMessageScheduler {
                 LeftSwitchedOffDetectionAction action = latestGyle.checkLeftSwitchedOff(timeNow);
                 if (action != null) {
                     switch (action) {
-                    case SEND_FRIDGE_LEFT_OFF:
-                        emailService.sendSimpleMessage("Fridge left switched off? 😟",
-                                chamber.getName() + ":\nIt looks like the fridge may have been left switched off!");
-                        break;
-                    case SEND_FRIDGE_NO_LONGER_LEFT_OFF:
-                        emailService.sendSimpleMessage("Fridge switched back on 😌",
-                                chamber.getName() + ":\nIt looks like the fridge has now been switched back on.");
-                        break;
-                    case SEND_HEATER_LEFT_OFF:
-                        emailService.sendSimpleMessage("Heater left switched off? 😟",
-                                chamber.getName() + ":\nIt looks like the heater may have been left switched off!");
-                        break;
-                    case SEND_HEATER_NO_LONGER_LEFT_OFF:
-                        emailService.sendSimpleMessage("Heater switched back on 😌",
-                                chamber.getName() + ":\nIt looks like the heater has now been switched back on.");
-                        break;
+                        case SEND_FRIDGE_LEFT_OFF:
+                            emailService.sendSimpleMessage("Fridge left switched off? 😟",
+                                    chamber.getName() + ":\nIt looks like the fridge may have been left switched off!");
+                            break;
+                        case SEND_FRIDGE_NO_LONGER_LEFT_OFF:
+                            emailService.sendSimpleMessage("Fridge switched back on 😌",
+                                    chamber.getName() + ":\nIt looks like the fridge has now been switched back on.");
+                            break;
+                        case SEND_HEATER_LEFT_OFF:
+                            emailService.sendSimpleMessage("Heater left switched off? 😟",
+                                    chamber.getName() + ":\nIt looks like the heater may have been left switched off!");
+                            break;
+                        case SEND_HEATER_NO_LONGER_LEFT_OFF:
+                            emailService.sendSimpleMessage("Heater switched back on 😌",
+                                    chamber.getName() + ":\nIt looks like the heater has now been switched back on.");
+                            break;
                     }
                 }
             }

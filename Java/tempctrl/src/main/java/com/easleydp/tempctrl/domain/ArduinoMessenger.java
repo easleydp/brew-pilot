@@ -124,7 +124,7 @@ public class ArduinoMessenger implements AutoCloseable {
         byte[] byteBuffer = new byte[1];
         int consecutiveZeroCount = 0;
         while (true) {
-            int numRead = comPort.readBytes(byteBuffer, 1L, 0);
+            int numRead = comPort.readBytes(byteBuffer, 1, 0);
             if (numRead == 0)
                 break;
             if (stringBytesList == null)
@@ -172,7 +172,7 @@ public class ArduinoMessenger implements AutoCloseable {
         byte[] byteBuffer = new byte[1];
         int consecutiveZeroCount = 0;
         while (true) {
-            int numRead = comPort.readBytes(byteBuffer, 1L, 0);
+            int numRead = comPort.readBytes(byteBuffer, 1, 0);
             if (numRead == 0)
                 throw new SerialPortTimeoutException("The read operation timed out before any data was returned.");
             byte b = byteBuffer[0];

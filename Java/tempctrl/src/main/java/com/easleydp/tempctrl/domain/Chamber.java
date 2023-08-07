@@ -148,8 +148,6 @@ public class Chamber extends ChamberDto {
 
     /** @returns gyles, latest first. */
     public synchronized List<Gyle> getGyles(Integer max) {
-        if (max == null)
-            return Collections.emptyList();
         List<Path> gDirs = max != null && max < gyleDirs.size() ? gyleDirs.subList(0, max) : gyleDirs;
         // @formatter:off
         return gDirs.stream()

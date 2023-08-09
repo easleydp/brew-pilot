@@ -523,7 +523,7 @@ const GyleManagement = () => {
             <Form.Text className="text-muted">
               One line per profile point, each consisting of two integers separated by a comma:
               <ol>
-                <li>Hours since start (for the first profile point this must be zero),</li>
+                <li>Hours since start (must be zero for the first profile point),</li>
                 <li>Target temperature x10 (e.g. 175 for 17.5°C).</li>
               </ol>
             </Form.Text>

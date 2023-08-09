@@ -269,16 +269,16 @@ public class Gyle extends GyleDto {
     // tests may wish to override the properties from which the constants get their
     // value, but if a prior test has already run then the value of the constant
     // would be fixed.
-    private static int getIgnoreFirstHours() {
+    private static int getSwitchedOffCheckIgnoreFirstHours() {
         return PropertyUtils.getInteger("switchedOffCheck.ignoreFirstHours", 4);
     }
 
-    private static int getFridgeOnTimeMins() {
-        return PropertyUtils.getInteger("switchedOffCheck.fridgeOnTimeMins", 5);
+    private static int getSwitchedOffCheckFridgeOnTimeMins() {
+        return PropertyUtils.getInteger("switchedOffCheck.fridgeOnTimeMins", 10);
     }
 
-    private static int getHeaterOnTimeMins() {
-        return PropertyUtils.getInteger("switchedOffCheck.heaterOnTimeMins", 10);
+    private static int getSwitchedOffCheckHeaterOnTimeMins() {
+        return PropertyUtils.getInteger("switchedOffCheck.heaterOnTimeMins", 8);
     }
 
     // The return value for our `checkLeftSwitchedOff()` method.
@@ -311,14 +311,16 @@ public class Gyle extends GyleDto {
         long timeNowMs = timeNow.getTime();
         long millisSinceStart = timeNowMs - dtStarted;
         int gyleAgeHours = (int) (millisSinceStart / 1000L / 60 / 60);
-        if (gyleAgeHours >= getIgnoreFirstHours()) {
+        if (gyleAgeHours >= getSwitchedOffCheckIgnoreFirstHours()) {
 
             if (latestChamberReadings.getFridgeOn()) {
                 // Fridge should be ON (as far as this app is concerned) but has it been left
                 // OFF?
                 if (leftSwitchedOffState != LeftSwitchedOffState.FRIDGE_LEFT_OFF) {
-                    if (trendBuffer.getFridgeOnTimeMins() >= getFridgeOnTimeMins() + chamber.getFridgeSwitchOnLagMins()
-                            && trendBuffer.gettChamberTrend(getFridgeOnTimeMins()) != Trend.DOWNWARDS) {
+                    int absoluteSwitchedOffCheckFridgeOnTimeMins = getSwitchedOffCheckFridgeOnTimeMins()
+                            + chamber.getFridgeSwitchOnLagMins();
+                    if (trendBuffer.getFridgeOnTimeMins() >= absoluteSwitchedOffCheckFridgeOnTimeMins
+                            && trendBuffer.gettChamberTrend(getSwitchedOffCheckFridgeOnTimeMins()) != Trend.DOWNWARDS) {
                         leftSwitchedOffState = LeftSwitchedOffState.FRIDGE_LEFT_OFF;
                         return LeftSwitchedOffDetectionAction.SEND_FRIDGE_LEFT_OFF;
                     }
@@ -338,10 +340,13 @@ public class Gyle extends GyleDto {
                 if (latestChamberReadings.getHeaterOutput() >= heaterThresholdPercent) {
                     // Heater should be ON (as far as this app is concerned) but is it switched OFF?
                     if (leftSwitchedOffState != LeftSwitchedOffState.HEATER_LEFT_OFF) {
-                        if (trendBuffer.getHeaterOnTimeMins(heaterThresholdPercent) >= getHeaterOnTimeMins()
-                                && trendBuffer.gettChamberTrend(getHeaterOnTimeMins()) != Trend.UPWARDS) {
-                            leftSwitchedOffState = LeftSwitchedOffState.HEATER_LEFT_OFF;
-                            return LeftSwitchedOffDetectionAction.SEND_HEATER_LEFT_OFF;
+                        int heaterOnTimeMins = trendBuffer.getHeaterOnTimeMins(heaterThresholdPercent);
+                        if (heaterOnTimeMins >= getSwitchedOffCheckHeaterOnTimeMins()) {
+                            Trend trend = trendBuffer.gettChamberTrend(getSwitchedOffCheckHeaterOnTimeMins());
+                            if (trend != Trend.UPWARDS) {
+                                leftSwitchedOffState = LeftSwitchedOffState.HEATER_LEFT_OFF;
+                                return LeftSwitchedOffDetectionAction.SEND_HEATER_LEFT_OFF;
+                            }
                         }
                     }
                 } else {
@@ -654,9 +659,12 @@ public class Gyle extends GyleDto {
         private final int maxSize;
 
         TrendBuffer(Chamber chamber) {
-            // The buffer is a FIFO deque of recent records, sized in terms of time.
-            int sizeInMinutes = Math.max(getFridgeOnTimeMins() + chamber.getFridgeSwitchOnLagMins(),
-                    Gyle.getHeaterOnTimeMins()) * 2;
+            // The buffer is a FIFO deque of recent records. Must be big enough to support
+            // `gettChamberTrend(periodMins)`, which would throw IllegalStateException if
+            // `periodMins` were to exceed this buffer's size.
+            int sizeInMinutes = Math.max(
+                    Gyle.getSwitchedOffCheckFridgeOnTimeMins() + chamber.getFridgeSwitchOnLagMins(),
+                    Gyle.getSwitchedOffCheckHeaterOnTimeMins()) * 2;
             // Given our sample rate, transform that into a size in terms of number of
             // records.
             maxSize = sizeInMinutes * 60 * 1000 / PropertyUtils.getReadingsPeriodMillis();
@@ -719,22 +727,23 @@ public class Gyle extends GyleDto {
         /**
          * As `getFridgeOnTimeMins()` but for heater.
          *
-         * @param threshold
-         *                  Anything below the threshold is ignored (as if OFF).
+         * @param heaterThresholdPercent
+         *                               Anything below the threshold is ignored (as if
+         *                               OFF).
          *
          * @return 0 if the heater is not currently ON and >= `threshold` (according to
          *         the latest record), otherwise a value of at least 1.
          */
-        public synchronized int getHeaterOnTimeMins(int threshold) {
+        public synchronized int getHeaterOnTimeMins(int heaterThresholdPercent) {
             if (!fifo.isEmpty()) {
                 final int size = fifo.size();
                 ChamberReadings lastRecord = fifo.get(size - 1);
-                if (lastRecord.getHeaterOutput() >= threshold) {
+                if (lastRecord.getHeaterOutput() >= heaterThresholdPercent) {
                     ListIterator<ChamberReadings> li = fifo.listIterator(size); // Start just after the last element.
                     ChamberReadings record = null;
                     while (li.hasPrevious()) {
                         record = li.previous();
-                        if (record.getHeaterOutput() < threshold)
+                        if (record.getHeaterOutput() < heaterThresholdPercent)
                             break;
                     }
                     Assert.state(record != null, "readings should not be null"); // ... given the checks we made above
@@ -761,11 +770,11 @@ public class Gyle extends GyleDto {
          *                   record) over which to analyse the trend.
          *
          * @return The detected trend, or `STEADY` if none. If the buffer does not
-         *         contain enough records to cover the specified period then `STEADY` is
-         *         returned.
-         *
-         *         Note: If the specified period exceeds this buffers max capacity then
-         *         an error is thrown.
+         *         yet contain enough records to cover the specified period then
+         *         `STEADY` is returned.
+         * 
+         * @throws IllegalStateException If the specified period exceeds this buffers
+         *                               max capacity.
          */
         public synchronized Trend gettChamberTrend(int periodMins) {
             if (!fifo.isEmpty()) {

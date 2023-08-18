@@ -19,7 +19,6 @@
 // No heating, no cooling, just monitoring.
 #define MODE_MONITOR_ONLY 'M'
 
-
 struct ChecksummedParams {
   uint16_t checksum;
 };
@@ -78,19 +77,24 @@ typedef struct {
   // Latest readings
   int16_t tBeer;
   int16_t tChamber;
-  uint8_t heaterOutput; // 0..100
-  boolean heaterElementOn; // Although heaterOutput is supposedly 0..100, the actual heater element is either
-                           // ON or OFF at any given point in time.
+  uint8_t heaterOutput;  // 0..100
+  boolean heaterElementOn;  // Although heaterOutput is supposedly 0..100, the actual heater element is either
+                            // ON or OFF at any given point in time.
   boolean fridgeOn;
 
   // PID state
-  float priorError; // tTarget - tBeer, so -ve for cooling, +ve for heating
+  float priorError;  // tTarget - tBeer, so -ve for cooling, +ve for heating
   // float integral;  Moved to MovingChamberParams
 
-  uint8_t fridgeStateChangeMins;  // Tops out at 255 (code avoids wrapping). initChamberData() sets to 255
-  uint8_t heaterElementStateChangeSecs;  // Tops out at 255 (code avoids wrapping). initChamberData() sets to 255
-  int8_t tBeerLastDelta; // The last registered change in tBeer ((priorError-error)*10), with decay each time no
-                         // change. Used to detect recent trend (+ve signifies rising / -ve falling).
+  uint8_t fridgeLastToggleMins;  // Time since last fridge activation/deactivation, i.e. fridgeOn changing between ON & OFF.
+                                 // Tops out at 255 (code avoids wrapping). initChamberData() sets to 255
+  uint8_t heaterLastToggleMins;  // Ditto but for the heater, i.e. heaterOutput changing between zero and non-zero.
+
+  uint8_t heaterElementStateChangeSecs;  // This is to do with pulsing the actual heater element to get a pseudo variable output.
+                                         // Tops out at 255 (code avoids wrapping). initChamberData() sets to 255
+
+  int8_t tBeerLastDelta;  // The last registered change in tBeer ((priorError-error)*10), with decay each time no
+                          // change. Used to detect recent trend (+ve signifies rising / -ve falling).
 } ChamberData;
 
 static const char* logPrefixChamberData = "CD";
@@ -101,12 +105,13 @@ ChamberData chamberDataArray[CHAMBER_COUNT];
  * Assumes that the supplied structure has a uint16_t `checksum` field that should NOT be included in the computation.
  * The supplied structure is temporaily modified: `checksum` field is set to zero and later restored to initial value.
  */
-template<typename T> uint16_t generateChecksum(T &t) {
+template <typename T>
+uint16_t generateChecksum(T& t) {
   uint16_t checksum = t.checksum;
   t.checksum = 0;
 
   uint16_t crc = 7;
-  const uint8_t *ptr = (const uint8_t*) &t;
+  const uint8_t* ptr = (const uint8_t*)&t;
   for (uint8_t i = 0; i < sizeof(T); i++) {
     crc = _crc16_update(crc, ptr[i]);
   }
@@ -119,21 +124,21 @@ template<typename T> uint16_t generateChecksum(T &t) {
  * EEPROM helpers.
  * Memory map: One MovingChamberParams per chamber, followed by one ChamberParams per chamber.
  */
-void getEepromMovingChamberParams(uint8_t chamberId, MovingChamberParams &mParams) {
+void getEepromMovingChamberParams(uint8_t chamberId, MovingChamberParams& mParams) {
   int addr = (chamberId - 1) * sizeof(MovingChamberParams);
   EEPROM.get(addr, mParams);
 }
-void putEepromMovingChamberParams(uint8_t chamberId, MovingChamberParams &mParams) {
+void putEepromMovingChamberParams(uint8_t chamberId, MovingChamberParams& mParams) {
   mParams.checksum = generateChecksum(mParams);
   int addr = (chamberId - 1) * sizeof(MovingChamberParams);
   EEPROM.put(addr, mParams);
 }
-void getEepromChamberParams(uint8_t chamberId, ChamberParams &params) {
+void getEepromChamberParams(uint8_t chamberId, ChamberParams& params) {
   int base = CHAMBER_COUNT * sizeof(MovingChamberParams);
   int addr = base + (chamberId - 1) * sizeof(ChamberParams);
   EEPROM.get(addr, params);
 }
-void putEepromChamberParams(uint8_t chamberId, ChamberParams &params) {
+void putEepromChamberParams(uint8_t chamberId, ChamberParams& params) {
   params.checksum = generateChecksum(params);
   int base = CHAMBER_COUNT * sizeof(MovingChamberParams);
   int addr = base + (chamberId - 1) * sizeof(ChamberParams);
@@ -149,15 +154,15 @@ ChamberData* findChamber(byte chamberId) {
   return NULL;
 }
 
-void saveMovingChamberParams(uint8_t chamberId, MovingChamberParams &mParams) {
+void saveMovingChamberParams(uint8_t chamberId, MovingChamberParams& mParams) {
   putEepromMovingChamberParams(chamberId, mParams);
   memoMinFreeRam(20);
 }
 
-const unsigned long saveMovingChamberParamsInterval = 1000L * 60 * 60; // save every hour
+const unsigned long saveMovingChamberParamsInterval = 1000L * 60 * 60;  // save every hour
 uint32_t millisSinceLastTTargetSave[CHAMBER_COUNT] = {0, 0};
 uint32_t prevMillisTTargetSave[CHAMBER_COUNT] = {0, 0};
-void saveMovingChamberParamsOnceInAWhile(uint8_t chamberId, MovingChamberParams &mParams) {
+void saveMovingChamberParamsOnceInAWhile(uint8_t chamberId, MovingChamberParams& mParams) {
   if (TIME_UP(prevMillisTTargetSave[chamberId - 1], uptimeMillis, saveMovingChamberParamsInterval)) {
     millisSinceLastTTargetSave[chamberId - 1] = 0;
     saveMovingChamberParams(chamberId, mParams);
@@ -170,10 +175,9 @@ void saveMovingChamberParamsOnceInAWhile(uint8_t chamberId, MovingChamberParams 
 
 boolean movingChamberParamsSaved[CHAMBER_COUNT] = {false, false};
 void setChamberParams(
-  ChamberData& cd, int16_t gyleAgeHours, int16_t tTarget, int16_t tTargetNext, int16_t tMin, int16_t tMax, boolean hasHeater,
-  uint8_t fridgeMinOnTimeMins, uint8_t fridgeMinOffTimeMins, uint8_t fridgeSwitchOnLagMins, float Kp, float Ki, float Kd, char mode) {
-
-  logMsg(LOG_DEBUG, logPrefixChamberData, '0', cd.chamberId, tTarget/* int16_t */, mode/* char */);
+    ChamberData& cd, int16_t gyleAgeHours, int16_t tTarget, int16_t tTargetNext, int16_t tMin, int16_t tMax, boolean hasHeater,
+    uint8_t fridgeMinOnTimeMins, uint8_t fridgeMinOffTimeMins, uint8_t fridgeSwitchOnLagMins, float Kp, float Ki, float Kd, char mode) {
+  logMsg(LOG_DEBUG, logPrefixChamberData, '0', cd.chamberId, tTarget /* int16_t */, mode /* char */);
 
   cd.mParams.tTarget = tTarget;
   cd.mParams.tTargetNext = tTargetNext;
@@ -206,7 +210,8 @@ void initChamberData() {
     ChamberData& cd = chamberDataArray[i];
     memset(&cd, 0, sizeof(ChamberData));
     uint8_t chamberId = cd.chamberId = i + 1;
-    cd.fridgeStateChangeMins = 255;
+    cd.fridgeLastToggleMins = 255;
+    cd.heaterLastToggleMins = 255;
     cd.heaterElementStateChangeSecs = 255;
     ChamberParams& params = cd.params;
     MovingChamberParams& mParams = cd.mParams;

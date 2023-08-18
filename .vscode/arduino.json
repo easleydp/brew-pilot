@@ -1,0 +1,4 @@
+{
+    "sketch": "Arduino/ChamberController/ChamberController.ino",
+    "board": "arduino:avr:uno"
+}

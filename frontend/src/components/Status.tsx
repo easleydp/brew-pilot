@@ -6,6 +6,33 @@ import { useHistory, useLocation } from 'react-router-dom';
 import ILocationState from '../api/ILocationState';
 import Loading from './Loading';
 
+const dateToStr = (date: Date) => {
+  const parts = new Intl.DateTimeFormat(['en'], {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(date);
+  const part = (type: string) => {
+    return parts.find((part) => part.type === type)?.value;
+  };
+  return `${part('year')}-${part('month')}-${part('day')}, ${part('hour')}:${part('minute')}`;
+};
+
+const transformStatus = (status: any) => {
+  // recentlyOffline array contains ISO8601 UTC date/times. Convert to local time.
+  const recentlyOffline = status.recentlyOffline;
+  if (recentlyOffline) {
+    status.recentlyOffline = recentlyOffline.map((utcDate: string) => {
+      const localDate = new Date(utcDate);
+      return dateToStr(localDate);
+    });
+  }
+  return status;
+};
+
 const syntaxHighlight = (json: string) => {
   json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const html = json.replace(
@@ -36,15 +63,10 @@ const syntaxHighlight = (json: string) => {
 };
 
 const Status = () => {
-  interface IStatusReport {
-    code: number;
-    desc: string;
-  }
-
   const history = useHistory<ILocationState>();
   const location = useLocation<ILocationState>();
   const [loading, setLoading] = useState<boolean>(true);
-  const [status, setStatus] = useState<IStatusReport | null>(null);
+  const [status, setStatus] = useState<any | null>(null);
 
   const { state, dispatch } = useAppState();
   const isAuth = state && state.isAuth;
@@ -56,7 +78,7 @@ const Status = () => {
         .get(url)
         .then((response) => {
           setLoading(false);
-          setStatus(response.data);
+          setStatus(transformStatus(response.data));
         })
         .catch((error) => {
           console.debug(url + ' ERROR', error);

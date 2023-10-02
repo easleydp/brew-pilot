@@ -9,8 +9,14 @@ import java.math.BigDecimal;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Enumeration;
+import java.util.List;
+import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,10 +45,10 @@ public class StatusController {
     private ChamberManager chamberManager;
 
     @Autowired
-    private EmailService emailService;
+    private CollectReadingsScheduler collectReadingsScheduler;
 
     @Autowired
-    private CollectReadingsScheduler collectReadingsScheduler;
+    private OfflineCheckScheduler offlineCheckScheduler;
 
     Supplier<ChamberManagerStatus> chamberManagerStatusSupplier;
 
@@ -70,10 +76,25 @@ public class StatusController {
 
     // Called by getStatusReport() above and also by StillAliveMessageScheduler
     StatusReportResponse buildStatusReportResponse() {
+        List<Date> recentlyOfflineDates = offlineCheckScheduler.getRecentlyOffline(new Date());
+        // @formatter:off
+        List<String> recentlyOfflineIso = recentlyOfflineDates.stream()
+            .map(d -> dateToIsoUtc(d))
+            .collect(Collectors.toList());
+        // @formatter:on
+
         return new StatusReportResponse(
                 new PiStats(),
                 chamberManagerStatusSupplier.get(),
-                collectReadingsScheduler.getReadingsCollectionDurationStats());
+                collectReadingsScheduler.getReadingsCollectionDurationStats(),
+                recentlyOfflineIso);
+    }
+
+    private static String dateToIsoUtc(Date date) {
+        TimeZone tz = TimeZone.getTimeZone("UTC");
+        DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm'Z'");
+        df.setTimeZone(tz);
+        return df.format(date);
     }
 
     @JsonPropertyOrder({ "garageTemperature", "projectBoxTemperature" })
@@ -87,14 +108,19 @@ public class StatusController {
         }
 
         public final PiStats raspberryPi;
+        @JsonInclude(Include.NON_NULL)
         public final ChamberManagerStatus arduino;
+        @JsonInclude(Include.NON_NULL)
         public final ReadingsCollectionDurationStats readingsCollectionDurationStats;
+        @JsonInclude(Include.NON_EMPTY)
+        public final List<String> recentlyOffline;
 
         public StatusReportResponse(PiStats piStats, ChamberManagerStatus arduino,
-                ReadingsCollectionDurationStats readingsCollectionDurationStats) {
+                ReadingsCollectionDurationStats readingsCollectionDurationStats, List<String> recentlyOffline) {
             this.raspberryPi = piStats;
             this.arduino = arduino;
             this.readingsCollectionDurationStats = readingsCollectionDurationStats;
+            this.recentlyOffline = recentlyOffline;
         }
 
         @JsonInclude(Include.NON_NULL)

@@ -307,6 +307,10 @@ public class Gyle extends GyleDto {
      */
     public LeftSwitchedOffDetectionAction checkLeftSwitchedOff(Date timeNow) {
         Assert.state(isActive(), "checkLeftSwitchedOff() should only be called on active gyle");
+        if (latestChamberReadings == null) {
+            logger.info("checkLeftSwitchedOff() called but latestChamberReadings is still null");
+            return null;
+        }
         long dtStarted = getDtStarted();
         long timeNowMs = timeNow.getTime();
         long millisSinceStart = timeNowMs - dtStarted;

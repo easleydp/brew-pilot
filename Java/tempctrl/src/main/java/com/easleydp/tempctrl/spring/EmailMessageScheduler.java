@@ -106,7 +106,9 @@ public class EmailMessageScheduler {
 
             long millisUntilTrigger = crashEndPoint.getMillisSinceStart() + postCrashDwellMillis - millisSinceStart;
             if (millisUntilTrigger > 0 && millisUntilTrigger < periodMillis) {
-                emailService.sendSimpleMessage("Bottle this gyle? 🍺",
+                Integer gyleNumber = latestGyle.getGyleNumber();
+                String subject = gyleNumber != null ? "Bottle gyle #" + gyleNumber + "? 🍺" : "Bottle this gyle? 🍺";
+                emailService.sendSimpleMessage(subject,
                         chamber.getName() + "'s gyle \"" + latestGyle.getName() + "\" could be bottled any time now.");
             }
         }

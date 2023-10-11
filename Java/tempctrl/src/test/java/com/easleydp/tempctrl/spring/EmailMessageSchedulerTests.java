@@ -283,7 +283,7 @@ class EmailMessageSchedulerTests {
     private void testSendTimeToBottleMessage(Date timeNow) {
         emailMessageScheduler.testableSendGyleRelatedNotifications(timeNow);
 
-        assertMessageSubjectEquals("Bottle this gyle? 🍺");
+        assertMessageSubjectEquals("Bottle gyle #45? 🍺");
         assertMessageTextEquals("Fermentation chamber's gyle \"#45 Reid 1839 BPA\" could be bottled any time now.");
     }
 

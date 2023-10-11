@@ -8,9 +8,7 @@ import Loading from './Loading';
 
 const dateToStr = (date: Date) => {
   const parts = new Intl.DateTimeFormat(['en'], {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
+    weekday: 'short',
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
@@ -18,11 +16,11 @@ const dateToStr = (date: Date) => {
   const part = (type: string) => {
     return parts.find((part) => part.type === type)?.value;
   };
-  return `${part('year')}-${part('month')}-${part('day')}, ${part('hour')}:${part('minute')}`;
+  return `${part('weekday')}, ${part('hour')}:${part('minute')}`;
 };
 
 const transformStatus = (status: any) => {
-  // recentlyOffline array contains ISO8601 UTC date/times. Convert to local time.
+  // recentlyOffline array contains ISO8601 UTC date/times. Convert to local time and a more friendly format.
   const recentlyOffline = status.recentlyOffline;
   if (recentlyOffline) {
     status.recentlyOffline = recentlyOffline.map((utcDate: string) => {
@@ -30,6 +28,10 @@ const transformStatus = (status: any) => {
       return dateToStr(localDate);
     });
   }
+  // For quick date format test:
+  // if (!recentlyOffline) {
+  //   status.recentlyOffline = [dateToStr(new Date())];
+  // }
   return status;
 };
 

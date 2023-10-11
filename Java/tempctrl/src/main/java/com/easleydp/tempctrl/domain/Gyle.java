@@ -813,4 +813,23 @@ public class Gyle extends GyleDto {
             return Trend.STEADY;
         }
     }
+
+    /**
+     * Parses the gyle number (if there is one) from the gyle name and returns it as
+     * an integer. So, for the gyle names "#45 Reid 1839 BPA" and "Beer fridge"
+     * this method would return 45 and null respectively.
+     * 
+     * Note: While the `id` field tends to be the same as gyle number it would be
+     * dodgy to use it as a proxy for the gyle number because this is only a
+     * convention (not enforced).
+     * 
+     * @return the gyle number if the gyle name appears to contain one, otherwise
+     *         null.
+     */
+    @JsonIgnore
+    public Integer getGyleNumber() {
+        Pattern pattern = Pattern.compile("^#(\\d+)\\s");
+        Matcher matcher = pattern.matcher(getName());
+        return matcher.find() ? Integer.valueOf(matcher.group(1)) : null;
+    }
 }

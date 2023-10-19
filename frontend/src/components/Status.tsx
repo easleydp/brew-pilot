@@ -6,6 +6,8 @@ import { useHistory, useLocation } from 'react-router-dom';
 import ILocationState from '../api/ILocationState';
 import Loading from './Loading';
 
+const JSON_INDENT = 4;
+
 const dateToStr = (date: Date) => {
   const parts = new Intl.DateTimeFormat(['en'], {
     weekday: 'short',
@@ -35,12 +37,38 @@ const transformStatus = (status: any) => {
   return status;
 };
 
+/**
+ * For small screens, removes the outermost braces and decreases the indent of the remaining lines.
+ *
+ * We only do this for smaller screens because the effect doesn't look good on desktop.
+ * Assumes the JSON string has been formatted with line-breaks and indentation.
+ */
+const removeOuterBraces = (json: string) => {
+  if (window.screen.width <= 1280) {  // Bit of a hack but simple compared to the alternatives (https://stackoverflow.com/a/62695041/65555)
+    if (json && json.length) {
+      let lines = json.split('\n');
+      // If first and last lines are opening and closing braces (as we expect),
+      // remove them and decrease the indent of all the remaining lines.
+      const lineCount = lines.length;
+      if (lineCount > 2) {
+        if (lines[0] === '{' && lines[lineCount - 1] === '}') {
+          lines.length = lineCount - 1;
+          lines.shift();
+          lines = lines.map(line => line.substring(JSON_INDENT));
+          json = lines.join('\n');
+        }
+      }
+    }
+  }
+  return json;
+};
+
 const syntaxHighlight = (json: string) => {
   json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const html = json.replace(
     /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?|,)/g,
     (match) => {
-      if (match === ',') return ''; // Since the input is pretty-printed we don't need the JSON commas
+      if (match === ',') return ''; // Since the input is pretty-printed we can afford to drop the JSON commas
       let cls;
       if (/^"/.test(match)) {
         if (/:$/.test(match)) {
@@ -119,7 +147,7 @@ const Status = () => {
       {!status ? (
         <p>Status unknown</p>
       ) : (
-        <pre dangerouslySetInnerHTML={syntaxHighlight(JSON.stringify(status, undefined, 4))}></pre>
+        <pre dangerouslySetInnerHTML={syntaxHighlight(removeOuterBraces(JSON.stringify(status, undefined, JSON_INDENT)))}></pre>
       )}
     </div>
   );

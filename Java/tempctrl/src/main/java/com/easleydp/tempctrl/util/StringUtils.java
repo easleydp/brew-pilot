@@ -3,10 +3,16 @@ package com.easleydp.tempctrl.util;
 import java.util.*;
 import java.util.stream.*;
 
-public class StringUtils
-{
-    public static String substringBetween(String str, String before, String after)
-    {
+public class StringUtils {
+    /**
+     * Returns true if the supplied string is 'null or empty', where empty is
+     * defined as being zero length after being trimmed.
+     */
+    public static boolean nullOrEmpty(String s) {
+        return s == null || s.trim().length() == 0;
+    }
+
+    public static String substringBetween(String str, String before, String after) {
         int i = str.indexOf(before);
         int j = str.indexOf(after, i + before.length());
         if (i == -1)
@@ -16,8 +22,7 @@ public class StringUtils
         return str.substring(i + before.length(), j);
     }
 
-    public static String substringAfter(String str, String before)
-    {
+    public static String substringAfter(String str, String before) {
         int i = str.indexOf(before);
         if (i == -1)
             throw new RuntimeException("String " + str + " did not contain " + before);
@@ -25,8 +30,7 @@ public class StringUtils
     }
 
     /** @returns string such as "19 hours, 31 minutes" */
-    public static String friendlyUptime(int uptimeMins)
-    {
+    public static String friendlyUptime(int uptimeMins) {
         int mins = uptimeMins;
         if (mins < 60)
             return mins == 0 ? "0 minutes" : minutesPart(mins);
@@ -35,7 +39,6 @@ public class StringUtils
         mins -= hours * 60;
         if (hours < 24)
             return joinTimeParts(hoursPart(hours), minutesPart(mins));
-
 
         int days = hours / 24;
         hours -= days * 24;
@@ -46,32 +49,32 @@ public class StringUtils
         days -= weeks * 7;
         return joinTimeParts(weeksPart(weeks), daysPart(days), hoursPart(hours), minutesPart(mins));
     }
-    private static String weeksPart(int weeks)
-    {
+
+    private static String weeksPart(int weeks) {
         return nPart(weeks, "week");
     }
-    private static String daysPart(int days)
-    {
+
+    private static String daysPart(int days) {
         return nPart(days, "day");
     }
-    private static String hoursPart(int hours)
-    {
+
+    private static String hoursPart(int hours) {
         return nPart(hours, "hour");
     }
-    private static String minutesPart(int mins)
-    {
+
+    private static String minutesPart(int mins) {
         return nPart(mins, "minute");
     }
-    private static String nPart(int n, String name)
-    {
+
+    private static String nPart(int n, String name) {
         if (n == 0)
             return null;
         return n + " " + (n == 1 ? name : name + 's');
     }
-    private static String joinTimeParts(String... parts)
-    {
+
+    private static String joinTimeParts(String... parts) {
         return Arrays.stream(parts)
-            .filter(p -> p != null)
-            .collect(Collectors.joining(", "));
+                .filter(p -> p != null)
+                .collect(Collectors.joining(", "));
     }
 }

@@ -2,6 +2,7 @@ package com.easleydp.tempctrl.spring;
 
 import static com.easleydp.tempctrl.util.StringUtils.substringAfter;
 import static com.easleydp.tempctrl.util.StringUtils.substringBetween;
+import static com.easleydp.tempctrl.util.StringUtils.nullOrEmpty;
 
 import java.io.File;
 import java.io.IOException;
@@ -129,7 +130,7 @@ public class StatusController {
         }
     }
 
-    @JsonPropertyOrder({ "uptime", "socTemperature", "cpuTemperature", "clockMHz", "localIP", "macAddress" })
+    @JsonPropertyOrder({ "uptime", "socTemperature", "cpuTemperature", "clockMHz", "localIP", "macAddress", "essid" })
     private static class PiStats {
         private static boolean mockPi = new File(VCGEN_CMD).exists() == false;
 
@@ -147,10 +148,11 @@ public class StatusController {
         private final String cpuTemperature;
         private final String volts;
         private final String clock;
+        private final String essid;
 
         // Handy for testing
         public PiStats(String uptime, MemoryStatsPi memory, MemoryStatsFileSystem fileSystem, JvmStatus jvm,
-                String socTemperature, String cpuTemperature, String volts, String clock) {
+                String socTemperature, String cpuTemperature, String volts, String clock, String essid) {
             this.uptime = uptime;
             this.memory = memory;
             this.fileSystem = fileSystem;
@@ -159,6 +161,7 @@ public class StatusController {
             this.jvm = jvm;
             this.volts = volts;
             this.clock = clock;
+            this.essid = essid;
         }
 
         public PiStats() {
@@ -170,7 +173,8 @@ public class StatusController {
                     mockPi ? "temp=30.2'C" : OsCommandExecuter.execute(VCGEN_CMD, "measure_temp"),
                     mockPi ? "30280" : OsCommandExecuter.execute("cat", "/sys/class/thermal/thermal_zone0/temp"),
                     mockPi ? "volt=0.8765V" : OsCommandExecuter.execute(VCGEN_CMD, "measure_volts", "core"),
-                    mockPi ? "frequency(48)=750199232" : OsCommandExecuter.execute(VCGEN_CMD, "measure_clock", "arm"));
+                    mockPi ? "frequency(48)=750199232" : OsCommandExecuter.execute(VCGEN_CMD, "measure_clock", "arm"),
+                    mockPi ? "SSID123" : OsCommandExecuter.execute("/usr/sbin/iwgetid", "--raw"));
         }
 
         @JsonInclude(Include.NON_NULL)
@@ -181,8 +185,9 @@ public class StatusController {
 
         @JsonInclude(Include.NON_NULL)
         public BigDecimal getSocTemperature() {
-            if (socTemperature == null)
+            if (socTemperature == null) {
                 return null;
+            }
             // e.g. "temp=41.0'C"
             return new BigDecimal(substringBetween(socTemperature, "=", "'"));
         }
@@ -213,8 +218,9 @@ public class StatusController {
 
         @JsonInclude(Include.NON_NULL)
         public BigDecimal getClockMHz() {
-            if (clock == null)
+            if (clock == null) {
                 return null;
+            }
             // e.g. "frequency(48)=750199232"
             return BigDecimal
                     .valueOf(((double) Integer.parseInt(substringAfter(clock, "="), 10)) / 1_000_000)
@@ -253,6 +259,11 @@ public class StatusController {
                 logger.error(e.getMessage(), e);
                 return null;
             }
+        }
+
+        @JsonInclude(Include.NON_NULL)
+        public String getEssid() {
+            return nullOrEmpty(essid) ? null : essid;
         }
     }
 

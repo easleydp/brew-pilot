@@ -44,7 +44,7 @@ public class EmailMessageScheduler {
 
         ObjectMapper mapper = new ObjectMapper();
         ObjectWriter writer = mapper.writer(new DefaultPrettyPrinter());
-        String json = writer.writeValueAsString(statusController.buildStatusReportResponse());
+        String json = writer.writeValueAsString(statusController.buildStatusReportResponse(true));
 
         emailService.sendSimpleMessage("BrewPilot server status report", json);
     }

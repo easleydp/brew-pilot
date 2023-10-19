@@ -1,8 +1,8 @@
 package com.easleydp.tempctrl.spring;
 
+import static com.easleydp.tempctrl.util.StringUtils.nullOrEmpty;
 import static com.easleydp.tempctrl.util.StringUtils.substringAfter;
 import static com.easleydp.tempctrl.util.StringUtils.substringBetween;
-import static com.easleydp.tempctrl.util.StringUtils.nullOrEmpty;
 
 import java.io.File;
 import java.io.IOException;
@@ -17,7 +17,11 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import javax.servlet.http.HttpServletRequest;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +36,7 @@ import com.easleydp.tempctrl.domain.MemoryStatsFileSystem;
 import com.easleydp.tempctrl.domain.MemoryStatsPi;
 import com.easleydp.tempctrl.spring.CollectReadingsScheduler.ReadingsCollectionDurationStats;
 import com.easleydp.tempctrl.util.OsCommandExecuter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
@@ -71,12 +76,12 @@ public class StatusController {
     private static final String VCGEN_CMD = "/opt/vc/bin/vcgencmd";
 
     @GetMapping("/guest/log-chart/status")
-    public StatusReportResponse getStatusReport() throws IOException {
-        return buildStatusReportResponse();
+    public StatusReportResponse getStatusReport(HttpServletRequest request) throws IOException {
+        return buildStatusReportResponse(request.isUserInRole("ADMIN"));
     }
 
     // Called by getStatusReport() above and also by StillAliveMessageScheduler
-    StatusReportResponse buildStatusReportResponse() {
+    StatusReportResponse buildStatusReportResponse(boolean isAdmin) {
         List<Date> recentlyOfflineDates = offlineCheckScheduler.getRecentlyOffline(new Date());
         // @formatter:off
         List<String> recentlyOfflineIso = recentlyOfflineDates.stream()
@@ -85,7 +90,7 @@ public class StatusController {
         // @formatter:on
 
         return new StatusReportResponse(
-                new PiStats(),
+                new PiStats(isAdmin),
                 chamberManagerStatusSupplier.get(),
                 collectReadingsScheduler.getReadingsCollectionDurationStats(),
                 recentlyOfflineIso);
@@ -130,9 +135,13 @@ public class StatusController {
         }
     }
 
-    @JsonPropertyOrder({ "uptime", "socTemperature", "cpuTemperature", "clockMHz", "localIP", "macAddress", "essid" })
+    @JsonPropertyOrder({ "uptime", "socTemperature", "cpuTemperature", "clockMHz", "localIP", "macAddress",
+            "wireless" })
     private static class PiStats {
         private static boolean mockPi = new File(VCGEN_CMD).exists() == false;
+
+        @JsonIgnore
+        private final boolean isAdmin;
 
         private final String uptime;
 
@@ -148,11 +157,23 @@ public class StatusController {
         private final String cpuTemperature;
         private final String volts;
         private final String clock;
-        private final String essid;
+        private final String iwConfigStats;
+
+        private static String MOCK_IWCONFIG_STATS = String.join(System.getProperty("line.separator"),
+                "wlan0     IEEE 802.11  ESSID:\"SSID123\"",
+                "          Mode:Managed  Frequency:2.412 GHz  Access Point: 3C:45:7A:CD:AC:BA",
+                "          Bit Rate=7.2 Mb/s   Tx-Power=31 dBm",
+                "          Retry short limit:7   RTS thr:off   Fragment thr:off",
+                "          Power Management:off",
+                "          Link Quality=24/70  Signal level=-86 dBm",
+                "          Rx invalid nwid:0  Rx invalid crypt:0  Rx invalid frag:0",
+                "          Tx excessive retries:202  Invalid misc:0   Missed beacon:0");
 
         // Handy for testing
-        public PiStats(String uptime, MemoryStatsPi memory, MemoryStatsFileSystem fileSystem, JvmStatus jvm,
-                String socTemperature, String cpuTemperature, String volts, String clock, String essid) {
+        public PiStats(boolean isAdmin, String uptime, MemoryStatsPi memory, MemoryStatsFileSystem fileSystem,
+                JvmStatus jvm, String socTemperature, String cpuTemperature, String volts, String clock,
+                String iwConfigStats) {
+            this.isAdmin = isAdmin;
             this.uptime = uptime;
             this.memory = memory;
             this.fileSystem = fileSystem;
@@ -161,11 +182,12 @@ public class StatusController {
             this.jvm = jvm;
             this.volts = volts;
             this.clock = clock;
-            this.essid = essid;
+            this.iwConfigStats = iwConfigStats;
         }
 
-        public PiStats() {
+        public PiStats(boolean isAdmin) {
             this(
+                    isAdmin,
                     OsCommandExecuter.execute("uptime", "-p"),
                     new MemoryStatsPi(),
                     new MemoryStatsFileSystem(File.listRoots()[0]),
@@ -174,7 +196,7 @@ public class StatusController {
                     mockPi ? "30280" : OsCommandExecuter.execute("cat", "/sys/class/thermal/thermal_zone0/temp"),
                     mockPi ? "volt=0.8765V" : OsCommandExecuter.execute(VCGEN_CMD, "measure_volts", "core"),
                     mockPi ? "frequency(48)=750199232" : OsCommandExecuter.execute(VCGEN_CMD, "measure_clock", "arm"),
-                    mockPi ? "SSID123" : OsCommandExecuter.execute("/usr/sbin/iwgetid", "--raw"));
+                    mockPi ? MOCK_IWCONFIG_STATS : OsCommandExecuter.execute("/usr/sbin/iwconfig", "wlan0"));
         }
 
         @JsonInclude(Include.NON_NULL)
@@ -262,8 +284,30 @@ public class StatusController {
         }
 
         @JsonInclude(Include.NON_NULL)
-        public String getEssid() {
-            return nullOrEmpty(essid) ? null : essid;
+        public String getWireless() {
+            if (nullOrEmpty(iwConfigStats)) {
+                return null;
+            }
+            Pattern pattern = Pattern.compile("ESSID:\"(\\w+)\"(.*)" +
+                    "Link Quality=([^\\s]+)(.*)" +
+                    "Signal level=([^\\s]+ dBm)",
+                    Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+            Matcher matcher = pattern.matcher(iwConfigStats);
+
+            if (matcher.find()) {
+                String id = matcher.group(1);
+                String quality = matcher.group(3);
+                String signal = matcher.group(5);
+                StringBuffer sb = new StringBuffer();
+                if (isAdmin) {
+                    sb.append("ESSID: " + id + ", ");
+                }
+                sb.append("Link quality: " + quality + ", Signal level: " + signal);
+                return sb.toString();
+            } else {
+                logger.error("Failed to parse iwConfigStats:\n" + iwConfigStats);
+                return isAdmin ? iwConfigStats : null;
+            }
         }
     }
 

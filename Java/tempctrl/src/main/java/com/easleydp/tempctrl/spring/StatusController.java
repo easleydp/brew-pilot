@@ -39,6 +39,7 @@ import com.easleydp.tempctrl.util.OsCommandExecuter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
@@ -117,6 +118,7 @@ public class StatusController {
         @JsonInclude(Include.NON_NULL)
         public final ChamberManagerStatus arduino;
         @JsonInclude(Include.NON_NULL)
+        @JsonProperty("readingsCollectionDuration")
         public final ReadingsCollectionDurationStats readingsCollectionDurationStats;
         @JsonInclude(Include.NON_EMPTY)
         public final List<String> recentlyOffline;

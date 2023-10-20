@@ -7,6 +7,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.Collectors;
@@ -65,6 +66,7 @@ public class ChamberRepository {
         return chambers;
     }
 
+    /** @throws NoSuchElementException if not found */
     public Chamber getChamberById(int id) {
         // @formatter:off
         return chambers.stream()

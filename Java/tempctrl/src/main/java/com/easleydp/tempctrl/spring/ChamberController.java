@@ -3,6 +3,7 @@ package com.easleydp.tempctrl.spring;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 import java.util.Comparator;
 
@@ -13,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.util.Assert;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -20,6 +22,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.easleydp.tempctrl.domain.Chamber;
 import com.easleydp.tempctrl.domain.ChamberReadings;
@@ -98,7 +101,7 @@ public class ChamberController {
      */
     @GetMapping("/guest/chamber/{chamberId}/beer-temp")
     public BeerTemp getSummaryStatus(@PathVariable("chamberId") int chamberId) {
-        Chamber chamber = chamberRepository.getChamberById(chamberId); // throws if not found
+        Chamber chamber = getChamberById(chamberId); // throws if not found
         ChamberReadings latestReadings = chamber.getLatestChamberReadings();
 
         // FE infers chamber is inactive if tTarget is null
@@ -127,7 +130,7 @@ public class ChamberController {
      */
     @GetMapping("/guest/chamber/{chamberId}/latest-gyle-details")
     public LatestGyleDetails getLatestGyleDetails(@PathVariable("chamberId") int chamberId) {
-        Chamber chamber = chamberRepository.getChamberById(chamberId); // throws if not found
+        Chamber chamber = getChamberById(chamberId); // throws if not found
         Gyle latestGyle = chamber.getLatestGyle();
         Assert.state(latestGyle != null, "No latest gyle for chamber " + chamberId);
         // @formatter:off
@@ -185,10 +188,23 @@ public class ChamberController {
 
     // Helper
     private Gyle getLatestGyleForChamber(int chamberId) {
-        Chamber chamber = chamberRepository.getChamberById(chamberId); // throws if not found
+        Chamber chamber = getChamberById(chamberId); // throws if not found
         Gyle latestGyle = chamber.getLatestGyle();
         Assert.state(latestGyle != null, "No latest gyle for chamber " + chamberId);
         return latestGyle;
+    }
+
+    // Helper - simply wraps chamberRepository.getChamberById(chamberId) and
+    // transforms NoSuchElementException to Spring MVC's ResponseStatusException,
+    // allowing us to choose the status and the message. So the upshots here are
+    // (i) we return a 404 rather than a 500 error and (ii) include a custom
+    // `message` property in the HTTP response.
+    private Chamber getChamberById(int chamberId) {
+        try {
+            return chamberRepository.getChamberById(chamberId); // throws if not found
+        } catch (NoSuchElementException ex) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Chamber " + chamberId + " not found", ex);
+        }
     }
 
     /**
@@ -256,7 +272,7 @@ public class ChamberController {
     @GetMapping("/guest/chamber/{chamberId}/recent-gyles")
     public List<GyleNameIdDuration> getRecentGyles(@PathVariable("chamberId") int chamberId,
             @RequestParam("max") Integer max) {
-        Chamber chamber = chamberRepository.getChamberById(chamberId); // throws if not found
+        Chamber chamber = getChamberById(chamberId); // throws if not found
         return chamber.getGyles(max).stream()
                 .map(g -> new GyleNameIdDuration(g))
                 .collect(Collectors.toList());
@@ -288,7 +304,7 @@ public class ChamberController {
     @PostMapping("/admin/chamber/{chamberId}/create-gyle")
     public void createGyle(@PathVariable("chamberId") int chamberId, @RequestBody CreateGyleDto createGyle) {
         logger.info("POST create-gyle, {}, {}, {}", chamberId, createGyle.gyleToCopyId, createGyle.newName);
-        Chamber chamber = chamberRepository.getChamberById(chamberId);
+        Chamber chamber = getChamberById(chamberId); // throws if not found
         Gyle gyleToCopy = chamber.getGyleById(createGyle.gyleToCopyId);
 
         try {

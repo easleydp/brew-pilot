@@ -81,7 +81,11 @@ public class StatusController {
         return buildStatusReportResponse(request.isUserInRole("ADMIN"));
     }
 
-    // Called by getStatusReport() above and also by StillAliveMessageScheduler
+    /**
+     * Called by getStatusReport() above and also by StillAliveMessageScheduler.
+     * 
+     * @param isAdmin If false, certain details are not leaked.
+     */
     StatusReportResponse buildStatusReportResponse(boolean isAdmin) {
         List<Date> recentlyOfflineDates = offlineCheckScheduler.getRecentlyOffline(new Date());
         // @formatter:off
@@ -137,13 +141,28 @@ public class StatusController {
         }
     }
 
+    private static class WirelessStats {
+        @JsonInclude(Include.NON_NULL)
+        public final String essid;
+        @JsonInclude(Include.NON_NULL)
+        public final String quality;
+        @JsonInclude(Include.NON_NULL)
+        public final String signal;
+
+        public WirelessStats(String essid, String quality, String signal) {
+            this.essid = essid;
+            this.quality = quality;
+            this.signal = signal;
+        }
+    }
+
     @JsonPropertyOrder({ "uptime", "socTemperature", "cpuTemperature", "clockMHz", "localIP", "macAddress",
             "wireless" })
     private static class PiStats {
         private static boolean mockPi = new File(VCGEN_CMD).exists() == false;
 
         @JsonIgnore
-        private final boolean isAdmin;
+        private final boolean isAdmin; // If false, certain details are not leaked
 
         private final String uptime;
 
@@ -156,7 +175,9 @@ public class StatusController {
         public final JvmStatus jvm;
 
         private final String socTemperature;
+        @SuppressWarnings("unused")
         private final String cpuTemperature;
+        @SuppressWarnings("unused")
         private final String volts;
         private final String clock;
         private final String iwConfigStats;
@@ -253,63 +274,60 @@ public class StatusController {
 
         @JsonInclude(Include.NON_NULL)
         public String getLocalIP() {
-            // Credit: https://stackoverflow.com/a/38342964/65555
-            try (final DatagramSocket socket = new DatagramSocket()) {
-                socket.connect(InetAddress.getByName("8.8.8.8"), 10002);
-                return socket.getLocalAddress().getHostAddress();
-            } catch (IOException e) {
-                logger.error(e.getMessage(), e);
-                return null;
+            if (isAdmin) {
+                // Credit: https://stackoverflow.com/a/38342964/65555
+                try (final DatagramSocket socket = new DatagramSocket()) {
+                    socket.connect(InetAddress.getByName("8.8.8.8"), 10002);
+                    return socket.getLocalAddress().getHostAddress();
+                } catch (IOException e) {
+                    logger.error(e.getMessage(), e);
+                }
             }
+            return null;
         }
 
         @JsonInclude(Include.NON_NULL)
         public String getMacAddress() {
-            // Credit: https://stackoverflow.com/a/26667426/65555
-            try {
-                Enumeration<NetworkInterface> netInfs = NetworkInterface.getNetworkInterfaces();
-                if (!netInfs.hasMoreElements()) {
-                    logger.warn("NetworkInterface.getNetworkInterfaces() returned no interfaces!");
-                    return null;
+            if (isAdmin) {
+                // Credit: https://stackoverflow.com/a/26667426/65555
+                try {
+                    Enumeration<NetworkInterface> netInfs = NetworkInterface.getNetworkInterfaces();
+                    if (!netInfs.hasMoreElements()) {
+                        logger.warn("NetworkInterface.getNetworkInterfaces() returned no interfaces!");
+                        return null;
+                    }
+                    final NetworkInterface netInf = netInfs.nextElement();
+                    final byte[] mac = netInf.getHardwareAddress();
+                    final StringBuilder sb = new StringBuilder();
+                    for (int i = 0; i < mac.length; i++) {
+                        sb.append(String.format("%02X%s", mac[i], (i < mac.length - 1) ? "-" : ""));
+                    }
+                    return sb.toString();
+                } catch (IOException e) {
+                    logger.error(e.getMessage(), e);
                 }
-                final NetworkInterface netInf = netInfs.nextElement();
-                final byte[] mac = netInf.getHardwareAddress();
-                final StringBuilder sb = new StringBuilder();
-                for (int i = 0; i < mac.length; i++) {
-                    sb.append(String.format("%02X%s", mac[i], (i < mac.length - 1) ? "-" : ""));
-                }
-                return sb.toString();
-            } catch (IOException e) {
-                logger.error(e.getMessage(), e);
-                return null;
             }
+            return null;
         }
 
         @JsonInclude(Include.NON_NULL)
-        public String getWireless() {
-            if (nullOrEmpty(iwConfigStats)) {
-                return null;
-            }
-            Pattern pattern = Pattern.compile("ESSID:\"(\\w+)\"(.*)" +
-                    "Link Quality=([^\\s]+)(.*)" +
-                    "Signal level=([^\\s]+ dBm)",
-                    Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
-            Matcher matcher = pattern.matcher(iwConfigStats);
+        public WirelessStats getWireless() {
+            if (!nullOrEmpty(iwConfigStats)) {
+                Pattern pattern = Pattern.compile("ESSID:\"(\\w+)\"(.*)" +
+                        "Link Quality=([^\\s]+)(.*)" +
+                        "Signal level=([^\\s]+ dBm)",
+                        Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+                Matcher matcher = pattern.matcher(iwConfigStats);
 
-            if (matcher.find()) {
-                String id = matcher.group(1);
-                String quality = matcher.group(3);
-                String signal = matcher.group(5);
-                StringBuffer sb = new StringBuffer();
-                if (isAdmin) {
-                    sb.append("ESSID: " + id + ", ");
+                if (matcher.find()) {
+                    String id = matcher.group(1);
+                    String quality = matcher.group(3);
+                    String signal = matcher.group(5);
+                    return new WirelessStats(isAdmin ? id : null, quality, signal);
                 }
-                sb.append("Link quality: " + quality + ", Signal level: " + signal);
-                return sb.toString();
-            } else {
                 logger.error("Failed to parse iwConfigStats:\n" + iwConfigStats);
-                return isAdmin ? iwConfigStats : null;
             }
+            return null;
         }
     }
 

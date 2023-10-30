@@ -1,22 +1,24 @@
 package com.easleydp.tempctrl.domain;
 
+import static com.easleydp.tempctrl.util.StringUtils.humaniseUptime;
+import static com.easleydp.tempctrl.util.StringUtils.prettyFormatUptime;
+
 import java.math.BigDecimal;
 
-import com.easleydp.tempctrl.util.StringUtils;
-import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 /**
  * Value object representing the status reported from a chamber manager.
  */
 @JsonPropertyOrder({
-    "uptime", "healthMessage", "projectBoxTemperature", "minFreeRam", "minFreeRamLocation", "badSensorCount", "logBufferCannibalised"
+        "uptime", "healthMessage", "projectBoxTemperature", "minFreeRam", "minFreeRamLocation", "badSensorCount",
+        "logBufferCannibalised"
 })
-public class ChamberManagerStatus
-{
+public class ChamberManagerStatus {
     public ChamberManagerStatus(
-            int uptimeMins, int garageTemperature, int projectBoxTemperature, int minFreeRam, int minFreeRamLocation, int badSensorCount, boolean logBufferCannibalised)
-    {
+            int uptimeMins, int garageTemperature, int projectBoxTemperature, int minFreeRam, int minFreeRamLocation,
+            int badSensorCount, boolean logBufferCannibalised) {
         this.uptimeMins = uptimeMins;
         this.garageTemperature = garageTemperature;
         this.projectBoxTemperature = projectBoxTemperature;
@@ -35,13 +37,11 @@ public class ChamberManagerStatus
     public final boolean logBufferCannibalised;
 
     /** @returns string such as "19 hours, 31 minutes" */
-    public String getUptime()
-    {
-        return StringUtils.friendlyUptime(uptimeMins);
+    public String getUptime() {
+        return humaniseUptime(prettyFormatUptime(uptimeMins));
     }
 
-    public String getHealthMessage()
-    {
+    public String getHealthMessage() {
         if (badSensorCount > 0)
             return "Bad sensor(s) 🥵";
         if (logBufferCannibalised)
@@ -50,14 +50,12 @@ public class ChamberManagerStatus
     }
 
     @JsonIgnore
-    public BigDecimal getGarageTemperature()
-    {
+    public BigDecimal getGarageTemperature() {
         return BigDecimal.valueOf(garageTemperature).scaleByPowerOfTen(-1);
     }
 
     @JsonIgnore
-    public BigDecimal getProjectBoxTemperature()
-    {
+    public BigDecimal getProjectBoxTemperature() {
         return BigDecimal.valueOf(projectBoxTemperature).scaleByPowerOfTen(-1);
     }
 }

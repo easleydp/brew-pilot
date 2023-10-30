@@ -36,6 +36,7 @@ import com.easleydp.tempctrl.domain.MemoryStatsFileSystem;
 import com.easleydp.tempctrl.domain.MemoryStatsPi;
 import com.easleydp.tempctrl.spring.CollectReadingsScheduler.ReadingsCollectionDurationStats;
 import com.easleydp.tempctrl.util.OsCommandExecuter;
+import com.easleydp.tempctrl.util.StringUtils;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
@@ -108,7 +109,8 @@ public class StatusController {
         return df.format(date);
     }
 
-    @JsonPropertyOrder({ "garageTemperature", "projectBoxTemperature" })
+    @JsonPropertyOrder({ "garageTemperature", "projectBoxTemperature", "raspberryPi", "arduino",
+            "readingsCollectionDuration", "recentlyOffline" })
     private static final class StatusReportResponse {
         public BigDecimal getGarageTemperature() {
             return arduino != null ? arduino.getGarageTemperature() : null;
@@ -164,7 +166,7 @@ public class StatusController {
         @JsonIgnore
         private final boolean isAdmin; // If false, certain details are not leaked
 
-        private final String uptime;
+        private final String uptime; // This is in Linux's `uptime -p` format, e.g. "up 19 hours, 31 minutes"
 
         @SuppressWarnings("unused")
         public final MemoryStatsFileSystem fileSystem;
@@ -224,8 +226,7 @@ public class StatusController {
 
         @JsonInclude(Include.NON_NULL)
         public String getUptime() {
-            // e.g. "up 19 hours, 31 minutes"
-            return uptime != null ? substringAfter(uptime, "up ") : null;
+            return uptime != null ? StringUtils.humaniseUptime(uptime) : null;
         }
 
         @JsonInclude(Include.NON_NULL)

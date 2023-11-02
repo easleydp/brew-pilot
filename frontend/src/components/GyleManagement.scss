@@ -34,6 +34,32 @@
       max-width: 80ch;
     }
   }
+  .form-group.mode {
+    select.form-control {
+      max-width: 17ch;
+    }
+    input.form-control {
+      max-width: 10ch;
+    }
+    .col.select-mode {
+      flex-grow: 0;
+      min-width: 20ch;
+    }
+    .col.t-hold.hidden {
+      visibility: hidden;
+    }
+    .form-text {
+      clear: both;
+      max-width: 41ch;
+    }
+    label {
+      white-space: nowrap;
+    }
+  }
+  .row.footer-buttons {
+    margin-top: 20px;
+  }
+
 
   // Standard placeholder colour isn't much lighter than our input text colour. Lighten a tad.
   // TODO: Move to site wide SCSS file.
@@ -41,17 +67,5 @@
     /* Chrome, Firefox, Opera, Safari 10.1+ */
     color: #b7b7b7;
     opacity: 1; /* Firefox */
-  }
-  ::-webkit-input-placeholder {
-    /* Chrome/Opera/Safari */
-    color: #b7b7b7;
-  }
-  :-ms-input-placeholder {
-    /* Internet Explorer 10-11 */
-    color: #b7b7b7;
-  }
-  ::-ms-input-placeholder {
-    /* Microsoft Edge */
-    color: #b7b7b7;
   }
 }

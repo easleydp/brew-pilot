@@ -56,7 +56,7 @@ public class Chamber extends ChamberDto {
     }
 
     /**
-     * Checked to see if the underlying JSON file rep has been updated and, if so,
+     * Checks to see if the underlying JSON file rep has been updated and, if so,
      * refreshes this bean's properties. Also checks whether the 'latest gyle' has
      * been updated or superseded.
      */

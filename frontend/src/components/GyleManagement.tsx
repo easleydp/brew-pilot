@@ -1,5 +1,5 @@
 import './GyleManagement.scss';
-import React, { useEffect, useState } from 'react';
+import React, { ChangeEvent, useEffect, useState } from 'react';
 import { Route, Router, useHistory, useLocation } from 'react-router-dom';
 import ILocationState from '../api/ILocationState';
 import { useAppState, Auth } from './state';
@@ -16,20 +16,20 @@ import * as Yup from 'yup';
 import Toast from 'react-bootstrap/Toast';
 import Loading from './Loading';
 
+type FormControlElement = HTMLInputElement | HTMLTextAreaElement;
+
 interface IErrors {
   formName?: string;
-  // formDtStartedOld?: string;
-  // formDtEndedOld?: string;
   formDtStarted?: string;
   formDtEnded?: string;
+  formTHold?: string;
 }
 interface IValues {
   formName?: string;
-  // formDtStartedOld?: string;
-  // formDtEndedOld?: string;
   formDtStarted?: string;
   formDtEnded?: string;
   formMode: Mode;
+  formTHold?: number;
 }
 
 // const validate = (values: IValues) => {
@@ -124,32 +124,15 @@ const GyleManagement = () => {
   const formik = useFormik({
     initialValues: {
       formName: '',
-      // formDtStartedOld: '',
-      // formDtEndedOld: '',
       formDtStarted: '',
       formDtEnded: '',
       formTemperatureProfile: '',
       formMode: Mode.Auto,
+      formTHold: '',
     },
     // validate,
     validationSchema: Yup.object({
       formName: Yup.string().required('Required'),
-      // formDtStartedOld: Yup.number()
-      //   .typeError('Must be an integer')
-      //   .integer('Must be an integer')
-      //   .min(0) // Jan 01 1970 00:00:00 UTC
-      //   .max(2000000000000), // May 18 2033 03:33:20 UTC
-      // formDtEndedOld: Yup.number()
-      //   .typeError('Must be an integer')
-      //   .integer('Must be an integer')
-      //   .min(1580000000000) // Jan 26 2020 00:53:20 UTC
-      //   .max(2000000000000) // May 18 2033 03:33:20 UTC
-      //   .test('', 'EndedOld cannot be specified without StartedOld being set', function (val) {
-      //     return !val || this.parent['formDtStartedOld'];
-      //   })
-      //   .test('', 'EndedOld must be later than StartedOld', function (val) {
-      //     return !val || val > this.parent['formDtStartedOld'];
-      //   }),
       formDtStarted: Yup.string().matches(reDateTime, 'Format must be: YYYY-MM-DD hh:mm'),
       formDtEnded: Yup.string()
         .matches(reDateTime, 'Format must be: YYYY-MM-DD hh:mm')
@@ -187,7 +170,15 @@ const GyleManagement = () => {
             return true;
           }
         }),
-    }),
+        formMode: Yup.string().test({
+          test(val) {
+            const tHoldCol = document.querySelector('.col.t-hold');
+            tHoldCol!.classList[val === 'H' ? 'remove' : 'add']('hidden');
+            return true;
+          }
+        }),
+        formTHold: Yup.number().integer('Must be an integer').min(-100).max(600),
+      }),
     onSubmit: (values, { setSubmitting }) => {
       const temperatureProfileTextToJson = (text: string): ITemperatureProfile => {
         const wsStrippedLines = text.split(/\r?\n|\r|\n/g)
@@ -204,15 +195,18 @@ const GyleManagement = () => {
         })};
       };
       gyle!.name = values.formName;
-      // gyle!.dtStartedOld = values.formDtStartedOld ? parseInt(values.formDtStartedOld) : undefined;
-      // gyle!.dtEndedOld = values.formDtEndedOld ? parseInt(values.formDtEndedOld) : undefined;
       gyle!.dtStarted = values.formDtStarted
         ? dateTimeStrToMillis(values.formDtStarted)
         : undefined;
       gyle!.dtEnded = values.formDtEnded ? dateTimeStrToMillis(values.formDtEnded) : undefined;
-      // gyle!.mode = values.formMode; Commented-out in sympathy with form.
-      // gyle.mode is currently returned as we received it
       gyle!.temperatureProfile = temperatureProfileTextToJson(values.formTemperatureProfile);
+      gyle!.mode = values.formMode;
+      if (values.formMode === 'H' && values.formTHold !== '') {
+        gyle!.tHold = parseInt(values.formTHold, 10);
+      } else {
+        delete gyle!.tHold;
+      }
+
       setSubmitting(true);
       const url = '/tempctrl/admin/chamber/' + chamberId + '/latest-gyle';
       axios
@@ -237,21 +231,6 @@ const GyleManagement = () => {
     },
   });
 
-  // const truncMsToMinute = (ms: number) => {
-  //   const minMillis = 1000 * 60;
-  //   return Math.trunc(ms / minMillis) * minMillis;
-  // };
-
-  // const handleDtStartedOldNow = () => {
-  //   setFieldOldNow('formDtStartedOld');
-  // };
-  // const handleDtEndedOldNow = () => {
-  //   setFieldOldNow('formDtEndedOld');
-  // };
-  // const setFieldOldNow = (field: string) => {
-  //   formik.setFieldValue(field, truncMsToMinute(Date.now()));
-  // };
-
   const handleDtStartedNow = () => {
     setFieldNow('formDtStarted');
   };
@@ -263,13 +242,16 @@ const GyleManagement = () => {
   };
 
   const handleFormBlur = () => {
-    // // If either of the two old time input fields looks like a 'now' pattern, convert to ms
-    // checkForOldNowPattern('formDtStartedOld');
-    // checkForOldNowPattern('formDtEndedOld');
-
     // If either of the two time input fields looks like a 'now' pattern, convert to date/time string
     checkForNowPattern('formDtStarted');
     checkForNowPattern('formDtEnded');
+  };
+
+  const handleModeChange = (event: ChangeEvent<FormControlElement>) => {
+    console.log(1, event);
+    console.log(2, formik.getFieldProps('formTHold'));
+    console.log(3, formik.getFieldMeta('formTHold'));
+    return false;
   };
 
   // const checkForOldNowPattern = (field: string) => {
@@ -326,8 +308,6 @@ const GyleManagement = () => {
 
     const buildForm = (gyle: IGyle) => {
       formik.setFieldValue('formName', gyle.name);
-      // formik.setFieldValue('formDtStartedOld', gyle.dtStarted || '');
-      // formik.setFieldValue('formDtEndedOld', gyle.dtEnded || '');
 
       formik.setFieldValue(
         'formDtStarted',
@@ -345,6 +325,8 @@ const GyleManagement = () => {
       );
 
       formik.setFieldValue('formMode', gyle.mode || Mode.Auto);
+
+      formik.setFieldValue('formTHold', gyle.tHold);
     };
 
     if (isAuth === Auth.NotLoggedIn) {
@@ -395,55 +377,6 @@ const GyleManagement = () => {
           <Form.Text className="text-error">{formik.errors.formName}</Form.Text>
         ) : null}
       </Form.Group>
-
-      {/* <Form.Group controlId="formDtStartedOld">
-        <Form.Label>Started old</Form.Label>
-        <Row>
-          <Col>
-            <Form.Control
-              type="text"
-              placeholder="ms since epoch"
-              {...formik.getFieldProps('formDtStartedOld')}
-            />
-            {formik.errors.formDtStartedOld ? (
-              <Form.Text className="text-error">{formik.errors.formDtStartedOld}</Form.Text>
-            ) : null}
-            <Form.Text className="text-muted">
-              When temperature control should start.<br></br>Typically reset (to 'now') when yeast
-              pitched or when signs of fermentation first detected.
-            </Form.Text>
-          </Col>
-          <Col>
-            <Button variant="secondary" type="button" onClick={handleDtStartedOldNow}>
-              Now
-            </Button>
-          </Col>
-        </Row>
-      </Form.Group>
-
-      <Form.Group controlId="formDtEndedOld">
-        <Form.Label>Ended old</Form.Label>
-        <Row>
-          <Col>
-            <Form.Control
-              type="text"
-              placeholder="ms since epoch"
-              {...formik.getFieldProps('formDtEndedOld')}
-            />
-            {formik.errors.formDtEndedOld ? (
-              <Form.Text className="text-error">{formik.errors.formDtEndedOld}</Form.Text>
-            ) : null}
-            <Form.Text className="text-muted">
-              When temperature control no longer required.<br></br>Can be left blank until known.
-            </Form.Text>
-          </Col>
-          <Col>
-            <Button variant="secondary" type="button" onClick={handleDtEndedOldNow}>
-              Now
-            </Button>
-          </Col>
-        </Row>
-      </Form.Group> */}
 
       <Form.Group controlId="formDtStarted" className="date-time">
         <Form.Label>Start time</Form.Label>
@@ -524,27 +457,51 @@ const GyleManagement = () => {
               One line per profile point, each consisting of two integers separated by a comma:
               <ol>
                 <li>Hours since start (must be zero for the first profile point),</li>
-                <li>Target temperature x10 (e.g. 175 for 17.5°C).</li>
+                <li>Target temperature in °C x10 (e.g. 175 for 17.5°C).</li>
               </ol>
             </Form.Text>
           </Col>
         </Row>
       </Form.Group>
 
-      {/* For the time being, don't display the "Mode" field since this feature
-          is unproven and of dubious usefulness. */}
-      {/* <Form.Group controlId="formMode">
-        <Form.Label>Mode</Form.Label>
-        <Form.Control as="select" {...formik.getFieldProps('formMode')}>
-          <option value={Mode.Auto}>Auto</option>
-          <option value={Mode.Hold}>Hold</option>
-          <option value={Mode.DisableHeater}>Disable heater</option>
-          <option value={Mode.DisableFridge}>Disable fridge</option>
-          <option value={Mode.MonitorOnly}>Monitor only</option>
-        </Form.Control>
-      </Form.Group> */}
+      <Form.Group controlId="formMode" className="mode">
+        <Row>
+          <Col className="select-mode">
+            <Form.Label>Mode</Form.Label>
+            <Form.Control as="select" {...formik.getFieldProps('formMode')}>
+              <option value={Mode.Auto}>Auto</option>
+              <option value={Mode.Hold}>Hold</option>
+              <option value={Mode.DisableHeater}>Disable heater</option>
+              <option value={Mode.DisableFridge}>Disable fridge</option>
+              <option value={Mode.MonitorOnly}>Monitor only</option>
+            </Form.Control>
+            <Form.Text className="text-muted">
+              {/* <ul>
+                <li>Auto - Track the temperature profile.</li>
+                <li>Hold - Maintain the beer temperature as it was when this mode was engaged.</li>
+                <li>Disable heater - As Auto but disable heating (if any).</li>
+                <li>Disable fridge - As Auto but disable cooling.</li>
+                <li>Monitor only - No heating, no cooling, just monitoring.</li>
+              </ul> */}
+            </Form.Text>
+          </Col>
+          <Col className="t-hold">
+            <Form.Label>Hold temperature</Form.Label>
+            <Form.Control
+              type="number"
+              {...formik.getFieldProps('formTHold')}
+            />
+            {formik.errors.formTHold ? (
+              <Form.Text className="text-error">{formik.errors.formTHold}</Form.Text>
+            ) : null}
+            <Form.Text className="text-muted">
+            Target temperature in °C x10 (e.g. 175 for 17.5°C). Leave blank to hold at current temperature.
+            </Form.Text>
+          </Col>
+        </Row>
+      </Form.Group>
 
-      <Row>
+      <Row className="footer-buttons">
         <Col>
           <Button variant="primary" type="submit" disabled={!isAdmin || formik.isSubmitting}>
             Update

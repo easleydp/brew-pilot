@@ -63,7 +63,7 @@ public class ChamberReadings {
 
     /**
      * Ordinarily, tTarget simply reflects the target temperature set by this
-     * application. But if mode is `HOLD`tTarget specifies the beer temperature as
+     * application. But if mode is `HOLD`, tTarget specifies the beer temperature as
      * it was when the present mode was engaged.
      */
     private Integer tTarget;

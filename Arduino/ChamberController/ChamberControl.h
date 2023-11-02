@@ -276,7 +276,7 @@ void controlChamber(ChamberData& cd) {
       // `mode` vetoing fridge?
       || mode == MODE_MONITOR_ONLY || mode == MODE_DISABLE_FRIDGE || justStarted) {
     fForce = true;
-    fSetting = OFF;  // This should be in sympathy already, but just in case.
+    fSetting = OFF;
   }
 
   // `mode` vetoing heater?

@@ -2,10 +2,10 @@ package com.easleydp.tempctrl.spring;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
-import java.util.Comparator;
 
 import javax.annotation.PreDestroy;
 import javax.servlet.http.HttpServletRequest;
@@ -29,6 +29,7 @@ import com.easleydp.tempctrl.domain.ChamberReadings;
 import com.easleydp.tempctrl.domain.ChamberRepository;
 import com.easleydp.tempctrl.domain.Gyle;
 import com.easleydp.tempctrl.domain.GyleDto;
+import com.easleydp.tempctrl.domain.Mode;
 import com.easleydp.tempctrl.domain.PointDto;
 import com.easleydp.tempctrl.domain.PropertyUtils;
 import com.easleydp.tempctrl.domain.TemperatureProfileDto;
@@ -103,6 +104,9 @@ public class ChamberController {
     public BeerTemp getSummaryStatus(@PathVariable("chamberId") int chamberId) {
         Chamber chamber = getChamberById(chamberId); // throws if not found
         ChamberReadings latestReadings = chamber.getLatestChamberReadings();
+        if (latestReadings == null) { // Can happen if called shortly after start-up
+            return new BeerTemp(null, null);
+        }
 
         // FE infers chamber is inactive if tTarget is null
         Gyle lg = chamber.getLatestGyle();
@@ -260,6 +264,26 @@ public class ChamberController {
     public void updateLatestGyle(@PathVariable("chamberId") int chamberId, @RequestBody GyleDto gyle) {
         logger.info("POST latest-gyle, {}, {}", chamberId, gyle);
         Gyle latestGyle = getLatestGyleForChamber(chamberId);
+        if (gyle.getMode() == Mode.HOLD) {
+            if (latestGyle.getMode() != Mode.HOLD) {
+                // HOLD mode has just been engaged. Unless the client has specified the hold
+                // temp, we need to record (persistently in the JSON file in case of restart)
+                // the latest value of tBeer.
+                if (gyle.gettHold() == null) {
+                    Chamber chamber = getChamberById(chamberId);
+                    ChamberReadings latestReadings = chamber.getLatestChamberReadings();
+                    gyle.settHold(latestReadings != null ? latestReadings.gettBeer() : null);
+                }
+            } else {
+                // Mode remains HOLD. Ensure that, if the posted DTO doesn't specify tHold,
+                // the established value continues in force.
+                if (gyle.gettHold() == null) {
+                    gyle.settHold(latestGyle.gettHold());
+                }
+            }
+        } else {
+            gyle.settHold(null);
+        }
         BeanUtils.copyProperties(gyle, latestGyle);
 
         try {

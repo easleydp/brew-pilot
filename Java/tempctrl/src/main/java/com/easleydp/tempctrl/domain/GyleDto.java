@@ -3,6 +3,8 @@ package com.easleydp.tempctrl.domain;
 import java.util.List;
 import java.util.Objects;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 /**
  * Marries-up with the the contents of gyle.json
  */
@@ -12,6 +14,7 @@ public class GyleDto {
     private Long dtStarted; // Null if not started
     private Long dtEnded; // Null if not ended
     private Mode mode;
+    private Integer tHold; // Null if mode is not HOLD
 
     public GyleDto() {
     }
@@ -72,6 +75,7 @@ public class GyleDto {
         this.temperatureProfile = temperatureProfile;
     }
 
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public Long getDtStarted() {
         return dtStarted;
     }
@@ -80,6 +84,7 @@ public class GyleDto {
         this.dtStarted = dtStarted;
     }
 
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public Long getDtEnded() {
         return dtEnded;
     }
@@ -96,6 +101,15 @@ public class GyleDto {
         // For the sake of backwards compatibility, if mode is not specified default to
         // 'AUTO'
         this.mode = mode != null ? mode : Mode.AUTO;
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public Integer gettHold() {
+        return tHold;
+    }
+
+    public void settHold(Integer tHold) {
+        this.tHold = tHold;
     }
 
     @Override

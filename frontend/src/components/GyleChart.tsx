@@ -21,8 +21,8 @@ const GyleChart = () => {
   const { chamberId } = useParams<{ chamberId: string }>();
 
   enum Mode {
-    AUTO, // Aim for the target temp specified in the ChamberParameters, if any. Otherwise, operate as per `HOLD`.
-    HOLD, // Aim to maintain tBeer as it was when this mode was engaged (reflected in tTarget).
+    AUTO, // Aim for the target temp specified in the ChamberParameters.
+    HOLD, // Aim to maintain tBeer as it was when this mode was engaged.
     DISABLE_HEATER, // As AUTO but disable heater.
     DISABLE_FRIDGE, // As AUTO but disable fridge.
     MONITOR_ONLY, // No heating, no cooling, just monitoring.

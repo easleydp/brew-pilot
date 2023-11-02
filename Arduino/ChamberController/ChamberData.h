@@ -8,9 +8,10 @@
  * E.g., with CHAMBER_COUNT of 2, IDs must be 1 and 2.
  */
 
-// Aim for the target temp specified in the ChamberParameters, if any. Otherwise, operate as per `HOLD`.
+// Aim for the target temp specified in the ChamberParameters.
 #define MODE_AUTO 'A'
-// Aim to maintain tBeer as it was when this mode was engaged (reflected in tTarget).
+// Aim to maintain tBeer as it was when this mode was engaged. (This will be reflected
+// in tTarget, so no special logic required on this side.)
 #define MODE_HOLD 'H'
 // As AUTO but disable heater.
 #define MODE_DISABLE_HEATER '*'

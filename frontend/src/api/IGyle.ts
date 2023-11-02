@@ -8,4 +8,5 @@ export default interface IGyle {
   dtStarted?: number;
   dtEnded?: number;
   mode: Mode;
+  tHold?: number;
 }

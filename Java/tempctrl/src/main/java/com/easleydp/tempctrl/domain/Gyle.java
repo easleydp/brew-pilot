@@ -141,11 +141,15 @@ public class Gyle extends GyleDto {
         logger.debug("millisSinceStart: {} (timeNowMs={}, dtStarted={})", millisSinceStart, timeNowMs, dtStarted);
         TemperatureProfile tp = getTemperatureProfileDomain();
         int gyleAgeHours = (int) (millisSinceStart / 1000L / 60 / 60);
-        return new ChamberParameters(gyleAgeHours, tp.getTargetTempAt(millisSinceStart),
-                tp.getTargetTempAt(millisSinceStart + 1000 * 60 * 60), chamber.gettMin(), chamber.gettMax(),
+        Mode mode = isActive() ? getMode() : Mode.MONITOR_ONLY;
+        int tTarget = mode == Mode.HOLD && gettHold() != null ? gettHold()
+                : tp.getTargetTempAt(millisSinceStart);
+        int tTargetNext = mode != Mode.HOLD && mode != Mode.MONITOR_ONLY
+                ? tp.getTargetTempAt(millisSinceStart + 1000 * 60 * 60)
+                : tTarget;
+        return new ChamberParameters(gyleAgeHours, tTarget, tTargetNext, chamber.gettMin(), chamber.gettMax(),
                 chamber.isHasHeater(), chamber.getFridgeMinOnTimeMins(), chamber.getFridgeMinOffTimeMins(),
-                chamber.getFridgeSwitchOnLagMins(), chamber.getKp(), chamber.getKi(), chamber.getKd(),
-                isActive() ? getMode() : Mode.MONITOR_ONLY);
+                chamber.getFridgeSwitchOnLagMins(), chamber.getKp(), chamber.getKi(), chamber.getKd(), mode);
     }
 
     /**

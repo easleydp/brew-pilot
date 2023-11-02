@@ -8,14 +8,21 @@ import com.fasterxml.jackson.annotation.JsonValue;
 
 import org.springframework.util.Assert;
 
-public enum Mode
-{
-    // Each mode has a single character code (convenient for the microcontroller).
-    AUTO('A'),  // Aim for the target temp specified in the ChamberParameters, if any. Otherwise, operate as per `HOLD`.
-    HOLD('H'),  // Aim to maintain tBeer as it was when this mode was engaged (reflected in tTarget).
-    DISABLE_HEATER('*'),  // As AUTO but disable heater.
-    DISABLE_FRIDGE('~'),  // As AUTO but disable fridge.
-    MONITOR_ONLY('M');    // No heating, no cooling, just monitoring.
+public enum Mode {
+    /*
+     * Each mode has a single character code (convenient for the microcontroller).
+     */
+
+    // Aim for the target temp specified in the ChamberParameters.
+    AUTO('A'),
+    // Aim to maintain tBeer as it was when this mode was engaged.
+    HOLD('H'),
+    // As AUTO but disable heater.
+    DISABLE_HEATER('*'),
+    // As AUTO but disable fridge.
+    DISABLE_FRIDGE('~'),
+    // No heating, no cooling, just monitoring.
+    MONITOR_ONLY('M');
 
     private final char code;
 
@@ -46,16 +53,15 @@ public enum Mode
             throw new IllegalArgumentException("Illegal Mode code: " + code);
         return mode;
     }
+
     // Convenience overload, with error checking for string length.
-    public static Mode get(String code)
-    {
+    public static Mode get(String code) {
         Assert.state(code.length() == 1, "Mode code should be a single character: [" + code + "]");
         return get(code.charAt(0));
     }
 
     @Override
-    public String toString()
-    {
+    public String toString() {
         return "" + getCode();
     }
 }

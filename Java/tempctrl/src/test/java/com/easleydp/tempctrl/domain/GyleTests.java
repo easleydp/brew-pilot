@@ -381,8 +381,9 @@ public class GyleTests {
     public void leftHeaterOff() throws Exception {
         timeNow = startTime;
 
-        final int tTarget = 0;
-        int[] tChamber = { 0 };
+        final int tTarget = 175;
+        int[] tBeer = { tTarget - 20 };
+        int[] tChamber = { tTarget };
         int[] heaterOutput = { 0 };
         ReadingsMassager massager = new ReadingsMassager() {
             @Override
@@ -390,6 +391,7 @@ public class GyleTests {
                 chamberReadings.setHeaterOutput(heaterOutput[0]);
                 chamberReadings.setFridgeOn(false);
                 chamberReadings.settTarget(tTarget);
+                chamberReadings.settBeer(tBeer[0]);
                 chamberReadings.settChamber(tChamber[0]);
                 return chamberReadings;
             }
@@ -418,7 +420,7 @@ public class GyleTests {
         assertNull(gyle.checkLeftSwitchedOff(timeNow));
 
         // One more minute should trigger
-        tChamber[0]++;
+        tChamber[0]--;
         timeNow = addMinutes(timeNow, 1);
         collectReadings(massager);
         assertEquals(LeftSwitchedOffDetectionAction.SEND_HEATER_LEFT_OFF, gyle.checkLeftSwitchedOff(timeNow));
@@ -430,8 +432,8 @@ public class GyleTests {
             timeNow = addMinutes(timeNow, 1);
             collectReadings(massager);
         }
-        // One final reading with heater below threshold
-        heaterOutput[0] = 29;
+        // One final reading with tBeer now reaching target
+        tBeer[0] = tTarget;
         timeNow = addMinutes(timeNow, 1);
         collectReadings(massager);
         assertEquals(LeftSwitchedOffDetectionAction.SEND_HEATER_NO_LONGER_LEFT_OFF, gyle.checkLeftSwitchedOff(timeNow));

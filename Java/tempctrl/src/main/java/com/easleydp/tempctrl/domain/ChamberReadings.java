@@ -5,6 +5,7 @@ import java.util.Date;
 import org.springframework.util.Assert;
 
 import com.easleydp.tempctrl.domain.optimise.Smoother.IntPropertyAccessor;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 /**
@@ -196,6 +197,17 @@ public class ChamberReadings {
 
     public void setMode(Mode mode) {
         this.mode = mode;
+    }
+
+    /**
+     * Convenience accessor. Distinguishes heater being ON to actually raise the
+     * beer temperature rather than just for 'maintenance heating'.
+     * 
+     * @return whether heater is ON AND the beer is COLD
+     */
+    @JsonIgnore
+    public boolean isTrulyHeating() {
+        return heaterOutput > 0 && tBeer < tTarget;
     }
 
     /*

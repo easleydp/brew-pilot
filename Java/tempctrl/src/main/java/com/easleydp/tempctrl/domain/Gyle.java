@@ -344,12 +344,11 @@ public class Gyle extends GyleDto {
             }
 
             if (chamber.isHasHeater()) {
-                final int heaterThresholdPercent = 30;
-                if (latestChamberReadings.getHeaterOutput() >= heaterThresholdPercent) {
+                // Note, we check for 'true heating' rather than mere 'maintenance heating'.
+                if (latestChamberReadings.isTrulyHeating()) {
                     // Heater should be ON (as far as this app is concerned) but is it switched OFF?
                     if (leftSwitchedOffState != LeftSwitchedOffState.HEATER_LEFT_OFF) {
-                        int heaterOnTimeMins = trendBuffer.getHeaterOnTimeMins(heaterThresholdPercent);
-                        if (heaterOnTimeMins >= getSwitchedOffCheckHeaterOnTimeMins()) {
+                        if (trendBuffer.getTrulyHeatingTimeMins() >= getSwitchedOffCheckHeaterOnTimeMins()) {
                             Trend trend = trendBuffer.gettChamberTrend(getSwitchedOffCheckHeaterOnTimeMins());
                             if (trend != Trend.UPWARDS) {
                                 leftSwitchedOffState = LeftSwitchedOffState.HEATER_LEFT_OFF;
@@ -358,7 +357,7 @@ public class Gyle extends GyleDto {
                         }
                     }
                 } else {
-                    // This app has switched the heater OFF.
+                    // Heater is OFF or is merely applying 'maintenance heating'.
                     // If state is HEATER_OFF_DETECTED then we can now signal that the condition has
                     // cleared.
                     if (leftSwitchedOffState == LeftSwitchedOffState.HEATER_LEFT_OFF) {
@@ -732,26 +731,58 @@ public class Gyle extends GyleDto {
             return 0;
         }
 
+        // TODO: Delete this commented-out code after Jun 2024:
+        // @formatter:off
+        // /**
+        //  * As `getFridgeOnTimeMins()` but for heater.
+        //  *
+        //  * @param heaterThresholdPercent
+        //  *                               Anything below the threshold is ignored (as if
+        //  *                               OFF).
+        //  *
+        //  * @return 0 if the heater is not currently ON and >= `threshold` (according
+        //  *         to
+        //  *         the latest record), otherwise a value of at least 1 minute.
+        //  */
+        // public synchronized int getHeaterOnTimeMins(int heaterThresholdPercent) {
+        //     if (!fifo.isEmpty()) {
+        //         final int size = fifo.size();
+        //         ChamberReadings lastRecord = fifo.get(size - 1);
+        //         if (lastRecord.getHeaterOutput() >= heaterThresholdPercent) {
+        //             ListIterator<ChamberReadings> li = fifo.listIterator(size); // Start just after the last element.
+        //             ChamberReadings record = null;
+        //             while (li.hasPrevious()) {
+        //                 record = li.previous();
+        //                 if (record.getHeaterOutput() < heaterThresholdPercent)
+        //                     break;
+        //             }
+        //             Assert.state(record != null, "readings should not be null"); // ... given the checks we made above
+        //             return minutesDifferenceAtLeastOne(lastRecord, record);
+        //         }
+        //     } else {
+        //         logger.debug("FIFO is empty");
+        //     }
+        //     return 0;
+        // }
+        // @formatter:on
+
         /**
-         * As `getFridgeOnTimeMins()` but for heater.
+         * If the latest record indicates that the heater is ON AND the beer is COLD
+         * then returns the number of minutes this has been the case (at least 1).
+         * Otherwise, 0. So, deliberately ignores 'maintenance heating'.
          *
-         * @param heaterThresholdPercent
-         *                               Anything below the threshold is ignored (as if
-         *                               OFF).
-         *
-         * @return 0 if the heater is not currently ON and >= `threshold` (according to
-         *         the latest record), otherwise a value of at least 1.
+         * @return Number of minutes (zero or greater).
          */
-        public synchronized int getHeaterOnTimeMins(int heaterThresholdPercent) {
+        public synchronized int getTrulyHeatingTimeMins() {
             if (!fifo.isEmpty()) {
                 final int size = fifo.size();
                 ChamberReadings lastRecord = fifo.get(size - 1);
-                if (lastRecord.getHeaterOutput() >= heaterThresholdPercent) {
+                if (lastRecord.isTrulyHeating()) {
                     ListIterator<ChamberReadings> li = fifo.listIterator(size); // Start just after the last element.
                     ChamberReadings record = null;
                     while (li.hasPrevious()) {
                         record = li.previous();
-                        if (record.getHeaterOutput() < heaterThresholdPercent)
+                        if (!record.isTrulyHeating())
                             break;
                     }
                     Assert.state(record != null, "readings should not be null"); // ... given the checks we made above

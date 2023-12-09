@@ -159,15 +159,19 @@ void controlChamber(ChamberData& cd) {
       // Fridge is on. Keep it on only if hot outside and beer temp is rising.
       if (tExternal > tTarget && cd.tBeerLastDelta > 0) {
         // ... but NOT if temp profile is about to turn upwards in next hour
-        if (tTargetNext <= tTarget)
+        if (tTargetNext <= tTarget) {
           fSetting = ON;
+        }
       }
     } else {
-      if (tExternal < tTarget && !exothermic) {
-        // Although the beer temp is on target it looks like it might drop without some heating.
-        // Allow the integral component to maintain the beer temp. If the beer is exothermic
-        // however then fermentation alone can be quite sufficient to maintain the temp.
-        heatPidWise = true;
+      if (tExternal < tTarget) {
+        // Although tBeer is on target it might drop without some heating because tExternal is colder.
+        // So in this case we allow the PID integral component to maintain the temp.
+        // If exothermic, however, this alone can be quite sufficient to maintain the temp,
+        // so in this case we only heat if tExternal is markedly lower than tTarget.
+        if ((tExternal + T_EXTERNAL_BOOST_THRESHOLD) < tTarget || !exothermic) {
+          heatPidWise = true;
+        }
       }
     }
   } else if (tError > 0) {  // beer too cool, needs heating
@@ -213,10 +217,11 @@ void controlChamber(ChamberData& cd) {
   // To avoid integral wind-up, we constrain as follows: If the integral contribution is too large, reject the adjustment.
   float latestIntegral = cd.mParams.integral + tError;
   float integralContrib = params.Ki * latestIntegral;
-  if (abs(integralContrib) > 50)
+  if (abs(integralContrib) > 50) {
     logMsg(LOG_DEBUG, logPrefixPid, 'W', chamberId, integralContrib /* float */);
-  else
+  } else {
     cd.mParams.integral = latestIntegral;
+  }
 
   logMsg(LOG_DEBUG, logPrefixPid, '~', chamberId, tError /* int16 */, cd.mParams.integral /* float */, cd.priorError /* float */);
   if (heatPidWise) {
@@ -261,10 +266,11 @@ void controlChamber(ChamberData& cd) {
   } else {
     // No change in the error since last time. Decay the last recorded change in error.
     logMsg(LOG_DEBUG, logPrefixPid, 'd', chamberId, cd.tBeerLastDelta /* int8 */);
-    if (cd.tBeerLastDelta > 0)
+    if (cd.tBeerLastDelta > 0) {
       cd.tBeerLastDelta -= 1;
-    else if (cd.tBeerLastDelta < 0)
+    } else if (cd.tBeerLastDelta < 0) {
       cd.tBeerLastDelta += 1;
+    }
   }
 
   cd.priorError = tError;
@@ -286,10 +292,11 @@ void controlChamber(ChamberData& cd) {
 
   /*** Apply ***/
 
-  if (fForce)
+  if (fForce) {
     forceFridge(cd, fSetting);
-  else
+  } else {
     fridge(cd, fSetting);
+  }
 
   heater(cd, hSetting);
 }

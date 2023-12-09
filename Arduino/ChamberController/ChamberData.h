@@ -68,7 +68,7 @@ typedef struct {
   // Parameters that seldom change
   ChamberParams params;
 
-  // These are updated frequently by the RPi
+  // These are updated frequently (by the RPi or, in the case of `integral`, by us)
   MovingChamberParams mParams;
 
   /*

@@ -45,12 +45,12 @@ server {
         root /home/david/brew-pilot/frontend;
 
         index index.html;
-        server_name brewpilot.ml; # managed by Certbot
+        server_name pilot.homebrewer.org; # managed by Certbot
 
         # Requests proxied to the Spring Boot app
         # was: location ~ ^/(login$|logout$|guest/|admin/) {
         location /tempctrl {
-                limit_req zone=default-xhr burst=4 nodelay;
+                limit_req zone=default-xhr burst=10 nodelay;
 
                 proxy_pass http://localhost:8081;
                 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -86,19 +86,19 @@ server {
 
         listen [::]:443 ssl ipv6only=on; # managed by Certbot
         listen 443 ssl; # managed by Certbot
-        ssl_certificate /etc/letsencrypt/live/brewpilot.ml/fullchain.pem; # managed by Certbot
-        ssl_certificate_key /etc/letsencrypt/live/brewpilot.ml/privkey.pem; # managed by Certbot
+        ssl_certificate /etc/letsencrypt/live/pilot.homebrewer.org/fullchain.pem; # managed by Certbot
+        ssl_certificate_key /etc/letsencrypt/live/pilot.homebrewer.org/privkey.pem; # managed by Certbot
         include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
         ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
 }
 
 server {
-        if ($host = brewpilot.ml) {
+        if ($host = pilot.homebrewer.org) {
                 return 301 https://$host$request_uri;
         } # managed by Certbot
 
         listen 80 ;
         listen [::]:80 ;
-        server_name brewpilot.ml;
+        server_name pilot.homebrewer.org;
         return 404; # managed by Certbot
 }

@@ -36,6 +36,8 @@ export const reducer = (state: AppState, action: Actions) => {
     case 'LOGIN':
       console.debug('LOGIN action executing');
       return { ...state, isAuth: Auth.LoggedIn, isAdmin: action.isAdmin };
+    default:
+      throw Error('Unexpected action.type: ' + action);
   }
 };
 

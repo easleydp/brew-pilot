@@ -18,7 +18,7 @@ const Logout: React.FC = () => {
 
     axios
       .get('/tempctrl/logout')
-      .then((response) => {
+      .then((/*response*/) => {
         history.push({ pathname: '/signin', state: { from: '/' } });
         dispatch({ type: 'LOGOUT' });
       })

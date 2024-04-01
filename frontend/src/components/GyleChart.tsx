@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useCallback } from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
 import ILocationState from '../api/ILocationState';
 import { useAppState, Auth } from './state';
+import { Mode } from '../api/Mode';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import useInterval from '../api/useInterval';
@@ -20,13 +21,13 @@ const GyleChart = () => {
 
   const { chamberId } = useParams<{ chamberId: string }>();
 
-  enum Mode {
-    AUTO, // Aim for the target temp specified in the ChamberParameters.
-    HOLD, // Aim to maintain tBeer as it was when this mode was engaged.
-    DISABLE_HEATER, // As AUTO but disable heater.
-    DISABLE_FRIDGE, // As AUTO but disable fridge.
-    MONITOR_ONLY, // No heating, no cooling, just monitoring.
-  }
+  // enum Mode {
+  //   AUTO, // Aim for the target temp specified in the ChamberParameters.
+  //   HOLD, // Aim to maintain tBeer as it was when this mode was engaged.
+  //   DISABLE_HEATER, // As AUTO but disable heater.
+  //   DISABLE_FRIDGE, // As AUTO but disable fridge.
+  //   MONITOR_ONLY, // No heating, no cooling, just monitoring.
+  // }
 
   interface IReadings {
     dt: number;
@@ -354,7 +355,7 @@ const GyleChart = () => {
         fridgeSeries: SeriesDiscontinuous = chart.get('fridgeOn') as SeriesDiscontinuous,
         heaterSeries: SeriesDiscontinuous = chart.get('heaterOutput') as SeriesDiscontinuous;
 
-      readingsList.forEach((readings, index) => {
+      readingsList.forEach((readings/*, index*/) => {
         // Sanity check. Each successive readings record should occur later in time.
         if (prevReadings !== null && prevReadings.dt >= readings.dt) {
           // Used to throw here but it seems that, after a power outage, the first recentReadings record
@@ -837,7 +838,7 @@ const GyleChart = () => {
     // Returns promise for aggregating readings from all the logs specified in the supplied
     // gyleDetails along with the latestReadings from the supplied gyleDetails.
     const getAggregatedReadings = (gyleDetails: IGyleDetails): Promise<IReadings[]> => {
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve/*, reject*/) => {
         let aggregatedReadings: IReadings[] = [];
         let readingsLogs = gyleDetails.readingsLogs;
         const isBeerFridge = !gyleDetails.hasHeater;

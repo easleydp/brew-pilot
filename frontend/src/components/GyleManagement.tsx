@@ -1,6 +1,6 @@
 import './GyleManagement.scss';
-import React, { ChangeEvent, useEffect, useState } from 'react';
-import { Route, Router, useHistory, useLocation } from 'react-router-dom';
+import React, { /*ChangeEvent,*/ useEffect, useState } from 'react';
+import { /*Route, Router,*/ useHistory, useLocation } from 'react-router-dom';
 import ILocationState from '../api/ILocationState';
 import { useAppState, Auth } from './state';
 import { useParams } from 'react-router-dom';
@@ -16,21 +16,21 @@ import * as Yup from 'yup';
 import Toast from 'react-bootstrap/Toast';
 import Loading from './Loading';
 
-type FormControlElement = HTMLInputElement | HTMLTextAreaElement;
+// type FormControlElement = HTMLInputElement | HTMLTextAreaElement;
 
-interface IErrors {
-  formName?: string;
-  formDtStarted?: string;
-  formDtEnded?: string;
-  formTHold?: string;
-}
-interface IValues {
-  formName?: string;
-  formDtStarted?: string;
-  formDtEnded?: string;
-  formMode: Mode;
-  formTHold?: number;
-}
+// interface IErrors {
+//   formName?: string;
+//   formDtStarted?: string;
+//   formDtEnded?: string;
+//   formTHold?: string;
+// }
+// interface IValues {
+//   formName?: string;
+//   formDtStarted?: string;
+//   formDtEnded?: string;
+//   formMode: Mode;
+//   formTHold?: number;
+// }
 
 // const validate = (values: IValues) => {
 //   const errors: IErrors = {};
@@ -140,7 +140,7 @@ const GyleManagement = () => {
           return !val || this.parent['formDtStarted'];
         })
         .test('', 'End time must be later than Start time', function (val) {
-          var millis = val && dateTimeStrIsValid(val) ? dateTimeStrToMillis(val) : undefined;
+          const millis = val && dateTimeStrIsValid(val) ? dateTimeStrToMillis(val) : undefined;
           return !millis || millis > dateTimeStrToMillis(this.parent['formDtStarted']);
         }),
       formTemperatureProfile: Yup.string()
@@ -211,7 +211,7 @@ const GyleManagement = () => {
       const url = '/tempctrl/admin/chamber/' + chamberId + '/latest-gyle';
       axios
         .post(url, gyle)
-        .then((response) => {
+        .then((/*response*/) => {
           setShowSuccess(true);
           setSubmitting(false);
         })
@@ -247,12 +247,12 @@ const GyleManagement = () => {
     checkForNowPattern('formDtEnded');
   };
 
-  const handleModeChange = (event: ChangeEvent<FormControlElement>) => {
-    console.log(1, event);
-    console.log(2, formik.getFieldProps('formTHold'));
-    console.log(3, formik.getFieldMeta('formTHold'));
-    return false;
-  };
+  // const handleModeChange = (event: ChangeEvent<FormControlElement>) => {
+  //   console.log(1, event);
+  //   console.log(2, formik.getFieldProps('formTHold'));
+  //   console.log(3, formik.getFieldMeta('formTHold'));
+  //   return false;
+  // };
 
   // const checkForOldNowPattern = (field: string) => {
   //   let value = formik.getFieldProps(field).value;
@@ -400,8 +400,8 @@ const GyleManagement = () => {
                 <li>While blank the chamber will be inactive.</li>
                 <li>
                   Can be set to a future date/time. In this case the chamber{' '}
-                  <strong>will be activated forthwith</strong> and held at the profile's start
-                  temperature until the start time.
+                  <strong>will be activated forthwith</strong> and held at the profile&apos;s
+                  start temperature until the start time.
                 </li>
                 <li>If setting in advance,
                   set it to your best guess initially (e.g. 24hrs after yeast pitch) then reset

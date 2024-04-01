@@ -225,7 +225,7 @@ const TemperatureProfile = ({ chamberSummaries }: TemperatureProfileProps) => {
           },
           point: {
             events: {
-              click: function (event) {
+              click: function (/*event*/) {
                 if (this.x !== 0) {
                   // Don't remove first point
                   this.remove();
@@ -581,7 +581,7 @@ const TemperatureProfile = ({ chamberSummaries }: TemperatureProfileProps) => {
     const url = '/tempctrl/admin/chamber/' + chamberId + '/latest-gyle-profile';
     axios
       .post(url, temperatureProfile)
-      .then((response) => {
+      .then((/*response*/) => {
         backedUpProfileRef.current = temperatureProfile;
         setShowSuccess(true);
         setSubmitting(false);

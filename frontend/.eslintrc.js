@@ -7,13 +7,20 @@ module.exports = {
   globals: {
     Highcharts: false,
   },
+  ignorePatterns: ['RangeDefaultLeftPatch.js', 'serviceWorker.ts', 'DateUtils.ts', 'NowPattern.ts'],
   extends: ['eslint:recommended', 'plugin:react/recommended'],
+  //extends: ['plugin:@typescript-eslint/recommended', 'plugin:react/recommended'],
+  //parser: "babel-eslint",
+  //parser: "@babel/eslint-parser",
+  //parser: "react-scripts/node_modules/babel-eslint",
+  parser: "@typescript-eslint/parser",
   parserOptions: {
     ecmaFeatures: {
       jsx: true,
     },
+    ecmaVersion: 2020,
   },
-  plugins: ['react', 'react-hooks'],
+  plugins: ['react', 'react-hooks', '@typescript-eslint'],
   settings: {
     react: {
       createClass: 'createReactClass', // Regex for Component Factory to use,
@@ -39,7 +46,7 @@ module.exports = {
   },
   rules: {
     'react-hooks/rules-of-hooks': 'error',
-    'react-hooks/exhaustive-deps': 'warn',
+    //'react-hooks/exhaustive-deps': 'warn',
     'react/jsx-uses-react': 'error',
     'react/jsx-uses-vars': 'error',
     'array-callback-return': 'error',
@@ -74,5 +81,13 @@ module.exports = {
     'one-var-declaration-per-line': 'error',
     'spaced-comment': 'error',
     'valid-typeof': 'error',
+    // https://stackoverflow.com/a/63798664/65555
+    'no-unused-vars': 'off',
+    '@typescript-eslint/no-unused-vars': 'error',
+
+    'spaced-comment': 'off',
+    'comma-dangle': 'off',
+    'no-trailing-spaces': 'off',
+    'curly': 'off',
   },
 };

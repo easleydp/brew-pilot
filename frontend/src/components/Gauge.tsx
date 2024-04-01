@@ -37,7 +37,7 @@ const Gauge = ({ chamberId, tTarget, handleAuthError }: GaugeProps) => {
 
 
     // Hack the Highcharts generated SVG to set a custom dial background image. Liable to break on upgrading Highcharts!
-    const svgHack_addDialBgImage = (chart: any) => {
+    const svgHackAddDialBgImage = (chart: any) => {
       const gaugeDiv: HTMLElement = chart.renderTo;
       const svgRoot = gaugeDiv.querySelector('svg.highcharts-root');
       const svgDefs = svgRoot!.querySelector('defs');
@@ -190,7 +190,7 @@ const Gauge = ({ chamberId, tTarget, handleAuthError }: GaugeProps) => {
       },
 
       function (chart: any) {
-        svgHack_addDialBgImage(chart);
+        svgHackAddDialBgImage(chart);
 
         const point = chart.series[0].points[0];
         function getBeerTemp() {

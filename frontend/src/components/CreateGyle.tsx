@@ -12,12 +12,12 @@ import * as Yup from 'yup';
 import Toast from 'react-bootstrap/Toast';
 import Loading from './Loading';
 
-interface IErrors {
-  formGyleId?: string;
-}
-interface IValues {
-  formGyleId?: string;
-}
+// interface IErrors {
+//   formGyleId?: string;
+// }
+// interface IValues {
+//   formGyleId?: string;
+// }
 
 interface IGyleNameIdDuration {
   id: number;
@@ -40,7 +40,7 @@ const CreateGyle = () => {
   const [recentGyles, setRecentGyles] = useState<IGyleNameIdDuration[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [showSuccess, setShowSuccess] = useState(false);
+  //const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState(false);
 
   const formik = useFormik({
@@ -59,8 +59,8 @@ const CreateGyle = () => {
           gyleToCopyId: values.formGyleId,
           newName: 'TODO **** Choose a name ****'
         })
-        .then((response) => {
-          setShowSuccess(true);
+        .then((/*response*/) => {
+          //setShowSuccess(true);
           setSubmitting(false);
           history.push({ pathname: `/gyle-management/${chamberId}` });
         })

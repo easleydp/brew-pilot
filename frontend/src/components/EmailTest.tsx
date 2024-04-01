@@ -11,16 +11,16 @@ import * as Yup from 'yup';
 import Toast from 'react-bootstrap/Toast';
 import Loading from './Loading';
 
-interface IErrors {
-  formName?: string;
-  formDtStarted?: string;
-  formDtEnded?: string;
-}
-interface IValues {
-  formSubject?: string;
-  formText?: string;
-  formNoRetry?: boolean;
-}
+// interface IErrors {
+//   formName?: string;
+//   formDtStarted?: string;
+//   formDtEnded?: string;
+// }
+// interface IValues {
+//   formSubject?: string;
+//   formText?: string;
+//   formNoRetry?: boolean;
+// }
 
 const EmailTest = () => {
   const history = useHistory<ILocationState>();
@@ -54,7 +54,7 @@ const EmailTest = () => {
           text: values.formText,
           noRetry: values.formNoRetry,
         })
-        .then((response) => {
+        .then((/*response*/) => {
           setShowSuccess(true);
           setSubmitting(false);
         })

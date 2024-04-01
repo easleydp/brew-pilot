@@ -18,8 +18,6 @@ import Loading from './Loading';
 
 // type FormControlElement = HTMLInputElement | HTMLTextAreaElement;
 
-// TODO: DELETE ME: Dummy change to test Github config change
-
 // interface IErrors {
 //   formName?: string;
 //   formDtStarted?: string;

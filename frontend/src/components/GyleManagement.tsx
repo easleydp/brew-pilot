@@ -107,14 +107,18 @@ const GyleManagement = () => {
   };
 
   const millisToDateTimeStr = (ms: number) => {
-    const parts = new Intl.DateTimeFormat(['en'], {
+    // Without the `as any` cast hack, it fails to compile (even though vscode is happy).
+    const options: Intl.DateTimeFormatOptions = {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
-      hour12: false,
-    }).formatToParts(new Date(ms));
+      //hourCycle: 'h23'
+    };
+    (options as any).hourCycle = 'h23';
+
+    const parts = new Intl.DateTimeFormat(['en'], options).formatToParts(new Date(ms));
     const part = (type: string) => {
       return parts.find((part) => part.type === type)?.value;
     };

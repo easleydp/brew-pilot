@@ -1,3 +1,8 @@
+#ifndef LED_H
+#define LED_H
+
+#include "Common.h"
+
 uint8_t ledState = LOW;
 void flipLed() {
   ledState = ledState == HIGH ? LOW : HIGH;
@@ -5,7 +10,7 @@ void flipLed() {
 }
 
 //// Buzz LED for the specified duration. NOTE: Blocking (typically only used at startup)
-#define LED_BUZZ_PERIOD  40  // ON + OFF time in milliseconds
+#define LED_BUZZ_PERIOD 40  // ON + OFF time in milliseconds
 void buzzLed(uint16_t ms) {
   const uint16_t cycles = ms / LED_BUZZ_PERIOD;
   for (uint16_t i = 0; i < cycles; i++) {
@@ -15,7 +20,6 @@ void buzzLed(uint16_t ms) {
     delay(LED_BUZZ_PERIOD / 2);
   }
 }
-
 
 uint16_t flipLedPeriod = 100;
 uint32_t millisSinceLastFlipLed = 0;
@@ -29,5 +33,4 @@ void maybeFlipLed() {
   }
 }
 
-
-// End
+#endif  // LED_H

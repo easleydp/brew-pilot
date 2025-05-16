@@ -1,12 +1,18 @@
+#ifndef TIME_KEEPING_H
+#define TIME_KEEPING_H
+
+#include "Common.h"
+#include "TimeKeeping.h"
+
 #define MINUTE_MILLIS 60000
 #define SECOND_MILLIS 1000
 
 // This depends on certain globals defined in Common.h:
-//uint32_t uptimeMillis = 0;
-//uint32_t uptimeMins = 0;
+// uint32_t uptimeMillis = 0;
+// uint32_t uptimeMins = 0;
 
-//uint32_t millisSinceLastUpdatedMins = 0;
-//uint32_t prevUptimeMillis = 0;
+// uint32_t millisSinceLastUpdatedMins = 0;
+// uint32_t prevUptimeMillis = 0;
 
 // Called once per elapsed minute, though not necessarily on a precise schedule.
 void _minuteTick() {
@@ -34,5 +40,4 @@ void keepTrackOfTime() {
   }
 }
 
-
-// End
+#endif  // TIME_KEEPING_H

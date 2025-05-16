@@ -1,3 +1,11 @@
+#ifndef CHAMBER_DATA_H
+#define CHAMBER_DATA_H
+
+#include <EEPROM.h>
+
+#include "Common.h"
+#include "Logging.h"
+
 /**
  * Change this to define maximum number of chambers that need to be supported.
  */
@@ -254,4 +262,4 @@ void initChamberData() {
   }
 }
 
-// End
+#endif  // CHAMBER_DATA_H

@@ -2,10 +2,37 @@
     "version": 4,
     "configurations": [
         {
+            "name": "Linux",
+            "compilerPath": "/usr/bin/gcc",
+            "compilerArgs": [],
+            "intelliSenseMode": "linux-gcc-x64",
+            "includePath": [
+                "${workspaceFolder}/libraries/**",
+                "/home/david/brew-pilot/Arduino/libraries/**",
+                "/home/david/ArduinoIDE/arduino-1.8.13/libraries/**",
+                "/home/david/ArduinoIDE/arduino-1.8.13/hardware/tools/**",
+                "/home/david/ArduinoIDE/arduino-1.8.13/hardware/arduino/avr/**",
+                "/home/david/ArduinoIDE/arduino-1.8.13/tools/**",
+                "/home/david/ArduinoIDE/arduino-1.8.13/hardware/arduino/avr/**",
+                "/home/david/ArduinoIDE/arduino-1.8.13/hardware/arduino/avr/libraries/EEPROM/src",
+                "/home/david/ArduinoIDE/arduino-1.8.13/hardware/tools/**",
+                "/home/david/ArduinoIDE/arduino-1.8.13/libraries/**",
+                "/home/david/ArduinoIDE/arduino-1.8.13/tools/**",
+                "/home/david/Arduino/libraries/**"
+            ],
+            "forcedInclude": [
+                "/home/david/ArduinoIDE/arduino-1.8.13/hardware/arduino/avr/cores/arduino/Arduino.h"
+            ],
+            "cStandard": "gnu17",
+            "cppStandard": "gnu++14",
+            "defines": [
+                "USBCON"
+            ]
+        },
+        {
             "name": "Arduino",
-            "compilerPath": "/home/david/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/bin/avr-g++",
+            "compilerPath": "/home/david/ArduinoIDE/arduino-1.8.13/hardware/tools/avr/bin/avr-g++",
             "compilerArgs": [
-                "-w",
                 "-std=gnu++11",
                 "-fpermissive",
                 "-fno-exceptions",
@@ -16,24 +43,24 @@
             ],
             "intelliSenseMode": "gcc-x64",
             "includePath": [
-                "/home/david/.arduino15/packages/arduino/hardware/avr/1.8.6/cores/arduino",
-                "/home/david/.arduino15/packages/arduino/hardware/avr/1.8.6/variants/standard",
+                "/home/david/ArduinoIDE/arduino-1.8.13/hardware/arduino/avr/cores/arduino",
+                "/home/david/ArduinoIDE/arduino-1.8.13/hardware/arduino/avr/variants/standard",
                 "/home/david/Arduino/libraries/Base64/src",
+                "/home/david/ArduinoIDE/arduino-1.8.13/hardware/arduino/avr/libraries/EEPROM/src",
                 "/home/david/Arduino/libraries/DallasTemperature",
                 "/home/david/Arduino/libraries/OneWire",
-                "/home/david/.arduino15/packages/arduino/hardware/avr/1.8.6/libraries/EEPROM/src",
-                "/home/david/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/lib/gcc/avr/7.3.0/include",
-                "/home/david/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/lib/gcc/avr/7.3.0/include-fixed",
-                "/home/david/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include"
+                "/home/david/ArduinoIDE/arduino-1.8.13/hardware/tools/avr/lib/gcc/avr/7.3.0/include",
+                "/home/david/ArduinoIDE/arduino-1.8.13/hardware/tools/avr/lib/gcc/avr/7.3.0/include-fixed",
+                "/home/david/ArduinoIDE/arduino-1.8.13/hardware/tools/avr/avr/include"
             ],
             "forcedInclude": [
-                "/home/david/.arduino15/packages/arduino/hardware/avr/1.8.6/cores/arduino/Arduino.h"
+                "/home/david/ArduinoIDE/arduino-1.8.13/hardware/arduino/avr/cores/arduino/Arduino.h"
             ],
             "cStandard": "c11",
             "cppStandard": "c++11",
             "defines": [
                 "F_CPU=16000000L",
-                "ARDUINO=10607",
+                "ARDUINO=10813",
                 "ARDUINO_AVR_UNO",
                 "ARDUINO_ARCH_AVR",
                 "__DBL_MIN_EXP__=(-125)",

@@ -1,4 +1,11 @@
+#ifndef CHAMBER_CONTROL_H
+#define CHAMBER_CONTROL_H
+
 #define CHAMBER_ITERATION_TIME_MILLIS 60000
+
+#include "Common.h"
+#include "Logging.h"
+#include "Temperature.h"
 
 #define ON 1
 #define OFF 0
@@ -346,3 +353,5 @@ void controlChambers() {
   }
   maintainHeaters();
 }
+
+#endif  // CHAMBER_CONTROL_H

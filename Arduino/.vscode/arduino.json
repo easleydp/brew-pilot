@@ -1,0 +1,6 @@
+{
+    "board": "arduino:avr:uno",
+    "sketch": "../Arduino/ChamberController/ChamberController.ino",
+    "programmer": "AVR ISP",
+    "output": "/home/david/Temp/ArduinoBuildOutput"
+}

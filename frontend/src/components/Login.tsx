@@ -86,13 +86,14 @@ const Login: React.FC = () => {
           <img src="http://danielzawadzki.com/codepen/01/icon.svg" id="icon" alt="User Icon" />
         </div> */}
 
-        <form action="/signin" onSubmit={handleSubmit}>
+        <form action="/signin" onSubmit={handleSubmit} autoComplete="on">
           <input
             type="text"
             id="signin"
             className="fadeIn second"
             name="signin"
             placeholder="username"
+            autoComplete="username"
             onChange={(e) => setUsername(e.target.value)}
             onKeyPress={(e) => handleKeyPress(e)}
           />
@@ -102,6 +103,7 @@ const Login: React.FC = () => {
             className="fadeIn third"
             name="password"
             placeholder="password"
+            autoComplete="current-password"
             onChange={(e) => setPassword(e.target.value)}
             onKeyPress={(e) => handleKeyPress(e)}
           />

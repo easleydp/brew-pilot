@@ -1,3 +1,7 @@
+/**
+ * @file Common.h
+ * @brief Basic utility functions and uptime tracking.
+ */
 #ifndef COMMON_H
 #define COMMON_H
 
@@ -14,65 +18,30 @@
 
 #define TIME_UP(prev, curr, interval) ((uint32_t)(curr - prev) >= interval)
 
-uint32_t uptimeMillis = 0;
-uint32_t uptimeMins = 0;
+extern uint32_t uptimeMillis;
+extern uint32_t uptimeMins;
 
-char _progMemBuff[80];
-const char* strFromProgMem(const char* addr) {
-  byte k;
-  for (k = 0; k < strlen_P(addr); k++) {
-    if (k == sizeof(_progMemBuff) - 1)
-      break;
-    char myChar = pgm_read_byte_near(addr + k);
-    _progMemBuff[k] = myChar;
-  }
-  _progMemBuff[k] = 0;
-  return _progMemBuff;
-}
+const char* strFromProgMem(const char* addr);
 
-char _itoaBuff[10];
-const char* itoa(int value) {
-  return itoa(value, _itoaBuff, 10);
-}
+const char* itoa(int value);
 
 /**
  * In the buffer referenced by `cmd`, finds the first comma starting from offset `startingOffset`,
  * sets the comma to null, and returns the offset of the following character.
  * Returns -1 if the end of the buffer is reached.
  */
-int nullNextComma(char* cmd, int startingOffset) {
-  while (true) {
-    char ch = cmd[startingOffset++];
-    if (ch == ',') {
-      cmd[startingOffset - 1] = '\0';
-      return startingOffset;
-    }
-    if (ch == '\0') {
-      return -1;
-    }
-  };
-}
+int nullNextComma(char* cmd, int startingOffset);
 
 // https://playground.arduino.cc/Code/AvailableMemory/
-int freeRam() {
-  extern int __heap_start, *__brkval;
-  int v;
-  return (int)&v - (__brkval == 0 ? (int)&__heap_start : (int)__brkval);
-}
-int minFreeRam = 32767;
-uint8_t minFreeRamLocation = 0;
+int freeRam();
+
+extern int minFreeRam;
+extern uint8_t minFreeRamLocation;
+
 // Call this to record lowest minFreeRam from whereever you suspect stack may be deep.
 // The minFreeRam & minFreeRamLocation are then available for reporting.
-void memoMinFreeRam(uint8_t location) {
-  int latestMinFreeRam = freeRam();
-  if (minFreeRam > latestMinFreeRam) {
-    minFreeRam = latestMinFreeRam;
-    minFreeRamLocation = location;
-  }
-}
+void memoMinFreeRam(uint8_t location);
 
-void printComma() {
-  Serial.print(',');
-}
+void printComma();
 
 #endif  // COMMON_H

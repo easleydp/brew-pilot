@@ -1,54 +1,22 @@
+/**
+ * @file MessageHandlingGen.h
+ * @brief General serial communication helpers.
+ */
 #ifndef MESSAGE_HANDLING_GEN_H
 #define MESSAGE_HANDLING_GEN_H
 
-static const char RESP_ERROR[] PROGMEM = "error:";
+#include "Common.h"
 
-bool prefix(const char* pre, const char* str) {
-  return strncmp(pre, str, strlen(pre)) == 0;
-}
+bool prefix(const char* pre, const char* str);
 
-void sendToMasterStart() {
-  Serial.print('^');
-}
-void sendToMasterEnd() {
-  Serial.println('$');  // Line ending merely for readability in console. Ignored by recipient.
-}
-// void sendToMaster(String response) {
-//   sendToMaster(response.c_str());
-// }
-void sendToMaster(const char* str1, const char* str2, const char* str3) {
-  sendToMasterStart();
-  Serial.print(str1);
-  if (str2 != NULL) {
-    Serial.print(str2);
-    if (str3 != NULL) {
-      Serial.print(str3);
-    }
-  }
-  sendToMasterEnd();
-}
-void sendToMaster(const char* str1, const char* str2) {
-  sendToMaster(str1, str2, NULL);
-}
-void sendToMaster(const char* response) {
-  sendToMaster(response, NULL, NULL);
-}
-// void sendToMaster(int response) {
-//   sendToMasterStart();
-//   Serial.print(response);
-//   sendToMasterEnd();
-// }
-void sendAck() {
-  sendToMaster("ack");
-}
-void respondWithError(const char* str1, const char* str2) {
-  sendToMaster("err:", str1, str2);
-}
+void sendToMasterStart();
+void sendToMasterEnd();
 
-// int parseInt(const char* str, int offset) {
-//   return atoi(&str[offset]);
-// }
+void sendToMaster(const char* str1, const char* str2, const char* str3);
+void sendToMaster(const char* str1, const char* str2);
+void sendToMaster(const char* response);
 
-// End
+void sendAck();
+void respondWithError(const char* str1, const char* str2);
 
 #endif  // MESSAGE_HANDLING_GEN_H

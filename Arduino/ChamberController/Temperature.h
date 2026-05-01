@@ -1,7 +1,12 @@
+/**
+ * @file Temperature.h
+ * @brief Dallas 1-Wire sensor management.
+ */
 #ifndef TEMPERATURE_H
 #define TEMPERATURE_H
 
 #include <DallasTemperature.h>
+#include <OneWire.h>
 #include <limits.h>
 
 #include "ChamberData.h"
@@ -14,21 +19,7 @@
 // Set this to your number of sensors, e.g. (tChamber + tBeer) * 2 chambers + tExternal + tProjectBox = 6
 #define SENSOR_COUNT 6
 
-// Setup a oneWire instance to communicate with any OneWire devices
-OneWire oneWire(PIN__ONE_WIRE_BUS);
-// Pass our oneWire reference to Dallas Temperature sensor
-DallasTemperature dallas(&oneWire);
-
-// void printSensorAddress(DeviceAddress address)
-//{
-//   for (uint8_t i = 0; i < 8; i++)
-//   {
-//     Serial.print(F("0x"));
-//     if (address[i] < 0x10) Serial.print(F("0"));
-//     Serial.print(address[i], HEX);
-//     if (i < 7) Serial.print(F(","));
-//   }
-// }
+extern DallasTemperature dallas;
 
 typedef struct {
   // Abbreviated address. See shortenAddress()'s comment.
@@ -42,7 +33,8 @@ typedef struct {
 
   int16_t prevReading;  // Used to apply a degree of averaging (noise smoothing)
 } Sensor;
-Sensor sensorData[SENSOR_COUNT];
+
+extern Sensor sensorData[SENSOR_COUNT];
 
 // Our indexes 0..<SENSOR_COUNT-1> (not to be confused with Sensor.dallasIndex).
 #define CH1_T_BEER 0
@@ -52,222 +44,28 @@ Sensor sensorData[SENSOR_COUNT];
 #define T_EXTERNAL 4
 #define T_PROJECT_BOX 5
 
-static const char* logPrefixTemperature = "T";
-
-void initSensorData(uint8_t ourIndex, uint16_t shortAddress, int8_t error) {
-  sensorData[ourIndex].shortAddress = shortAddress;
-  sensorData[ourIndex].error = error;
-  sensorData[ourIndex].prevReading = SHRT_MIN;
-}
+void initSensorData(uint8_t ourIndex, uint16_t shortAddress, int8_t error);
 
 // Each sensor has a 64 bit address. For such a relatively small number of sensors as ours 16 bits is sufficient to discriminate.
-// (Note: byte[0] is always 0x28 for DS18B20; [4] appears to be always either 5E or 5F; [5] appears to be always 14; [6] appears to
-// be  always 01; [7] is CRC of first 7 bytes.)
-// Most significant byte of the return value is byte[1] of the full address, LSB of the return value is byte[2] of the full address.
-uint16_t shortenAddress(const DeviceAddress& fullAddress) {
-  return ((uint16_t)fullAddress[1]) << 8 | ((uint16_t)fullAddress[2]);
-}
+uint16_t shortenAddress(const DeviceAddress& fullAddress);
 
-Sensor* findSensorByAddress(const DeviceAddress& fullAddress) {
-  uint16_t shortAddress = shortenAddress(fullAddress);
-  for (uint8_t i = 0; i < SENSOR_COUNT; i++)
-    if (sensorData[i].shortAddress == shortAddress)
-      return &sensorData[i];
-  return NULL;
-}
+Sensor* findSensorByAddress(const DeviceAddress& fullAddress);
 
-uint8_t badSensorCount = 0;
+extern uint8_t badSensorCount;
 
 // This must be called once each period before reading the individual temperatures (using getTemperature()).
 // Retuns true if all ok.
-boolean readTemperatures() {
-  dallas.requestTemperatures();
-  uint8_t sensorCount = dallas.getDS18Count();
-  if (sensorCount != SENSOR_COUNT) {
-    badSensorCount = SENSOR_COUNT - sensorCount;
-    logMsg(LOG_ERROR, logPrefixTemperature, 'C', 1, badSensorCount /* uint8_t */);
-    return false;
-  }
-  return true;
-}
+boolean readTemperatures();
 
-void initTemperatureSensors() {
-  delay(1000);
-  dallas.begin();
-  delay(1000);
-  readTemperatures();
-  // Edit this in sympathy with SENSOR_COUNT, having established each device's address and error using calibrateTemperatureSensors()
-  // Note: the error offset is x100. This value divided by 100 will be ADDED to the reading from the device.
-  initSensorData(CH1_T_BEER, 0x3A11, 25);
-  initSensorData(CH1_T_CHAMBER, 0x3606, 11);
-  initSensorData(CH2_T_BEER, 0x3EE1, -4);
-  initSensorData(CH2_T_CHAMBER, 0x79BA, -8);
-  initSensorData(T_EXTERNAL, 0xBD96, -15);
-  initSensorData(T_PROJECT_BOX, 0x3B79, -12);
-
-  DeviceAddress address;
-  for (uint8_t i = 0; i < SENSOR_COUNT; i++) {
-    dallas.getAddress(address, i);
-    Sensor* ptr = findSensorByAddress(address);
-    if (ptr == NULL) {
-      Serial.print(F("ERROR! not found: "));
-      Serial.println(shortenAddress(address), HEX);
-      return;
-    }
-    ptr->dallasIndex = i;
-  }
-  badSensorCount = 0;
-}
+void initTemperatureSensors();
 
 // Retrieves latest reading for the specified sensor, converts to int x10,
 // and applies a degree of averaging w.r.t. previous readings.
-int16_t getTemperature(uint8_t sensorIndex) {
-  Sensor& sensor = *(&sensorData[sensorIndex]);  // Who knows why `sensorData[sensorIndex]` doesn't work
-  float readingRaw = dallas.getTempCByIndex(sensor.dallasIndex) + ((float)sensor.error) / 100.0f;
-  int16_t prevReading = sensor.prevReading;
-  // A disconnected sensor seems to give a reading of -127.04.
-  // Regard anything less that -50 as an error and return the previous reading.
-  if (readingRaw < -50.0f) {
-    // Some sensors seem prone to give this false reading occasionally even when not actually
-    // disconnected, so we log as warning rather than error.
-    logMsg(LOG_WARN, logPrefixTemperature, 'D', 1, sensorIndex /* uint8_t */, readingRaw /* float */);
-    return prevReading;
-  }
-  int16_t reading = (readingRaw + 0.05f) * 10;
-  if (prevReading == SHRT_MIN) {
-    prevReading = reading;
-  }
-  sensor.prevReading = reading;
-  return (prevReading + reading) / 2;
-}
+int16_t getTemperature(uint8_t sensorIndex);
 
-void readTBeer(ChamberData& cd) {
-  int16_t t = getTemperature(cd.chamberId == 1 ? CH1_T_BEER : CH2_T_BEER);
-  cd.tBeer = t != SHRT_MIN ? t : cd.mParams.tTarget;
-}
-void readTChamber(ChamberData& cd) {
-  int16_t t = getTemperature(cd.chamberId == 1 ? CH1_T_CHAMBER : CH2_T_CHAMBER);
-  cd.tChamber = t != SHRT_MIN ? t : cd.mParams.tTarget;
-}
-void readTExternal() {
-  int16_t t = getTemperature(T_EXTERNAL);
-  tExternal = t != SHRT_MIN ? t : 0;
-}
-void readTProjectBox() {
-  int16_t t = getTemperature(T_PROJECT_BOX);
-  tProjectBox = t != SHRT_MIN ? t : 0;
-}
-
-// unsigned long prevMillisReadTemperatures = 0;
-// void testTemperatureSensors() {
-//   if (badSensorCount > 0)
-//     return;
-//   if (uptimeMillis - prevMillisReadTemperatures >= TEMP_READINGS_MILLIS) {
-//     prevMillisReadTemperatures = uptimeMillis;
-//
-//     dallas.requestTemperatures();
-//     float total = 0;
-//     for (uint8_t i = 0; i < SENSOR_COUNT; i++) {
-//
-//       Sensor sensor = sensorData[i];
-//       Serial.print(F("Sensor "));
-//       Serial.print(i);
-//       Serial.print(F(": "));
-//       Serial.print(sensor.dallasIndex);
-//       Serial.print(F(", raw: "));
-//       float reading = dallas.getTempCByIndex(sensor.dallasIndex);
-//       total += reading;
-//       Serial.print(reading);
-//       Serial.print(F(", adjusted: "));
-//       Serial.print(reading + ((float) sensor.error) / 100.0f);
-//       Serial.print(F(" (intX10: "));
-//       Serial.print(getTemperature(i));
-//       Serial.println(F(")"));
-//     }
-//     Serial.print(F("------ Avg: "));
-//     Serial.print(total / SENSOR_COUNT);
-//     Serial.println(" ------");
-//   }
-// }
-//
-// #define AVG_READING_COUNT 10
-// float averageReadingAcrossAllSensors(float readings[]) {
-//   float total = 0;
-//   for (uint8_t i = 0; i < SENSOR_COUNT; i++)
-//     total += readings[i];
-//   return total / SENSOR_COUNT;
-// }
-// float avgReadings[SENSOR_COUNT][AVG_READING_COUNT];
-// float readingErrs[SENSOR_COUNT][AVG_READING_COUNT];
-// uint8_t readingModuloCount = 0;
-// void calibrateTemperatureSensors() {
-//   if (uptimeMillis - prevMillisReadTemperatures >= TEMP_READINGS_MILLIS) {
-//     prevMillisReadTemperatures = uptimeMillis;
-//
-//     if (!sensorCountChecked) {
-//       uint8_t sensorCount = dallas.getDS18Count();
-//       if (sensorCount != SENSOR_COUNT) {
-//         Serial.print(F("ERROR! sensore count: "));
-//         Serial.println(sensorCount);
-//         return;
-//       }
-//       sensorCountChecked = true;
-//     }
-//     // Serial.print(F("Sensor count: "));
-//     // Serial.println(sensorCount);
-//
-//     // Collect a reading for each sensor
-//     DeviceAddress address;
-//     float currReadings[SENSOR_COUNT];
-//     // Serial.print(F("Readings ("));
-//     // Serial.print(readingModuloCount + 1);
-//     // Serial.print(F("):"));
-//     dallas.requestTemperatures();
-//     for (uint8_t i = 0; i < SENSOR_COUNT; i++) {
-//
-//       // Serial.print(F("Sensor "));
-//       // Serial.print(i);
-//       // Serial.print(F(": "));
-//       // Serial.print(dallas.getResolution(address));
-//       // Serial.print(F("; "));
-//       // dallas.getAddress(address, i);
-//       // printSensorAddress(address);
-//       // Serial.print(F("; "));
-//       // Serial.println(dallas.getTempCByIndex(i));
-//
-//       float reading = dallas.getTempCByIndex(i);
-//       currReadings[i] = reading;
-//       // Serial.print(reading); Serial.print(F(" ");)
-//     }
-//
-//     // Now we have a reading for each sensor, compute average across them all (the golden reading).
-//     float golden = averageReadingAcrossAllSensors(currReadings);
-//     // Serial.print(F("Average: ")); Serial.print(golden);
-//     // Serial.println("");
-//     // Calculate the error for each sensor and store so we can compute average error later.
-//     for (uint8_t i = 0; i < SENSOR_COUNT; i++) {
-//       readingErrs[i][readingModuloCount] = golden - currReadings[i];
-//     }
-//
-//     // When the error array is full, compute average error for each sensor and print.
-//     if (++readingModuloCount == AVG_READING_COUNT) {
-//       readingModuloCount = 0;
-//
-//       for (uint8_t i = 0; i < SENSOR_COUNT; i++) {
-//         float totalErr = 0;
-//         for (uint8_t j = 0; j < AVG_READING_COUNT; j++) {
-//           totalErr += readingErrs[i][j];
-//         }
-//         Serial.print(F("Sensor "));
-//         Serial.print(i);
-//         Serial.print(F(" avg error: "));
-//         dallas.getAddress(address, i);
-//         printSensorAddress(address);
-//         Serial.print(F("; "));
-//         Serial.println(totalErr / AVG_READING_COUNT);
-//       }
-//     }
-//   }
-// }
+void readTBeer(ChamberData& cd);
+void readTChamber(ChamberData& cd);
+void readTExternal();
+void readTProjectBox();
 
 #endif  // TEMPERATURE_H

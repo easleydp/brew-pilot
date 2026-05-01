@@ -1,3 +1,7 @@
+/**
+ * @file Pins.h
+ * @brief I/O pin definitions.
+ */
 #ifndef PINS_H
 #define PINS_H
 

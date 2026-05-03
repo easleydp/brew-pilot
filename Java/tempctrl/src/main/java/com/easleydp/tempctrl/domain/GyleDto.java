@@ -6,7 +6,12 @@ import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 /**
- * Marries-up with the the contents of gyle.json
+ * In brewing parlance a _gyle_ refers to a specific batch of wort/beer as it
+ * moves through the production process. In this app the term is used more
+ * loosely to refer to a temperature controlled session, i.e. period of time
+ * where the temperature is controlled according to a _temperature profile_.
+ * 
+ * The data attributes marry-up with the the contents of gyle.json
  */
 public class GyleDto {
     private String name;

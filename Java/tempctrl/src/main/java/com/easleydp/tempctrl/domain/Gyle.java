@@ -278,7 +278,7 @@ public class Gyle extends GyleDto {
     }
 
     private static int getSwitchedOffCheckFridgeOnTimeMins() {
-        return PropertyUtils.getInteger("switchedOffCheck.fridgeOnTimeMins", 10);
+        return PropertyUtils.getInteger("switchedOffCheck.fridgeOnTimeMins", 30);
     }
 
     private static int getSwitchedOffCheckHeaterOnTimeMins() {

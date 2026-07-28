@@ -13,16 +13,21 @@ repositories {
 	mavenCentral()
 }
 
-configurations {
-	// We'll use Undertow instead of Tomcat
-    compile.exclude module: 'spring-boot-starter-tomcat'
-}
+// Around Gradle 6 and 7, Gradle deprecated the compile configuration in favour 
+// of implementation and api, and changed how rule inheritance worked.
+// configurations {
+// 	// We'll use Undertow instead of Tomcat
+//     compile.exclude module: 'spring-boot-starter-tomcat'
+// }
 
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	implementation 'org.springframework.boot:spring-boot-starter-mail'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
-	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation('org.springframework.boot:spring-boot-starter-web') {
+		// We'll use Undertow instead of Tomcat
+        exclude group: 'org.springframework.boot', module: 'spring-boot-starter-tomcat'
+    }
 	implementation 'org.springframework.boot:spring-boot-starter-aop'
 	implementation 'org.springframework.retry:spring-retry'
 	implementation 'org.springframework:spring-aspects'

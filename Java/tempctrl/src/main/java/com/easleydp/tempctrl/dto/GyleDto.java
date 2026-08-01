@@ -1,8 +1,9 @@
-package com.easleydp.tempctrl.domain;
+package com.easleydp.tempctrl.dto;
 
 import java.util.List;
 import java.util.Objects;
 
+import com.easleydp.tempctrl.domain.Mode;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 /**

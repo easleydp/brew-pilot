@@ -20,13 +20,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.util.Assert;
 
+import com.easleydp.tempctrl.dto.ChamberDto;
+import com.easleydp.tempctrl.dto.GyleDto;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 
 /**
- * NOTE: This is a stateful bean since it wraps a 'latest Gyle' which is itself
- * stateful (see Gyle.java).
+ * NOTE: This is a stateful entity since it wraps a 'latest Gyle' which is
+ * itself stateful (see Gyle.java).
  */
 public class Chamber extends ChamberDto {
     private static final Logger logger = LoggerFactory.getLogger(Chamber.class);

@@ -56,7 +56,7 @@ public class OfflineCheckScheduler {
     }
 
     private void purgeBuffer(Date timeNow) {
-        Date expired = addHours(timeNow, -1 * PropertyUtils.getInt("offlineCheck.bufferSizeHrs"));
+        Date expired = addHours(timeNow, -1 * PropertyUtils.getInt("offlineCheck.bufferSizeHours"));
         buffer.removeIf(d -> d.before(expired));
     }
 

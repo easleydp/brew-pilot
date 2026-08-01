@@ -1,41 +1,37 @@
-package com.easleydp.tempctrl.domain;
+package com.easleydp.tempctrl.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
-public class PointDto
-{
+public class PointDto {
     private int hoursSinceStart;
 
     /** Degrees x 10, e.g. a value of 175 represents 17.5 degrees. */
     private int targetTemp;
 
-    public PointDto(int hoursSinceStart, int targetTemp)
-    {
+    public PointDto(int hoursSinceStart, int targetTemp) {
         setHoursSinceStart(hoursSinceStart);
         setTargetTemp(targetTemp);
     }
 
-    public PointDto()
-    {
+    public PointDto() {
     }
 
-    public int getHoursSinceStart()
-    {
+    public int getHoursSinceStart() {
         return hoursSinceStart;
     }
-    public void setHoursSinceStart(int hoursSinceStart)
-    {
+
+    public void setHoursSinceStart(int hoursSinceStart) {
         if (hoursSinceStart < 0)
             throw new IllegalArgumentException("hoursSinceStart must be +ve");
         this.hoursSinceStart = hoursSinceStart;
     }
-    public int getTargetTemp()
-    {
+
+    public int getTargetTemp() {
         return targetTemp;
     }
-    public void setTargetTemp(int targetTemp)
-    {
-        if (-500 < targetTemp  &&  targetTemp < 500)
+
+    public void setTargetTemp(int targetTemp) {
+        if (-500 < targetTemp && targetTemp < 500)
             this.targetTemp = targetTemp;
         else
             throw new IllegalArgumentException("targetTemp is out of range: " + targetTemp);
@@ -43,8 +39,7 @@ public class PointDto
 
     /** Convenience */
     @JsonIgnore
-    public long getMillisSinceStart()
-    {
+    public long getMillisSinceStart() {
         return ((long) hoursSinceStart) * 1000 * 60 * 60;
     }
 

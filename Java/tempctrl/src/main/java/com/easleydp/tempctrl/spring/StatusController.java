@@ -58,6 +58,19 @@ public class StatusController {
     @Autowired
     private OfflineCheckScheduler offlineCheckScheduler;
 
+    @Autowired
+    private IpAddressUtils ipAddressUtils;
+
+    private final String MOCK_IWCONFIG_STATS = String.join(System.getProperty("line.separator"),
+            "wlan0     IEEE 802.11  ESSID:\"SSID123\"",
+            "          Mode:Managed  Frequency:2.412 GHz  Access Point: 3C:45:7A:CD:AC:BA",
+            "          Bit Rate=7.2 Mb/s   Tx-Power=31 dBm",
+            "          Retry short limit:7   RTS thr:off   Fragment thr:off",
+            "          Power Management:off",
+            "          Link Quality=24/70  Signal level=-86 dBm",
+            "          Rx invalid nwid:0  Rx invalid crypt:0  Rx invalid frag:0",
+            "          Tx excessive retries:202  Invalid misc:0   Missed beacon:0");
+
     Supplier<ChamberManagerStatus> chamberManagerStatusSupplier;
 
     public StatusController() {
@@ -83,7 +96,7 @@ public class StatusController {
     }
 
     /**
-     * Called by getStatusReport() above and also by StillAliveMessageScheduler.
+     * Called by getStatusReport() above and also by {@link EmailMessageScheduler}.
      * 
      * @param isAdmin If false, certain details are not leaked.
      */
@@ -95,8 +108,10 @@ public class StatusController {
             .collect(Collectors.toList());
         // @formatter:on
 
+        boolean mockPi = new File(VCGEN_CMD).exists() == false;
+
         return new StatusReportResponse(
-                new PiStats(isAdmin),
+                new PiStats(isAdmin, mockPi, MOCK_IWCONFIG_STATS),
                 chamberManagerStatusSupplier.get(),
                 collectReadingsScheduler.getReadingsCollectionDurationStats(),
                 recentlyOfflineIso);
@@ -158,11 +173,9 @@ public class StatusController {
         }
     }
 
-    @JsonPropertyOrder({ "uptime", "socTemperature", "cpuTemperature", "clockMHz", "localIP", "macAddress",
+    @JsonPropertyOrder({ "uptime", "socTemperature", "cpuTemperature", "clockMHz", "localIP", "publicIP", "macAddress",
             "wireless" })
-    private static class PiStats {
-        private static boolean mockPi = new File(VCGEN_CMD).exists() == false;
-
+    private class PiStats {
         @JsonIgnore
         private final boolean isAdmin; // If false, certain details are not leaked
 
@@ -184,16 +197,6 @@ public class StatusController {
         private final String clock;
         private final String iwConfigStats;
 
-        private static String MOCK_IWCONFIG_STATS = String.join(System.getProperty("line.separator"),
-                "wlan0     IEEE 802.11  ESSID:\"SSID123\"",
-                "          Mode:Managed  Frequency:2.412 GHz  Access Point: 3C:45:7A:CD:AC:BA",
-                "          Bit Rate=7.2 Mb/s   Tx-Power=31 dBm",
-                "          Retry short limit:7   RTS thr:off   Fragment thr:off",
-                "          Power Management:off",
-                "          Link Quality=24/70  Signal level=-86 dBm",
-                "          Rx invalid nwid:0  Rx invalid crypt:0  Rx invalid frag:0",
-                "          Tx excessive retries:202  Invalid misc:0   Missed beacon:0");
-
         // Handy for testing
         public PiStats(boolean isAdmin, String uptime, MemoryStatsPi memory, MemoryStatsFileSystem fileSystem,
                 JvmStatus jvm, String socTemperature, String cpuTemperature, String volts, String clock,
@@ -210,7 +213,7 @@ public class StatusController {
             this.iwConfigStats = iwConfigStats;
         }
 
-        public PiStats(boolean isAdmin) {
+        public PiStats(boolean isAdmin, boolean mockPi, String mockIwConfigStats) {
             this(
                     isAdmin,
                     OsCommandExecuter.execute("uptime", "-p"),
@@ -221,7 +224,7 @@ public class StatusController {
                     mockPi ? "30280" : OsCommandExecuter.execute("cat", "/sys/class/thermal/thermal_zone0/temp"),
                     mockPi ? "volt=0.8765V" : OsCommandExecuter.execute(VCGEN_CMD, "measure_volts", "core"),
                     mockPi ? "frequency(48)=750199232" : OsCommandExecuter.execute(VCGEN_CMD, "measure_clock", "arm"),
-                    mockPi ? MOCK_IWCONFIG_STATS : OsCommandExecuter.execute("/usr/sbin/iwconfig", "wlan0"));
+                    mockPi ? mockIwConfigStats : OsCommandExecuter.execute("/usr/sbin/iwconfig", "wlan0"));
         }
 
         @JsonInclude(Include.NON_NULL)
@@ -275,16 +278,12 @@ public class StatusController {
 
         @JsonInclude(Include.NON_NULL)
         public String getLocalIP() {
-            if (isAdmin) {
-                // Credit: https://stackoverflow.com/a/38342964/65555
-                try (final DatagramSocket socket = new DatagramSocket()) {
-                    socket.connect(InetAddress.getByName("8.8.8.8"), 10002);
-                    return socket.getLocalAddress().getHostAddress();
-                } catch (IOException e) {
-                    logger.error(e.getMessage(), e);
-                }
-            }
-            return null;
+            return isAdmin ? ipAddressUtils.getLocalIP() : null;
+        }
+
+        @JsonInclude(Include.NON_NULL)
+        public String getPublicIP() {
+            return isAdmin ? ipAddressUtils.getPublicIP() : null;
         }
 
         @JsonInclude(Include.NON_NULL)

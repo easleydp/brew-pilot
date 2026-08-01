@@ -3,8 +3,10 @@
     "java.compile.nullAnalysis.mode": "automatic",
     "cSpell.words": [
         "ARDUINO",
+        "easleydp",
         "gyle",
         "gyle's",
-        "gyles"
+        "gyles",
+        "tempctrl"
     ]
 }

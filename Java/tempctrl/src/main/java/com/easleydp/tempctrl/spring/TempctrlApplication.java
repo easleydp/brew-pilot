@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.Environment;
 import org.springframework.retry.annotation.EnableRetry;
@@ -24,6 +25,7 @@ import com.easleydp.tempctrl.domain.ChamberManager;
 import com.easleydp.tempctrl.domain.ChamberRepository;
 import com.easleydp.tempctrl.domain.DummyChamberManager;
 import com.easleydp.tempctrl.domain.PropertyUtils;
+import com.easleydp.tempctrl.spring.config.AppProperties;
 
 @SpringBootApplication(
 // Uncomment this line to temporarily disable Spring Security:
@@ -33,6 +35,7 @@ import com.easleydp.tempctrl.domain.PropertyUtils;
 @EnableScheduling
 @EnableAsync
 @EnableRetry
+@EnableConfigurationProperties(AppProperties.class)
 public class TempctrlApplication {
     private static final Logger logger = LoggerFactory.getLogger(TempctrlApplication.class);
 
@@ -70,6 +73,11 @@ public class TempctrlApplication {
         logger.info("Using {}", useDummyChamberManager ? "DummyChamberManager" : "ArduinoChamberManager");
         return useDummyChamberManager ? new DummyChamberManager(chamberRepository)
                 : new ArduinoChamberManager(chamberRepository);
+    }
+
+    @Bean
+    public IpAddressUtils ipAddressUtils(AppProperties appProperties) {
+        return new IpAddressUtils(appProperties.getPublicIpChange().getIpProviders());
     }
 
     public static void main(String[] args) {

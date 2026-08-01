@@ -7,6 +7,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.util.Assert;
 
+import com.easleydp.tempctrl.dto.PointDto;
+import com.easleydp.tempctrl.dto.TemperatureProfileDto;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 /**
@@ -33,7 +35,7 @@ public class TemperatureProfile extends TemperatureProfileDto {
 
     /**
      * @param targetTemp
-     *            target temperature (degrees x 10)
+     *                   target temperature (degrees x 10)
      */
     public void addPoint(int hoursSinceStart, int targetTemp) {
         PointDto point = new PointDto(hoursSinceStart, targetTemp);

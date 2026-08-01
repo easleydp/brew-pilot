@@ -1,4 +1,4 @@
-package com.easleydp.tempctrl.domain;
+package com.easleydp.tempctrl.dto;
 
 /**
  * A _chamber_ is a temperature controlled container in which beer

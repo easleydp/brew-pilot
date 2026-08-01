@@ -19,7 +19,7 @@ import com.easleydp.tempctrl.domain.Chamber;
 import com.easleydp.tempctrl.domain.ChamberRepository;
 import com.easleydp.tempctrl.domain.Gyle;
 import com.easleydp.tempctrl.domain.Gyle.LeftSwitchedOffDetectionAction;
-import com.easleydp.tempctrl.domain.PointDto;
+import com.easleydp.tempctrl.dto.PointDto;
 import com.easleydp.tempctrl.domain.PropertyUtils;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.ObjectMapper;

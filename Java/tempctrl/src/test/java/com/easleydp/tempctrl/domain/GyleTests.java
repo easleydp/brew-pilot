@@ -30,6 +30,7 @@ import org.springframework.util.FileSystemUtils;
 
 import com.easleydp.tempctrl.domain.Gyle.LeftSwitchedOffDetectionAction;
 import com.easleydp.tempctrl.domain.Gyle.LogFileDescriptor;
+import com.easleydp.tempctrl.dto.GyleDto;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.MappingIterator;

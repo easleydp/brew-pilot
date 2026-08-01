@@ -1,7 +1,7 @@
 package com.easleydp.tempctrl.domain;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static com.easleydp.tempctrl.domain.Utils.roundToNearestHour;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.Calendar;
 import java.util.Date;

@@ -1,4 +1,4 @@
-package com.easleydp.tempctrl.domain;
+package com.easleydp.tempctrl.dto;
 
 import java.util.ArrayList;
 import java.util.Collections;

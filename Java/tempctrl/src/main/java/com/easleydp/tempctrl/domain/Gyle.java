@@ -43,6 +43,8 @@ import org.springframework.util.Assert;
 
 import com.easleydp.tempctrl.domain.optimise.Smoother;
 import com.easleydp.tempctrl.domain.optimise.Smoother.IntPropertyAccessor;
+import com.easleydp.tempctrl.dto.GyleDto;
+import com.easleydp.tempctrl.dto.TemperatureProfileDto;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -50,7 +52,7 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.SequenceWriter;
 
 /**
- * NOTE: This is a stateful bean since it contains buffered readings.
+ * NOTE: This is a stateful entity since it contains buffered readings.
  */
 public class Gyle extends GyleDto {
     private static final Logger logger = LoggerFactory.getLogger(Gyle.class);

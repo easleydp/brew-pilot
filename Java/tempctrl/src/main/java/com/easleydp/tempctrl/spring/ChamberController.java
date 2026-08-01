@@ -28,11 +28,11 @@ import com.easleydp.tempctrl.domain.Chamber;
 import com.easleydp.tempctrl.domain.ChamberReadings;
 import com.easleydp.tempctrl.domain.ChamberRepository;
 import com.easleydp.tempctrl.domain.Gyle;
-import com.easleydp.tempctrl.domain.GyleDto;
 import com.easleydp.tempctrl.domain.Mode;
-import com.easleydp.tempctrl.domain.PointDto;
 import com.easleydp.tempctrl.domain.PropertyUtils;
-import com.easleydp.tempctrl.domain.TemperatureProfileDto;
+import com.easleydp.tempctrl.dto.GyleDto;
+import com.easleydp.tempctrl.dto.PointDto;
+import com.easleydp.tempctrl.dto.TemperatureProfileDto;
 
 @RestController
 public class ChamberController {

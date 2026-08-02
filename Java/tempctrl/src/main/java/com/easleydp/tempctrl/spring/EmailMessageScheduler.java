@@ -19,8 +19,8 @@ import com.easleydp.tempctrl.domain.Chamber;
 import com.easleydp.tempctrl.domain.ChamberRepository;
 import com.easleydp.tempctrl.domain.Gyle;
 import com.easleydp.tempctrl.domain.Gyle.LeftSwitchedOffDetectionAction;
-import com.easleydp.tempctrl.dto.PointDto;
 import com.easleydp.tempctrl.domain.PropertyUtils;
+import com.easleydp.tempctrl.dto.PointDto;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
@@ -38,6 +38,9 @@ public class EmailMessageScheduler {
     @Autowired
     private ChamberRepository chamberRepository;
 
+    @Autowired
+    private IpAddressUtils ipAddressUtils;
+
     @Scheduled(cron = "${stillAliveMessage.cronSchedule}")
     public void sendStillAliveMessage() throws IOException {
         logger.debug("sendStillAliveMessage called");
@@ -47,6 +50,38 @@ public class EmailMessageScheduler {
         String json = writer.writeValueAsString(statusController.buildStatusReportResponse(true));
 
         emailService.sendSimpleMessage("BrewPilot server status report", json);
+    }
+
+    // Stored in memory; initial null check avoids alerting on cold startup
+    private String currentIp = null;
+
+    @Scheduled(fixedRateString = "${app.public-ip-change.period-hours}", timeUnit = TimeUnit.HOURS, initialDelay = 1)
+    public void checkPublicIp() {
+        logger.debug("checkPublicIp called");
+
+        String fetchedIp = ipAddressUtils.getPublicIP();
+        if (fetchedIp == null) {
+            return; // ipAddressUtils will have taken care of logging
+        }
+
+        // First run after boot: record the current IP without sending an email
+        if (currentIp == null) {
+            currentIp = fetchedIp;
+            logger.info("Public IP initially {}", currentIp);
+            return;
+        }
+
+        if (fetchedIp.equals(currentIp)) {
+            logger.info("Public IP remains {}", currentIp);
+        } else {
+            String oldIp = currentIp;
+            currentIp = fetchedIp;
+
+            String msg = String.format("Public IP changed! Old: %s, New: %s", oldIp, currentIp);
+            logger.warn(msg);
+            emailService.sendSimpleMessage("BrewPilot public IP changed 😟",
+                    msg + "\n\nPlease update your DNS record if automatic updates are disabled.");
+        }
     }
 
     // TODO: rename coldCrashCheck.periodMinutes to something like

@@ -72,16 +72,38 @@ public class EmailMessageScheduler {
         }
 
         if (fetchedIp.equals(currentIp)) {
-            logger.info("Public IP remains {}", currentIp);
+            logger.debug("Public IP remains {}", currentIp);
         } else {
             String oldIp = currentIp;
             currentIp = fetchedIp;
 
             String msg = String.format("Public IP changed! Old: %s, New: %s", oldIp, currentIp);
             logger.warn(msg);
-            emailService.sendSimpleMessage("BrewPilot public IP changed 😟",
-                    msg + "\n\nPlease update your DNS record if automatic updates are disabled.");
+
+            // Attempt auto DNS update if enabled. Either way, send an email alert.
+            String subject;
+            msg += "\n\n"; // A supplementary message will be appended to create the email body
+            if (ipAddressUtils.canUpdateDns()) {
+                String failureMsg = ipAddressUtils.updateDns();
+                if (failureMsg == null) {
+                    subject = "BrewPilot public IP changed";
+                    String supplementaryMsg = "Successfully updated DNS record 🙂.";
+                    logger.info(supplementaryMsg);
+                    msg += supplementaryMsg;
+                } else {
+                    subject = "BrewPilot public IP changed, DNS update failed 😟";
+                    String supplementaryMsg = "Automatic DNS update failed:" + failureMsg;
+                    logger.warn(supplementaryMsg);
+                    msg += supplementaryMsg;
+                }
+            } else {
+                subject = "BrewPilot public IP changed 😟";
+                msg += "Since automatic update is non enabled, please update your DNS record.";
+                logger.debug("Automatic DNS update is non enabled");
+            }
+            emailService.sendSimpleMessage(subject, msg);
         }
+
     }
 
     // TODO: rename coldCrashCheck.periodMinutes to something like

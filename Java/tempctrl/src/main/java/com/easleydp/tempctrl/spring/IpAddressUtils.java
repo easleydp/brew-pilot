@@ -10,15 +10,18 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
 
+import com.easleydp.tempctrl.spring.config.PublicIpChange;
+
 public class IpAddressUtils {
     private static final Logger logger = LoggerFactory.getLogger(IpAddressUtils.class);
 
     private final RestTemplate restTemplate = createRestTemplateWithTimeouts();
-
     private final List<String> ipProviders;
+    private final String dnsUpdateUrl;
 
-    public IpAddressUtils(List<String> ipProviders) {
-        this.ipProviders = ipProviders;
+    public IpAddressUtils(PublicIpChange publicIpChange) {
+        ipProviders = publicIpChange.getIpProviders();
+        dnsUpdateUrl = publicIpChange.getDnsUpdateUrl();
     }
 
     private RestTemplate createRestTemplateWithTimeouts() {
@@ -53,6 +56,10 @@ public class IpAddressUtils {
         return null;
     }
 
+    /**
+     * @return Public IP address or null in the event of any kind of failure (in
+     *         which case an error will have already been logged)
+     */
     String getPublicIP(String ipProvider) {
         try {
             // Fetch public IP as plain text
@@ -62,8 +69,6 @@ public class IpAddressUtils {
                 throw new IllegalStateException("Empty response");
             }
 
-            // TODO: Maybe confirm the response looks like an IP address
-
             return fetchedIp.trim();
 
         } catch (Exception e) {
@@ -71,6 +76,30 @@ public class IpAddressUtils {
             // Log as error since we want to hear about it (via email).
             logger.error("Failed to check public IP via {}: {}", ipProvider, e.getMessage());
             return null;
+        }
+    }
+
+    public boolean canUpdateDns() {
+        return !(dnsUpdateUrl == null || dnsUpdateUrl.isBlank());
+    }
+
+    /**
+     * @return null if successful, or a failure reason (in
+     *         which case an error will have already been logged).
+     */
+    public String updateDns() {
+        if (!canUpdateDns())
+            throw new IllegalStateException("Should not be called unless canUpdateDns() returns true");
+        try {
+            // Sends the GET request; expects no body back
+            restTemplate.getForEntity(dnsUpdateUrl, Void.class);
+            logger.debug("Successfully updated DNS record.");
+            return null;
+        } catch (Exception e) {
+            // Catches connection timeouts, 4xx/5xx HTTP codes, and network drops
+            String msg = e.getMessage();
+            logger.error("Failed to update DNS record: {}", msg);
+            return msg;
         }
     }
 

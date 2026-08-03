@@ -6,6 +6,7 @@ import java.util.List;
 public class PublicIpChange {
     private List<String> ipProviders = new ArrayList<>();
     private int periodHours;
+    private String dnsUpdateUrl;
 
     public int getPeriodHours() {
         return periodHours;
@@ -21,5 +22,13 @@ public class PublicIpChange {
 
     public void setIpProviders(List<String> ipProviders) {
         this.ipProviders = ipProviders;
+    }
+
+    public String getDnsUpdateUrl() {
+        return dnsUpdateUrl;
+    }
+
+    public void setDnsUpdateUrl(String dnsUpdateUrl) {
+        this.dnsUpdateUrl = dnsUpdateUrl;
     }
 }

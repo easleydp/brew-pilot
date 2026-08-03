@@ -77,7 +77,7 @@ public class TempctrlApplication {
 
     @Bean
     public IpAddressUtils ipAddressUtils(AppProperties appProperties) {
-        return new IpAddressUtils(appProperties.getPublicIpChange().getIpProviders());
+        return new IpAddressUtils(appProperties.getPublicIpChange());
     }
 
     public static void main(String[] args) {

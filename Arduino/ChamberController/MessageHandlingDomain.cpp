@@ -16,7 +16,7 @@ void handleSetChamberParams(char* cmd) {
 
   i = j;
   j = nullNextComma(cmd, i);
-  int16_t gyleAgeHours = atoi(&cmd[i]);
+  int32_t gyleAgeHours = atol(&cmd[i]);
 
   i = j;
   j = nullNextComma(cmd, i);

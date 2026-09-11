@@ -67,7 +67,7 @@ struct ChamberParams : ChecksummedParams {
 struct MovingChamberParams : ChecksummedParams {
   int16_t tTarget;
   int16_t tTargetNext;
-  int16_t gyleAgeHours;
+  int32_t gyleAgeHours;
   float integral;  // Worth preserving this since it may have accumulated a useful value over time
 };
 
@@ -151,7 +151,7 @@ void saveMovingChamberParamsOnceInAWhile(uint8_t chamberId, MovingChamberParams&
 
 extern boolean movingChamberParamsSaved[CHAMBER_COUNT];
 void setChamberParams(
-    ChamberData& cd, int16_t gyleAgeHours, int16_t tTarget, int16_t tTargetNext, int16_t tMin, int16_t tMax, boolean hasHeater,
+    ChamberData& cd, int32_t gyleAgeHours, int16_t tTarget, int16_t tTargetNext, int16_t tMin, int16_t tMax, boolean hasHeater,
     uint8_t fridgeMinOnTimeMins, uint8_t fridgeMinOffTimeMins, uint8_t fridgeSwitchOnLagMins, float Kp, float Ki, float Kd, char mode);
 
 /** Called from setup() */

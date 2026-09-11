@@ -3,6 +3,7 @@
  * @brief EEPROM management and chamber state data.
  */
 #include "ChamberData.h"
+
 #include <util/crc16.h>
 
 int16_t tExternal;
@@ -66,7 +67,7 @@ void saveMovingChamberParamsOnceInAWhile(uint8_t chamberId, MovingChamberParams&
 }
 
 void setChamberParams(
-    ChamberData& cd, int16_t gyleAgeHours, int16_t tTarget, int16_t tTargetNext, int16_t tMin, int16_t tMax, boolean hasHeater,
+    ChamberData& cd, int32_t gyleAgeHours, int16_t tTarget, int16_t tTargetNext, int16_t tMin, int16_t tMax, boolean hasHeater,
     uint8_t fridgeMinOnTimeMins, uint8_t fridgeMinOffTimeMins, uint8_t fridgeSwitchOnLagMins, float Kp, float Ki, float Kd, char mode) {
   logMsg(LOG_DEBUG, "CD", '0', cd.chamberId, tTarget /* int16_t */, mode /* char */);
 
@@ -128,6 +129,8 @@ void initChamberData() {
         memcpy(&params, &eepromParams, sizeof(ChamberParams));
         logMsg(LOG_DEBUG, "CD", 'p', chamberId);
       } else {
+        // Note: Expect to see this error logged once per chamber if you've change the
+        // nature of the params (member fields or their types)
         logMsg(LOG_ERROR, "CD", 'P', chamberId);
       }
     }
@@ -138,6 +141,8 @@ void initChamberData() {
         memcpy(&mParams, &eepromMParams, sizeof(MovingChamberParams));
         logMsg(LOG_DEBUG, "CD", 't', chamberId);
       } else {
+        // Note: Expect to see this error logged once per chamber if you've change the
+        // nature of the params (member fields or their types)
         logMsg(LOG_ERROR, "CD", 'T', chamberId);
       }
     }

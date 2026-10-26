@@ -9,7 +9,6 @@ import axios from 'axios';
 import useInterval from '../api/useInterval';
 import SpikeDetector from '../util/SpikeDetector';
 import ITemperatureProfile from '../api/ITemperatureProfile';
-import applyPatchRangeDefaultLeft from '../api/RangeDefaultLeftPatch.js';
 
 import Highcharts, { Chart, Series } from 'highcharts/highstock';
 
@@ -460,11 +459,6 @@ const GyleChart = () => {
       '=================== GyleChart useEffect invoked ======================'
     );
 
-    // For this chart we want the Highstock range selector to default to the right hand side
-    // of the x-axis, i.e. to show latest points by default. (This is the stock behaviour
-    // but we have to take care to undo the patch applied in TemperatureProfile.tsx)
-    applyPatchRangeDefaultLeft(Highcharts, false);
-
     // Returns promise for retrieving IGyleDetails
     const getLatestGyleDetails = (): Promise<IGyleDetails> => {
       const url = '/tempctrl/guest/chamber/' + chamberId + '/latest-gyle-details';
@@ -745,13 +739,13 @@ const GyleChart = () => {
 
           legend: {
             enabled: true,
-            align: 'right',
+            //align: 'right',
             backgroundColor: '#FFFFE7',
             borderColor: '#999',
             borderWidth: 1,
-            layout: 'vertical',
-            verticalAlign: 'top',
-            y: 100,
+            //layout: 'vertical',
+            //verticalAlign: 'top',
+            //y: 100,
             shadow: true,
           },
 

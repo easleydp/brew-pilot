@@ -30,12 +30,6 @@ The project consists of the following components, each in a specific top-level f
 
 There is also an `./nginx` folder, containing configuration files for the recommended web server.
 
-NOTE: The frontend web app features a patched version of the Highcharts library
-(based on highstock.src.js 7.2.1). This is so we can override Highcharts default behaviour to
-always scroll a 'range selector' to show the latest data. For our TemperatureProfile chart, we
-want the range selector to default to the left hand side of the x-axis, i.e. to show earliest
-points by default.
-
 ## Code Style
 
 - Follow the formatting rules implied by the component's `.prettierrc` file if

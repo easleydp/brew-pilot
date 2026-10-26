@@ -7,7 +7,6 @@ import { useAppState, Auth } from './state';
 import { useParams } from 'react-router-dom';
 import IGyle from '../api/IGyle';
 import ITemperatureProfile from '../api/ITemperatureProfile';
-import applyPatchRangeDefaultLeft from '../api/RangeDefaultLeftPatch.js';
 import Utils from '../util/Utils';
 import axios from 'axios';
 import { Button } from 'react-bootstrap';
@@ -302,7 +301,7 @@ const TemperatureProfile = ({ chamberSummaries }: TemperatureProfileProps) => {
         minRange: 14 * hourMs,
         labels: {
           formatter: function () {
-            return formatTimeAsHtml(this.value);
+          return formatTimeAsHtml(Number(this.value));
           },
           useHTML: true,
           // staggerLines: 2
@@ -469,7 +468,7 @@ const TemperatureProfile = ({ chamberSummaries }: TemperatureProfileProps) => {
 
     // For this chart we want the Highstock range selector to default to the left hand side
     // of the x-axis, i.e. to show earliest points by default.
-    applyPatchRangeDefaultLeft(Highcharts, true);
+    //applyPatchRangeDefaultLeft(Highcharts, true);
 
     // Returns promise for retrieving IGyle. (We retrieve the whole gyle since we need dtStarted/Ended as well as the profile.)
     const getGyle = (): Promise<IGyle> => {

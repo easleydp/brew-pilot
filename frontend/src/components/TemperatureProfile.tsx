@@ -417,7 +417,7 @@ const TemperatureProfile = ({ chamberSummaries }: TemperatureProfileProps) => {
                     otherNeighbourP = points[iNearestP - 1];
                   } else {
                     const spaceToLeft = nearestP.x - points[iNearestP - 1].x;
-                    const spaceToRight = (points[iNearestP + 1].x = nearestP.x);
+                    const spaceToRight = points[iNearestP + 1].x - nearestP.x;
                     otherNeighbourP =
                       spaceToLeft > spaceToRight ? points[iNearestP - 1] : points[iNearestP + 1];
                   }

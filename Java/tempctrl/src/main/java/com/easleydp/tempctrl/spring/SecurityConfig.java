@@ -131,7 +131,6 @@ public class SecurityConfig {
         protected void configure(HttpSecurity http) throws Exception {
             // @formatter:off
             http
-                    .csrf().disable()
                     .authorizeRequests(authorizeRequests ->
                         authorizeRequests
                             .anyRequest().authenticated()

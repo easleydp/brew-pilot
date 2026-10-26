@@ -181,7 +181,11 @@ const GyleManagement = () => {
             return true;
           }
         }),
-        formTHold: Yup.number().integer('Must be an integer').min(-100).max(600),
+        formTHold: Yup.number()
+          .transform((value, originalValue) => (originalValue === '' ? undefined : value))
+          .integer('Must be an integer')
+          .min(-100)
+          .max(600),
       }),
     onSubmit: (values, { setSubmitting }) => {
       const temperatureProfileTextToJson = (text: string): ITemperatureProfile => {

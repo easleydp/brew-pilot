@@ -14,4 +14,3 @@ npm ci
   `/tempctrl` are proxied to the backend at `http://localhost:8081`.
 - `npm test` runs the test suite once; `npm run test:watch` starts it in watch mode.
 - `npm run build` type-checks and creates the production build in `build/`.
-- `npm run lint` lints the application source.

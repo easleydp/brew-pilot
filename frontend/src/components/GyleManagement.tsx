@@ -144,8 +144,11 @@ const GyleManagement = () => {
           return !val || this.parent['formDtStarted'];
         })
         .test('', 'End time must be later than Start time', function (val) {
-          const millis = val && dateTimeStrIsValid(val) ? dateTimeStrToMillis(val) : undefined;
-          return !millis || millis > dateTimeStrToMillis(this.parent['formDtStarted']);
+          const start = this.parent['formDtStarted'];
+          if (!dateTimeStrIsValid(val) || !dateTimeStrIsValid(start)) {
+            return true;
+          }
+          return dateTimeStrToMillis(val) > dateTimeStrToMillis(start);
         }),
       formTemperatureProfile: Yup.string()
         .test({

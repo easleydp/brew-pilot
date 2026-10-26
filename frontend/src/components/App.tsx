@@ -187,7 +187,10 @@ const Nested = () => {
         </Route>
         <Route path="/gyle-management/:chamberId" component={GyleManagement} />
         <Route path="/create-gyle/:chamberId" component={CreateGyle} />
-        <Route path="/gyle-chart/:chamberId" component={GyleChart} />
+        <Route
+          path="/gyle-chart/:chamberId"
+          render={({ match }) => <GyleChart key={match.params.chamberId} />}
+        />
         <Route path="/email-test" component={EmailTest} />
         <Route path="/">
           <Home errorMessage={chamberSummariesError} />

@@ -452,6 +452,8 @@ const GyleChart = () => {
   // };
 
   useEffect(() => {
+    let cancelled = false;
+
     console.info(
       Auth[isAuth],
       chamberId,
@@ -906,6 +908,9 @@ const GyleChart = () => {
     } else {
       getLatestGyleDetails()
         .then((gyleDetails) => {
+          if (cancelled) {
+            return;
+          }
           gyleDetailsRef.current = gyleDetails;
           readingsPeriodMillisRef.current = gyleDetails.readingsPeriodMillis;
           lastDtRef.current = gyleDetails.recentReadings.length
@@ -916,6 +921,9 @@ const GyleChart = () => {
           return getAggregatedReadings(gyleDetails);
         })
         .then((aggregatedReadings) => {
+          if (cancelled || !aggregatedReadings) {
+            return;
+          }
           // TODO: Remove this debug output after Jun 2021. Hoping by then to have got to the bottom of this:
           //   Error: Reading at 1610248020000 is not later than our the oldest reading we already have (1611499230000).
           //   .
@@ -931,6 +939,12 @@ const GyleChart = () => {
           getCurrentChart().hideLoading();
         });
     }
+
+    return () => {
+      cancelled = true;
+      chartRef.current?.destroy();
+      chartRef.current = null;
+    };
   }, [dispatch, history, chamberId, isAuth, addBunchOfReadings, location.pathname, restoreUtcMillisPrecision]);
 
   useInterval(() => {

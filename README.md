@@ -161,10 +161,10 @@ cd ~/brew-pilot/Java/tempctrl/build/libs && mv tempctrl*.jar app.jar && rsync -a
 sudo systemctl start brewpilot
 ```
 
-Install the front-end app as per any standard React app, i.e. run `npm run build` then copy the contents of the `build` folder to the server. The command I use is:
+Install the front-end app as per any standard React app, i.e. run `nvm use && npm run build` then copy the contents of the `build` folder to the server. The command I use is:
 
 ```
-cd ~/brew-pilot/frontend && npm run build && rsync -a --delete ~/brew-pilot/frontend/build/ <username>@raspberrypi:~/brew-pilot/frontend
+cd ~/brew-pilot/frontend && nvm use && npm run build && rsync -a --delete ~/brew-pilot/frontend/build/ <username>@raspberrypi:~/brew-pilot/frontend
 
 ```
 

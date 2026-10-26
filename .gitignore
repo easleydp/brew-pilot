@@ -23,6 +23,7 @@
 hs_err_pid*
 
 *.code-workspace
+.vscode
 /staticContent
 /pi-staticContent
 /Highcharts

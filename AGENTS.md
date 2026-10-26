@@ -20,19 +20,19 @@ The project consists of the following components, each in a specific top-level f
 
 1. `./Arduino` - Arduino microcontroller code written in C++.
    Responsible for real time temperature control.
-   Able to manage fermentation chambers autonomously if the Java app crashes (simply
-   maintaining the last 'set temperature').
-2. `./Java` - Backend for the management interface. A Java Spring Boot application running on
+   Able to manage fermentation chambers autonomously if the management app crashes (simply
+   maintaining the latest 'set temperature' for each chamber).
+2. `./Java` - The management interface backend is a Java Spring Boot application targetting
    a RaspberryPi. Communicates with the Arduino over a serial interface, regularly collecting
-   sensor readings and updating the latest 'set temperature' (for each chamber) according to a
-   user specified temperature profile.
-3. `./Frontend` - Frontend is a React web app written in TypeScript.
+   sensor readings and updating the latest 'set temperature' according to a
+   user specified temperature profile (all on a per chamber basis).
+3. `./frontend` - The management interface frontend is a React web app written in TypeScript.
 
 There is also an `./nginx` folder, containing configuration files for the recommended web server.
 
 ## Code Style
 
-- Always follow the formatting rules implied by the component's `.prettierrc` file if
+- Follow the formatting rules implied by the component's `.prettierrc` file if
   there is one, otherwise adhere to the existing style.
 - Use consistent, descriptive naming.
 - Prefer small, focused components.

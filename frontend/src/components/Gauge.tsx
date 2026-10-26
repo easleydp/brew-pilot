@@ -51,7 +51,7 @@ const Gauge = ({ chamberId, tTarget, handleAuthError }: GaugeProps) => {
       pattern.setAttribute('width', '400');
       pattern.setAttribute('height', '400');
       const image = pattern.appendChild(document.createElement('image'));
-      image.setAttribute('href', process.env.PUBLIC_URL + '/' + idAndImgName + '.jpg');
+      image.setAttribute('href', `${import.meta.env.BASE_URL}${idAndImgName}.jpg`);
       image.setAttribute('x', chamberId % 2 ? '20' : '-70');
       image.setAttribute('y', chamberId % 2 ? '20' : '-70');
       image.setAttribute('style', chamberId % 2 ? '' : 'transform: scaleY(-1) translateY(-260px)');

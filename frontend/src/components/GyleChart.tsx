@@ -853,7 +853,8 @@ const GyleChart = () => {
           };
           readingsLogs = readingsLogs.filter((logName, i) => {
             const gen = getGen(logName);
-            return gen <= genN && (gen !== genN || getGen(readingsLogs[i + 1]) !== genN);
+            const nextLogName = readingsLogs[i + 1];
+            return gen <= genN && (gen !== genN || !nextLogName || getGen(nextLogName) !== genN);
           });
         }
         Promise.all(readingsLogs.map((logName) => getLogFileReadings(logName))).then(

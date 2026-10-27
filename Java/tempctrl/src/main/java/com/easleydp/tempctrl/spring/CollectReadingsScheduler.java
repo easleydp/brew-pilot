@@ -80,10 +80,10 @@ public class CollectReadingsScheduler {
             if (lg != null && lg.isActive()) {
                 lg.logLatestReadings(latestReadings, timeNow);
             }
-        } catch (Throwable t) {
-            logger.error(t.getMessage(), t);
-            if (t instanceof IOException)
-                chamberManager.handleIOException((IOException) t);
+        } catch (Exception e) {
+            logger.error(e.getMessage(), e);
+            if (e instanceof IOException)
+                chamberManager.handleIOException((IOException) e);
         }
     }
 

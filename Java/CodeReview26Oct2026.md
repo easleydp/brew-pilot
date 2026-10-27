@@ -33,7 +33,7 @@ File: [Java/tempctrl/src/main/java/com/easleydp/tempctrl/spring/SecurityConfig.j
 - This pattern is brittle in a multi-threaded app: concurrent logins, bean initialisation ordering, or tests can create null/stale references. It also hides dependencies from Spring, making the code harder to reason about and harder to test.
 - It is not a safe substitute for proper dependency injection.
 
-### 4) `@Async` is applied to a private method, so the async behaviour is effectively bypassed
+### [FIXED] 4) `@Async` is applied to a private method, so the async behaviour is effectively bypassed
 
 File: [Java/tempctrl/src/main/java/com/easleydp/tempctrl/spring/EmailServiceImpl.java](./tempctrl/src/main/java/com/easleydp/tempctrl/spring/EmailServiceImpl.java)
 
@@ -42,7 +42,7 @@ File: [Java/tempctrl/src/main/java/com/easleydp/tempctrl/spring/EmailServiceImpl
 - Because `sendSimpleMessage()` is the public method that calls the private helper, the retry/async intent is split across two methods in a way that can easily produce unexpected synchronous behaviour.
 - This is a correctness issue in the application’s email delivery path and can delay request handling or produce confusing failure behaviour.
 
-### 5) `CollectReadingsScheduler` catches `Throwable`, which masks fatal JVM-level failures
+### [FIXED] 5) `CollectReadingsScheduler` catches `Throwable`, which masks fatal JVM-level failures
 
 File: [Java/tempctrl/src/main/java/com/easleydp/tempctrl/spring/CollectReadingsScheduler.java](./tempctrl/src/main/java/com/easleydp/tempctrl/spring/CollectReadingsScheduler.java)
 

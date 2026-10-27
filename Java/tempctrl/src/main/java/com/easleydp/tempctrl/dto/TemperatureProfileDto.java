@@ -23,18 +23,25 @@ public class TemperatureProfileDto {
     }
 
     public void setPoints(List<PointDto> points) {
+        validatePoints(points);
+        this.points = new ArrayList<>(points);
+    }
+
+    public void validatePoints(List<PointDto> points) {
         if (points == null)
             throw new IllegalArgumentException("points is required");
         if (points.isEmpty())
             throw new IllegalArgumentException("points cannot be empty");
         int lastHoursSinceStart = Integer.MIN_VALUE;
         for (PointDto point : points) {
+            if (point == null)
+                throw new IllegalArgumentException("point cannot be null");
             if (point.getHoursSinceStart() < lastHoursSinceStart)
                 throw new IllegalArgumentException("Each point must have hoursSinceStart > the previous point");
             lastHoursSinceStart = point.getHoursSinceStart();
         }
-
-        this.points = new ArrayList<>(points);
+        if (points.get(0).getHoursSinceStart() != 0)
+            throw new IllegalArgumentException("First profile point isn't at t0: " + points.get(0).getHoursSinceStart());
     }
 
     @Override

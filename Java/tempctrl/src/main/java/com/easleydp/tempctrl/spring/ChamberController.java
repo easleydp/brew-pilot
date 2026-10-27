@@ -239,17 +239,20 @@ public class ChamberController {
     public void updateLatestGyleProfile(@PathVariable("chamberId") int chamberId,
             @RequestBody TemperatureProfileDto profile) {
         logger.info("POST latest-gyle-profile, {},\n\t{}", chamberId, profile);
-        Gyle latestGyle = getLatestGyleForChamber(chamberId);
-        TemperatureProfileDto currentProfile = latestGyle.getTemperatureProfile();
-        if (currentProfile.equals(profile)) { // optimisation
-            logger.info(" ... no change.");
-            return;
-        }
-        logger.info(" ... was:\n\t{}", currentProfile);
-        latestGyle.setTemperatureProfile(profile);
-
         try {
+            Gyle latestGyle = getLatestGyleForChamber(chamberId);
+            TemperatureProfileDto currentProfile = latestGyle.getTemperatureProfile();
+            if (currentProfile.equals(profile)) { // optimisation
+                logger.info(" ... no change.");
+                return;
+            }
+            logger.info(" ... was:\n\t{}", currentProfile);
+            profile.validatePoints(profile.getPoints());
+            latestGyle.setTemperatureProfile(profile);
+
             latestGyle.updateJsonFile();
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid temperature profile: " + e.getMessage(), e);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -263,31 +266,40 @@ public class ChamberController {
     @PostMapping("/admin/chamber/{chamberId}/latest-gyle")
     public void updateLatestGyle(@PathVariable("chamberId") int chamberId, @RequestBody GyleDto gyle) {
         logger.info("POST latest-gyle, {}, {}", chamberId, gyle);
-        Gyle latestGyle = getLatestGyleForChamber(chamberId);
-        if (gyle.getMode() == Mode.HOLD) {
-            if (latestGyle.getMode() != Mode.HOLD) {
-                // HOLD mode has just been engaged. Unless the client has specified the hold
-                // temp, we need to record (persistently in the JSON file in case of restart)
-                // the latest value of tBeer.
-                if (gyle.gettHold() == null) {
-                    Chamber chamber = getChamberById(chamberId);
-                    ChamberReadings latestReadings = chamber.getLatestChamberReadings();
-                    gyle.settHold(latestReadings != null ? latestReadings.gettBeer() : null);
+        try {
+            Gyle latestGyle = getLatestGyleForChamber(chamberId);
+            if (gyle.getMode() == Mode.HOLD) {
+                if (latestGyle.getMode() != Mode.HOLD) {
+                    // HOLD mode has just been engaged. Unless the client has specified the hold
+                    // temp, we need to record (persistently in the JSON file in case of restart)
+                    // the latest value of tBeer.
+                    if (gyle.gettHold() == null) {
+                        Chamber chamber = getChamberById(chamberId);
+                        ChamberReadings latestReadings = chamber.getLatestChamberReadings();
+                        gyle.settHold(latestReadings != null ? latestReadings.gettBeer() : null);
+                    }
+                } else {
+                    // Mode remains HOLD. Ensure that, if the posted DTO doesn't specify tHold,
+                    // the established value continues in force.
+                    if (gyle.gettHold() == null) {
+                        gyle.settHold(latestGyle.gettHold());
+                    }
                 }
             } else {
-                // Mode remains HOLD. Ensure that, if the posted DTO doesn't specify tHold,
-                // the established value continues in force.
-                if (gyle.gettHold() == null) {
-                    gyle.settHold(latestGyle.gettHold());
-                }
+                gyle.settHold(null);
             }
-        } else {
-            gyle.settHold(null);
-        }
-        BeanUtils.copyProperties(gyle, latestGyle);
 
-        try {
+            gyle.validateRequiredState();
+            latestGyle.setName(gyle.getName());
+            latestGyle.setTemperatureProfile(gyle.getTemperatureProfile());
+            latestGyle.setDtStarted(gyle.getDtStarted());
+            latestGyle.setDtEnded(gyle.getDtEnded());
+            latestGyle.setMode(gyle.getMode());
+            latestGyle.settHold(gyle.gettHold());
+
             latestGyle.updateJsonFile();
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid gyle update: " + e.getMessage(), e);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

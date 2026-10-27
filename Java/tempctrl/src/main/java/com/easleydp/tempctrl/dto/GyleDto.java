@@ -49,17 +49,26 @@ public class GyleDto {
         if (profile == null) {
             throw new IllegalArgumentException("temperatureProfile is required");
         }
+        profile.validatePoints(profile.getPoints());
+    }
 
-        List<PointDto> points = profile.getPoints();
-        if (points == null || points.isEmpty()) {
-            throw new IllegalArgumentException("Profile points cannot be " + (points == null ? "null" : "empty"));
+    public void validateRequiredState() {
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("name is required");
         }
-        int p0HoursSinceStart = points.get(0).getHoursSinceStart();
-        if (p0HoursSinceStart != 0) {
-            throw new IllegalArgumentException("First profile point isn't at t0: " + p0HoursSinceStart);
+        if (mode == null) {
+            throw new IllegalArgumentException("mode is required");
         }
-
-        // See PointDto for further validation
+        validateTemperatureProfile(temperatureProfile);
+        if (dtStarted != null && dtStarted < 0) {
+            throw new IllegalArgumentException("dtStarted must be non-negative");
+        }
+        if (dtEnded != null && dtStarted != null && dtEnded < dtStarted) {
+            throw new IllegalArgumentException("dtEnded cannot be before dtStarted");
+        }
+        if (mode == Mode.HOLD && tHold == null) {
+            throw new IllegalArgumentException("tHold is required when mode is HOLD");
+        }
     }
 
     public String getName() {

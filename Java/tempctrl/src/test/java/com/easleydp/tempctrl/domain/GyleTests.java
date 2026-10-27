@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -170,6 +171,25 @@ public class GyleTests {
     public void shouldStaggerFirstReadingsOfEachChamber() throws Exception {
         env.setProperty("readings.staggerFirstReadings", "" + true);
         // TODO
+    }
+
+    @Test
+    public void shouldRejectInvalidGyleState() {
+        GyleDto invalid = new GyleDto();
+        assertThrows(IllegalArgumentException.class, () -> invalid.validateRequiredState());
+
+        invalid.setName("demo");
+        invalid.setMode(Mode.AUTO);
+        invalid.setTemperatureProfile(new com.easleydp.tempctrl.dto.TemperatureProfileDto(java.util.Arrays.asList(
+                new com.easleydp.tempctrl.dto.PointDto(0, 150),
+                new com.easleydp.tempctrl.dto.PointDto(2, 160))));
+        invalid.setDtStarted(200L);
+        invalid.setDtEnded(100L);
+        assertThrows(IllegalArgumentException.class, () -> invalid.validateRequiredState());
+
+        invalid.setDtEnded(null);
+        invalid.setMode(Mode.HOLD);
+        assertThrows(IllegalArgumentException.class, () -> invalid.validateRequiredState());
     }
 
     private void assertReadingsLookOk(int expectedCCount, Path logFile) throws IOException {

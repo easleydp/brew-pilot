@@ -41,6 +41,23 @@ public class TemperatureProfileTests {
     }
 
     @Test
+    public void testRejectsInvalidProfilePoints() {
+        TemperatureProfileDto invalidProfile = new TemperatureProfileDto();
+        assertThrows(IllegalArgumentException.class, () -> invalidProfile.setPoints(null));
+        assertThrows(IllegalArgumentException.class, () -> invalidProfile.setPoints(java.util.Collections.emptyList()));
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            profile.setPoints(java.util.Arrays.asList(new com.easleydp.tempctrl.dto.PointDto(1, 150),
+                    new com.easleydp.tempctrl.dto.PointDto(0, 160)));
+        });
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            profile.setPoints(java.util.Arrays.asList(new com.easleydp.tempctrl.dto.PointDto(1, 150),
+                    new com.easleydp.tempctrl.dto.PointDto(2, 160)));
+        });
+    }
+
+    @Test
     public void testGetCrashStartPoint() {
         profile = new TemperatureProfile();
         profile.addPoint(0, 175);

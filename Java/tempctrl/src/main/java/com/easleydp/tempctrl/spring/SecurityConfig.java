@@ -1,6 +1,7 @@
 package com.easleydp.tempctrl.spring;
 
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -51,15 +52,8 @@ public class SecurityConfig {
     @Autowired
     private Environment env;
 
-    @Autowired
-    private EmailService emailService;
-
-    // Hack. Allow static code to access the above Spring component.
-    private static EmailService _emailService = null;
-
     private static final int loginFailureDelayMs_lowest = 1 * 1000;
     private static final int loginFailureDelayMs_highest = 64 * 1000; // Some power of 2 greater than lowest
-    private static int loginFailureDelayMs = loginFailureDelayMs_lowest;
 
     @Bean
     public UserDetailsService userDetailsService() throws Exception {
@@ -73,9 +67,6 @@ public class SecurityConfig {
         pwdHash = env.getProperty("pwdhash.admin").replaceAll("#dollar#", "\\$"); // For running from vscode
         Assert.state(pwdHash != null && pwdHash.length() > 0, "Admin password not specified");
         manager.createUser(User.withUsername("admin").password(pwdHash).roles("USER", "ADMIN").build());
-
-        // Hack
-        _emailService = emailService;
 
         return manager;
     }
@@ -126,6 +117,13 @@ public class SecurityConfig {
 
     @Configuration
     public static class FormLoginWebSecurityConfigurerAdapter extends MyWebSecurityConfigurerAdapter {
+        private final EmailService emailService;
+
+        private final AtomicInteger loginFailureDelayMs = new AtomicInteger(loginFailureDelayMs_lowest);
+
+        public FormLoginWebSecurityConfigurerAdapter(EmailService emailService) {
+            this.emailService = emailService;
+        }
 
         @Override
         protected void configure(HttpSecurity http) throws Exception {
@@ -159,13 +157,12 @@ public class SecurityConfig {
 
                     logger.info("Successful login ({})", request.getParameter("username"));
                     if (!isAdmin) {
-                        _emailService.sendSimpleMessage("BrewPilot guest login", "");
+                        emailService.sendSimpleMessage("BrewPilot guest login", "");
                     }
 
                     // We use successful logins as a hook to decay any accumulated login failure
                     // delay.
-                    if (loginFailureDelayMs > loginFailureDelayMs_lowest) {
-                        loginFailureDelayMs = loginFailureDelayMs_lowest;
+                    if (loginFailureDelayMs.getAndSet(loginFailureDelayMs_lowest) > loginFailureDelayMs_lowest) {
                         logger.debug("Login failure delay reset");
                     }
 
@@ -182,13 +179,15 @@ public class SecurityConfig {
                 public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response,
                         AuthenticationException e) throws IOException, ServletException {
                     logger.warn("Login failure ({})", request.getParameter("username"));
-                    _emailService.sendSimpleMessage("BrewPilot login failure", request.getParameter("username"));
+                    emailService.sendSimpleMessage("BrewPilot login failure", request.getParameter("username"));
 
                     // Apply an increasing delay to failed login attempts.
-                    Utils.sleep(loginFailureDelayMs);
-                    if (loginFailureDelayMs < loginFailureDelayMs_highest) {
-                        loginFailureDelayMs *= 2;
-                        logger.warn("Login failure delay increased to {}", loginFailureDelayMs);
+                    int delayMs = loginFailureDelayMs.get();
+                    Utils.sleep(delayMs);
+                    int nextDelayMs = loginFailureDelayMs.updateAndGet(
+                            current -> Math.min(current * 2, loginFailureDelayMs_highest));
+                    if (nextDelayMs > delayMs) {
+                        logger.warn("Login failure delay increased to {}", nextDelayMs);
                     }
 
                     response.setContentType("application/json");

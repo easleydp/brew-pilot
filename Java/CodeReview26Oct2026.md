@@ -78,7 +78,7 @@ File: [Java/tempctrl/src/main/java/com/easleydp/tempctrl/util/OsCommandExecuter.
 
 ## Minor
 
-### 9) Adapter naming is confusing and misleading
+### [FIXED] 9) Adapter naming is confusing and misleading
 
 File: [Java/tempctrl/src/main/java/com/easleydp/tempctrl/spring/SecurityConfig.java](./tempctrl/src/main/java/com/easleydp/tempctrl/spring/SecurityConfig.java)
 

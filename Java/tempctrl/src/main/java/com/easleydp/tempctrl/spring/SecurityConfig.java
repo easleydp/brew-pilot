@@ -74,7 +74,7 @@ public class SecurityConfig {
 
     @Configuration
     @Order(1)
-    public static class GuestConfigurationAdapter extends MyWebSecurityConfigurerAdapter {
+    public static class AdminConfigurationAdapter extends MyWebSecurityConfigurerAdapter {
         @Override
         protected void configure(HttpSecurity http) throws Exception {
             configure(http, "/admin/**", "ADMIN");
@@ -83,7 +83,7 @@ public class SecurityConfig {
 
     @Configuration
     @Order(2)
-    public static class AdminConfigurationAdapter extends MyWebSecurityConfigurerAdapter {
+    public static class GuestConfigurationAdapter extends MyWebSecurityConfigurerAdapter {
         @Override
         protected void configure(HttpSecurity http) throws Exception {
             configure(http, "/guest/**", "USER");

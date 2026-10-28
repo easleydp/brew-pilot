@@ -17,6 +17,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.SpringVersion;
 import org.springframework.mock.web.MockHttpSession;
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -76,6 +77,25 @@ class TempctrlApplicationTests {
                 .param("password", "admin"))
                 .andExpect(status().isOk())
                 .andExpect(content().json("{\"result\":\"OK\", \"isAdmin\":true}"));
+    }
+
+    @Test
+    void roleSpecificSecurityChainsEnforceRoles() throws Exception {
+        mockMvc.perform(get("/admin/security-chain-probe")
+                .with(SecurityMockMvcRequestPostProcessors.user("guest").roles("USER")))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/guest/security-chain-probe")
+                .with(SecurityMockMvcRequestPostProcessors.user("admin").roles("USER", "ADMIN")))
+                .andExpect(status().isNotFound());
+
+        mockMvc.perform(get("/admin/security-chain-probe")
+                .with(SecurityMockMvcRequestPostProcessors.user("admin").roles("USER", "ADMIN")))
+                .andExpect(status().isNotFound());
+
+        mockMvc.perform(get("/guest/security-chain-probe")
+                .with(SecurityMockMvcRequestPostProcessors.user("guest").roles("USER")))
+                .andExpect(status().isNotFound());
     }
 
 }

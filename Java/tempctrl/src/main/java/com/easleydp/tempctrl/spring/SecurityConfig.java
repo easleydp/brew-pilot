@@ -17,10 +17,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.User;
@@ -29,6 +27,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.AuthenticationEntryPoint;
+import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
@@ -55,6 +54,8 @@ public class SecurityConfig {
     private static final int loginFailureDelayMs_lowest = 1 * 1000;
     private static final int loginFailureDelayMs_highest = 64 * 1000; // Some power of 2 greater than lowest
 
+    private final AtomicInteger loginFailureDelayMs = new AtomicInteger(loginFailureDelayMs_lowest);
+
     @Bean
     public UserDetailsService userDetailsService() throws Exception {
         InMemoryUserDetailsManager manager = new InMemoryUserDetailsManager();
@@ -72,136 +73,55 @@ public class SecurityConfig {
         return manager;
     }
 
-    @Configuration
     @Order(1)
-    public static class AdminConfigurationAdapter extends MyWebSecurityConfigurerAdapter {
-        @Override
-        protected void configure(HttpSecurity http) throws Exception {
-            configure(http, "/admin/**", "ADMIN");
-        }
+    @Bean
+    public SecurityFilterChain adminSecurityFilterChain(HttpSecurity http) throws Exception {
+        configureRoleSecurity(http, "/admin/**", "ADMIN");
+        return http.build();
     }
 
-    @Configuration
     @Order(2)
-    public static class GuestConfigurationAdapter extends MyWebSecurityConfigurerAdapter {
-        @Override
-        protected void configure(HttpSecurity http) throws Exception {
-            configure(http, "/guest/**", "USER");
-        }
+    @Bean
+    public SecurityFilterChain guestSecurityFilterChain(HttpSecurity http) throws Exception {
+        configureRoleSecurity(http, "/guest/**", "USER");
+        return http.build();
     }
 
-    @Configuration
     @Order(3)
-    public static class ActuatorConfigurationAdapter extends MyWebSecurityConfigurerAdapter {
-        @Override
-        protected void configure(HttpSecurity http) throws Exception {
-            configure(http, "/actuator/**", "ADMIN");
-        }
+    @Bean
+    public SecurityFilterChain actuatorSecurityFilterChain(HttpSecurity http) throws Exception {
+        configureRoleSecurity(http, "/actuator/**", "ADMIN");
+        return http.build();
     }
 
-// @formatter:off
-// Uncomment this to disable authentication for actuator
-//    @Configuration
-//    @Order(3)
-//    public static class ActuatorConfigurationAdapter extends MyWebSecurityConfigurerAdapter
-//    {
-//        @Override
-//        protected void configure(HttpSecurity http) throws Exception {
-//            http.authorizeRequests()
-//                    .antMatchers("/actuator/**")
-//                    .permitAll()
-//                .anyRequest()
-//                    .authenticated();
-//        }
-//    }
-// @formatter:on
-
-    @Configuration
-    public static class FormLoginWebSecurityConfigurerAdapter extends MyWebSecurityConfigurerAdapter {
-        private final EmailService emailService;
-
-        private final AtomicInteger loginFailureDelayMs = new AtomicInteger(loginFailureDelayMs_lowest);
-
-        public FormLoginWebSecurityConfigurerAdapter(EmailService emailService) {
-            this.emailService = emailService;
-        }
-
-        @Override
-        protected void configure(HttpSecurity http) throws Exception {
-            // @formatter:off
-            http
-                    .authorizeRequests(authorizeRequests ->
-                        authorizeRequests
-                            .antMatchers("/csrf").permitAll()
-                            .anyRequest().authenticated()
-                    )
-                    .formLogin()
-                        .loginProcessingUrl("/login").usernameParameter("username").passwordParameter("password").permitAll()
-                            .successHandler(successHandler())
-                            .failureHandler(failureHandler())
-                .and()
-                    .exceptionHandling()
-                        .authenticationEntryPoint(authenticationEntryPoint())
-                        .accessDeniedHandler(accessDeniedHandler())
-                .and()
-                    .logout().logoutSuccessHandler((new HttpStatusReturningLogoutSuccessHandler(HttpStatus.OK)))
-                .and()
-                    .csrf().csrfTokenRepository(csrfTokenRepository())
-                .and()
-                    .addFilterAfter(csrfHeaderFilter(), CsrfFilter.class)
-                ;
-            // @formatter:on
-        }
-
-        private AuthenticationSuccessHandler successHandler() {
-            return new AuthenticationSuccessHandler() {
-                @Override
-                public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
-                        Authentication authentication) throws IOException, ServletException {
-                    boolean isAdmin = authentication.getAuthorities().stream()
-                            .filter(auth -> auth.getAuthority().equals("ROLE_ADMIN")).findFirst().isPresent();
-
-                    logger.info("Successful login ({})", request.getParameter("username"));
-                    if (!isAdmin) {
-                        emailService.sendSimpleMessage("BrewPilot guest login", "");
-                    }
-
-                    // We use successful logins as a hook to decay any accumulated login failure
-                    // delay.
-                    if (loginFailureDelayMs.getAndSet(loginFailureDelayMs_lowest) > loginFailureDelayMs_lowest) {
-                        logger.debug("Login failure delay reset");
-                    }
-
-                    response.setContentType("application/json");
-                    response.setStatus(200);
-                    response.getWriter().write("{\"result\":\"OK\", \"isAdmin\":" + isAdmin + "}");
-                }
-            };
-        }
-
-        private AuthenticationFailureHandler failureHandler() {
-            return new AuthenticationFailureHandler() {
-                @Override
-                public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response,
-                        AuthenticationException e) throws IOException, ServletException {
-                    logger.warn("Login failure ({})", request.getParameter("username"));
-                    emailService.sendSimpleMessage("BrewPilot login failure", request.getParameter("username"));
-
-                    // Apply an increasing delay to failed login attempts.
-                    int delayMs = loginFailureDelayMs.get();
-                    Utils.sleep(delayMs);
-                    int nextDelayMs = loginFailureDelayMs.updateAndGet(
-                            current -> Math.min(current * 2, loginFailureDelayMs_highest));
-                    if (nextDelayMs > delayMs) {
-                        logger.warn("Login failure delay increased to {}", nextDelayMs);
-                    }
-
-                    response.setContentType("application/json");
-                    response.setStatus(401);
-                    response.getWriter().write("{\"result\":\"UNAUTHORIZED\",\"message\":\"Authentication failure\"}");
-                }
-            };
-        }
+    @Order(4)
+    @Bean
+    public SecurityFilterChain applicationSecurityFilterChain(HttpSecurity http, EmailService emailService)
+            throws Exception {
+        // @formatter:off
+        http
+                .authorizeRequests(authorizeRequests ->
+                    authorizeRequests
+                        .antMatchers("/csrf").permitAll()
+                        .anyRequest().authenticated()
+                )
+                .formLogin()
+                    .loginProcessingUrl("/login").usernameParameter("username").passwordParameter("password").permitAll()
+                        .successHandler(successHandler(emailService))
+                        .failureHandler(failureHandler(emailService))
+            .and()
+                .exceptionHandling()
+                    .authenticationEntryPoint(authenticationEntryPoint())
+                    .accessDeniedHandler(accessDeniedHandler())
+            .and()
+                .logout().logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler(HttpStatus.OK))
+            .and()
+                .csrf().csrfTokenRepository(csrfTokenRepository())
+            .and()
+                .addFilterAfter(csrfHeaderFilter(), CsrfFilter.class)
+            ;
+        // @formatter:on
+        return http.build();
     }
 
     @Bean
@@ -209,70 +129,110 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    private static abstract class MyWebSecurityConfigurerAdapter extends WebSecurityConfigurerAdapter {
-        protected void configure(HttpSecurity http, String antPattern, String role) throws Exception {
-            // @formatter:off
-            http
-                .antMatcher(antPattern)
-                    .authorizeRequests()
-                    .anyRequest().hasRole(role)
-                .and().exceptionHandling()
-                    .authenticationEntryPoint(authenticationEntryPoint())
-                    .accessDeniedHandler(accessDeniedHandler())
-                .and().csrf().csrfTokenRepository(csrfTokenRepository()).and().addFilterAfter(csrfHeaderFilter(), CsrfFilter.class)
-            ;
-            // @formatter:on
-        }
+    private void configureRoleSecurity(HttpSecurity http, String antPattern, String role) throws Exception {
+        // @formatter:off
+        http
+            .antMatcher(antPattern)
+                .authorizeRequests()
+                .anyRequest().hasRole(role)
+            .and().exceptionHandling()
+                .authenticationEntryPoint(authenticationEntryPoint())
+                .accessDeniedHandler(accessDeniedHandler())
+            .and().csrf().csrfTokenRepository(csrfTokenRepository())
+            .and().addFilterAfter(csrfHeaderFilter(), CsrfFilter.class)
+        ;
+        // @formatter:on
+    }
 
-        protected AuthenticationEntryPoint authenticationEntryPoint() {
-            return new AuthenticationEntryPoint() {
-                @Override
-                public void commence(HttpServletRequest request, HttpServletResponse response,
-                        AuthenticationException e) throws IOException, ServletException {
-                    response.setContentType("application/json");
-                    response.setStatus(401);
-                    response.getWriter().write("{\"result\":\"UNAUTHORIZED\",\"message\":\"Not authenticated\"}");
+    private AuthenticationSuccessHandler successHandler(EmailService emailService) {
+        return new AuthenticationSuccessHandler() {
+            @Override
+            public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
+                    Authentication authentication) throws IOException, ServletException {
+                boolean isAdmin = authentication.getAuthorities().stream()
+                        .filter(auth -> auth.getAuthority().equals("ROLE_ADMIN")).findFirst().isPresent();
+
+                logger.info("Successful login ({})", request.getParameter("username"));
+                if (!isAdmin) {
+                    emailService.sendSimpleMessage("BrewPilot guest login", "");
                 }
-            };
-        }
 
-        protected AccessDeniedHandler accessDeniedHandler() {
-            return new AccessDeniedHandler() {
-
-                @Override
-                public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException e)
-                        throws IOException, ServletException {
-                    response.setContentType("application/json");
-                    response.setStatus(403);
-                    response.getWriter().write("{\"result\":\"FORBIDDEN\",\"message\":\"Access denied\"}");
+                // We use successful logins as a hook to decay any accumulated login failure
+                // delay.
+                if (loginFailureDelayMs.getAndSet(loginFailureDelayMs_lowest) > loginFailureDelayMs_lowest) {
+                    logger.debug("Login failure delay reset");
                 }
-            };
-        }
 
-        protected Filter csrfHeaderFilter() {
-            return new OncePerRequestFilter() {
-                @Override
-                protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
-                        FilterChain filterChain) throws ServletException, IOException {
-                    CsrfToken csrf = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
-                    if (csrf != null) {
-                        Cookie cookie = WebUtils.getCookie(request, "XSRF-TOKEN");
-                        String token = csrf.getToken();
-                        if (cookie == null || token != null && !token.equals(cookie.getValue())) {
-                            cookie = new Cookie("XSRF-TOKEN", token);
-                            cookie.setPath("/");
-                            response.addCookie(cookie);
-                        }
+                response.setContentType("application/json");
+                response.setStatus(200);
+                response.getWriter().write("{\"result\":\"OK\", \"isAdmin\":" + isAdmin + "}");
+            }
+        };
+    }
+
+    private AuthenticationFailureHandler failureHandler(EmailService emailService) {
+        return new AuthenticationFailureHandler() {
+            @Override
+            public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response,
+                    AuthenticationException e) throws IOException, ServletException {
+                logger.warn("Login failure ({})", request.getParameter("username"));
+                emailService.sendSimpleMessage("BrewPilot login failure", request.getParameter("username"));
+
+                // Apply an increasing delay to failed login attempts.
+                int delayMs = loginFailureDelayMs.get();
+                Utils.sleep(delayMs);
+                int nextDelayMs = loginFailureDelayMs.updateAndGet(
+                        current -> Math.min(current * 2, loginFailureDelayMs_highest));
+                if (nextDelayMs > delayMs) {
+                    logger.warn("Login failure delay increased to {}", nextDelayMs);
+                }
+
+                response.setContentType("application/json");
+                response.setStatus(401);
+                response.getWriter().write("{\"result\":\"UNAUTHORIZED\",\"message\":\"Authentication failure\"}");
+            }
+        };
+    }
+
+    private AuthenticationEntryPoint authenticationEntryPoint() {
+        return (request, response, e) -> {
+            response.setContentType("application/json");
+            response.setStatus(401);
+            response.getWriter().write("{\"result\":\"UNAUTHORIZED\",\"message\":\"Not authenticated\"}");
+        };
+    }
+
+    private AccessDeniedHandler accessDeniedHandler() {
+        return (request, response, e) -> {
+            response.setContentType("application/json");
+            response.setStatus(403);
+            response.getWriter().write("{\"result\":\"FORBIDDEN\",\"message\":\"Access denied\"}");
+        };
+    }
+
+    private Filter csrfHeaderFilter() {
+        return new OncePerRequestFilter() {
+            @Override
+            protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
+                    FilterChain filterChain) throws ServletException, IOException {
+                CsrfToken csrf = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
+                if (csrf != null) {
+                    Cookie cookie = WebUtils.getCookie(request, "XSRF-TOKEN");
+                    String token = csrf.getToken();
+                    if (cookie == null || token != null && !token.equals(cookie.getValue())) {
+                        cookie = new Cookie("XSRF-TOKEN", token);
+                        cookie.setPath("/");
+                        response.addCookie(cookie);
                     }
-                    filterChain.doFilter(request, response);
                 }
-            };
-        }
+                filterChain.doFilter(request, response);
+            }
+        };
+    }
 
-        protected CsrfTokenRepository csrfTokenRepository() {
-            HttpSessionCsrfTokenRepository repository = new HttpSessionCsrfTokenRepository();
-            repository.setHeaderName("X-XSRF-TOKEN");
-            return repository;
-        }
+    private CsrfTokenRepository csrfTokenRepository() {
+        HttpSessionCsrfTokenRepository repository = new HttpSessionCsrfTokenRepository();
+        repository.setHeaderName("X-XSRF-TOKEN");
+        return repository;
     }
 }

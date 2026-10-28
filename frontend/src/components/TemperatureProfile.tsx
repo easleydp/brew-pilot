@@ -73,7 +73,7 @@ const TemperatureProfile = ({ chamberSummaries }: TemperatureProfileProps) => {
 
     const hourMs = 1000 * 60 * 60;
 
-    const maxDays = 28;
+    const maxDays = 18;  // Should be ample. User can always drag last point further right if they want to.
 
     const minX = utcMsFromDaysAndHours(0, 0);
     const maxX = utcMsFromDaysAndHours(maxDays, 0);
@@ -97,13 +97,6 @@ const TemperatureProfile = ({ chamberSummaries }: TemperatureProfileProps) => {
       isFirstPoint: boolean;
 
     const profilePoints = profile.points;
-
-    // Determine how many days we should make visible by default
-    const lastPoint = profilePoints.length ? profilePoints[profilePoints.length - 1] : null;
-    let daysSpan = lastPoint ? lastPoint.hoursSinceStart / 24 : 0;
-    if (startTimeOffset) {
-      daysSpan = Math.max(daysSpan, Math.ceil(startTimeOffset / (1000 * 60 * 60 * 24)));
-    }
 
     // If startTimeOffset has been supplied, plot a vertical line indicating time now.
     const xAxisPlotLine: Array<XAxisPlotLinesOptions> | undefined = startTimeOffset
@@ -178,8 +171,6 @@ const TemperatureProfile = ({ chamberSummaries }: TemperatureProfileProps) => {
         buttonTheme: {
           width: 60,
         },
-        selected: daysSpan <= 3 ? 1 : daysSpan <= 7 ? 2 : daysSpan <= 14 ? 3 : 4, // Index of selected range button
-
         inputEnabled: false,
       },
 

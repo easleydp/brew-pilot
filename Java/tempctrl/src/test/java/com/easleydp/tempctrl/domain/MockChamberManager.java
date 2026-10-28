@@ -1,5 +1,6 @@
 package com.easleydp.tempctrl.domain;
 
+import java.time.ZoneId;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
@@ -82,7 +83,7 @@ public class MockChamberManager implements ChamberManager {
     }
 
     private int _getExternalTempFromDate(Date date) {
-        int nHours = date.getHours();
+        int nHours = date.toInstant().atZone(ZoneId.systemDefault()).getHour();
         if (0 <= nHours && nHours < 3)
             return 30;
         if (3 <= nHours && nHours < 6)

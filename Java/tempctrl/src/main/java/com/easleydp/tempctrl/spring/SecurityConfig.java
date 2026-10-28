@@ -132,6 +132,7 @@ public class SecurityConfig {
             http
                     .authorizeRequests(authorizeRequests ->
                         authorizeRequests
+                            .antMatchers("/csrf").permitAll()
                             .anyRequest().authenticated()
                     )
                     .formLogin()
@@ -144,6 +145,10 @@ public class SecurityConfig {
                         .accessDeniedHandler(accessDeniedHandler())
                 .and()
                     .logout().logoutSuccessHandler((new HttpStatusReturningLogoutSuccessHandler(HttpStatus.OK)))
+                .and()
+                    .csrf().csrfTokenRepository(csrfTokenRepository())
+                .and()
+                    .addFilterAfter(csrfHeaderFilter(), CsrfFilter.class)
                 ;
             // @formatter:on
         }
@@ -244,7 +249,7 @@ public class SecurityConfig {
             };
         }
 
-        private Filter csrfHeaderFilter() {
+        protected Filter csrfHeaderFilter() {
             return new OncePerRequestFilter() {
                 @Override
                 protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
@@ -264,7 +269,7 @@ public class SecurityConfig {
             };
         }
 
-        private CsrfTokenRepository csrfTokenRepository() {
+        protected CsrfTokenRepository csrfTokenRepository() {
             HttpSessionCsrfTokenRepository repository = new HttpSessionCsrfTokenRepository();
             repository.setHeaderName("X-XSRF-TOKEN");
             return repository;

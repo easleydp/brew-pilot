@@ -17,8 +17,24 @@ const Logout: React.FC = () => {
     console.info('=================== Logout useEffect invoked ======================');
 
     axios
-      .get('/tempctrl/logout')
-      .then((/*response*/) => {
+      .get('/tempctrl/csrf')
+      .then(() => {
+        const csrfCookie = document.cookie
+          .split(';')
+          .map((value) => value.trim())
+          .find((value) => value.startsWith('XSRF-TOKEN='));
+        const csrfToken = csrfCookie ? decodeURIComponent(csrfCookie.substring('XSRF-TOKEN='.length)) : undefined;
+        if (!csrfToken) {
+          throw new Error('CSRF token cookie was not set');
+        }
+
+        return axios.post('/tempctrl/logout', null, {
+          headers: {
+            'X-XSRF-TOKEN': csrfToken,
+          },
+        });
+      })
+      .then(() => {
         history.push({ pathname: '/signin', state: { from: '/' } });
         dispatch({ type: 'LOGOUT' });
       })

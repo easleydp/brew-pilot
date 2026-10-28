@@ -26,6 +26,7 @@ hs_err_pid*
 .vscode
 /staticContent
 /pi-staticContent
+/pi-tempctrl-config
 /Highcharts
 /rpi-full-backup
 .dockerignore

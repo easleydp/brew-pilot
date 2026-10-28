@@ -5,6 +5,15 @@ import ILocationState from '../api/ILocationState';
 import axios from 'axios';
 import { useAppState } from './state';
 
+const getCookie = (name: string): string | undefined => {
+  const prefix = `${name}=`;
+  const cookie = document.cookie
+    .split(';')
+    .map((value) => value.trim())
+    .find((value) => value.startsWith(prefix));
+  return cookie ? decodeURIComponent(cookie.substring(prefix.length)) : undefined;
+};
+
 const Login: React.FC = () => {
   const history = useHistory<ILocationState>();
   const location = useLocation<ILocationState>();
@@ -36,13 +45,18 @@ const Login: React.FC = () => {
     params.append('username', username);
     params.append('password', password);
     axios
-      .post('/tempctrl/login', params, {
-        headers: {
-          'X-XSRF-TOKEN': '_csrf',
-          //'Content-Type': 'application/json;charset=ISO-8859-1',
-          'Content-Type': 'application/x-www-form-urlencoded',
-          //multipart/form-data
-        },
+      .get('/tempctrl/csrf')
+      .then(() => {
+        const csrfToken = getCookie('XSRF-TOKEN');
+        if (!csrfToken) {
+          throw new Error('CSRF token cookie was not set');
+        }
+        return axios.post('/tempctrl/login', params, {
+          headers: {
+            'X-XSRF-TOKEN': csrfToken,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        });
       })
       .then((response) => {
         console.debug(response);

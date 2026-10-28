@@ -23,10 +23,10 @@ public class ChamberReadings {
     }
 
     public ChamberReadings(Date timeNow, int tTarget, int tBeer, int tExternal, int tChamber, int tPi,
-            Integer heaterOutput, boolean fridgeOn, Mode mode) {
+            Integer heaterOutput, boolean fridgeOn, Mode mode, int timestampResolutionMillis) {
         Assert.isTrue(timeNow != null, "timeNow is required");
 
-        this.dt = Utils.reduceUtcMillisPrecision(timeNow);
+        this.dt = Utils.reduceUtcMillisPrecision(timeNow, timestampResolutionMillis);
 
         this.tTarget = tTarget;
         this.tBeer = tBeer;

@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
 
-import com.easleydp.tempctrl.spring.config.PublicIpChange;
+import com.easleydp.tempctrl.spring.config.AppProperties.PublicIpChange;
 
 public class IpAddressUtils {
     private static final Logger logger = LoggerFactory.getLogger(IpAddressUtils.class);

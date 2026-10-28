@@ -9,12 +9,10 @@ import javax.annotation.PostConstruct;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
-import org.springframework.core.env.Environment;
 import org.springframework.retry.annotation.EnableRetry;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -24,8 +22,9 @@ import com.easleydp.tempctrl.domain.ArduinoChamberManager;
 import com.easleydp.tempctrl.domain.ChamberManager;
 import com.easleydp.tempctrl.domain.ChamberRepository;
 import com.easleydp.tempctrl.domain.DummyChamberManager;
-import com.easleydp.tempctrl.domain.PropertyUtils;
 import com.easleydp.tempctrl.spring.config.AppProperties;
+import com.easleydp.tempctrl.spring.config.AppProperties.Readings;
+import com.easleydp.tempctrl.spring.config.AppProperties.SwitchedOffCheck;
 
 @SpringBootApplication(
 // Uncomment this line to temporarily disable Spring Security:
@@ -45,34 +44,32 @@ public class TempctrlApplication {
         ensureAppTimeZoneIsUtc();
     }
 
-    @Autowired
-    private Environment env;
-
     @PostConstruct
     public void init() {
-        PropertyUtils.setEnv(env);
         logger.debug("Current working dir is {}", System.getProperty("user.dir"));
     }
 
     @Bean
-    public Path dataDir() {
-        String strPath = env.getRequiredProperty("dataDir");
+    public Path dataDir(AppProperties appProperties) {
+        String strPath = appProperties.getDataDir();
+        Assert.hasText(strPath, "app.data-dir must be specified");
         Path path = Paths.get(strPath);
         Assert.state(Files.exists(path), "dataDir '" + strPath + "' does not exist.");
         return path;
     }
 
     @Bean
-    public ChamberRepository chamberRepository(Path dataDir) {
-        return new ChamberRepository(dataDir);
+    public ChamberRepository chamberRepository(Path dataDir, AppProperties appProperties) {
+        return new ChamberRepository(dataDir, appProperties.getReadings(), appProperties.getSwitchedOffCheck());
     }
 
     @Bean
-    public ChamberManager chamberManager(ChamberRepository chamberRepository) {
-        boolean useDummyChamberManager = PropertyUtils.getBoolean("dummy.chambers", false);
+    public ChamberManager chamberManager(ChamberRepository chamberRepository, AppProperties appProperties) {
+        boolean useDummyChamberManager = appProperties.isDummyChambers();
         logger.info("Using {}", useDummyChamberManager ? "DummyChamberManager" : "ArduinoChamberManager");
-        return useDummyChamberManager ? new DummyChamberManager(chamberRepository)
-                : new ArduinoChamberManager(chamberRepository);
+        Readings readings = appProperties.getReadings();
+        return useDummyChamberManager ? new DummyChamberManager(chamberRepository, readings)
+                : new ArduinoChamberManager(chamberRepository, readings);
     }
 
     @Bean

@@ -50,7 +50,7 @@ File: [Java/tempctrl/src/main/java/com/easleydp/tempctrl/spring/CollectReadingsS
 - This catches serious failures such as `OutOfMemoryError`, `StackOverflowError`, or other JVM-level errors and treats them like recoverable business exceptions.
 - The code then logs and continues, which can leave the app in a partially broken state while the scheduler keeps running. That is the wrong failure boundary for a control loop that interacts with external hardware and persisted history.
 
-### 6) `PropertyUtils` is a static global singleton over Spring `Environment`
+### [FIXED] 6) `PropertyUtils` is a static global singleton over Spring `Environment`
 
 File: [Java/tempctrl/src/main/java/com/easleydp/tempctrl/domain/PropertyUtils.java](./tempctrl/src/main/java/com/easleydp/tempctrl/domain/PropertyUtils.java)
 
@@ -86,13 +86,9 @@ File: [Java/tempctrl/src/main/java/com/easleydp/tempctrl/spring/SecurityConfig.j
 - The class names do not match the path they guard or the role they apply; they are easy to read backwards and therefore easy to misconfigure.
 - This is not a functional bug today, but it is a maintainability hazard in a security-heavy class.
 
-### 10) `PropertyUtils` parsing is not null-safe for absent or blank configuration
+### [FIXED] 10) `PropertyUtils` parsing was not null-safe for absent or blank configuration
 
-File: [Java/tempctrl/src/main/java/com/easleydp/tempctrl/domain/PropertyUtils.java](./tempctrl/src/main/java/com/easleydp/tempctrl/domain/PropertyUtils.java)
-
-- `getStringArray()` and `getIntArray()` call `raw.replaceAll(...)` without checking whether `raw` is `null` or empty.
-- If a configuration key is missing, this produces a `NullPointerException` instead of a clear, intentional default or validation error.
-- The code uses a pattern that looks convenient but quietly assumes configuration will always be present and correctly formatted.
+Resolved by replacing the custom static property parsing with typed Spring configuration binding via [AppProperties](./tempctrl/src/main/java/com/easleydp/tempctrl/spring/config/AppProperties.java).
 
 ### 11) The codebase mixes admin/guest terminology in ways that are easy to invert accidentally
 

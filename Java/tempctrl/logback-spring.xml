@@ -3,8 +3,8 @@
     <!-- Only uncomment on server (unless testing):
     <springProperty name="smtpHost" source="spring.mail.host" />
     <springProperty name="smtpPort" source="spring.mail.properties.mail.smtp.port" />
-    <springProperty name="smtpTo" source="mail.to" />
-    <springProperty name="smtpFrom" source="mail.from" />
+    <springProperty name="smtpTo" source="app.mail.to" />
+    <springProperty name="smtpFrom" source="app.mail.from" />
     <springProperty name="smtpUsername" source="spring.mail.username" />
     <springProperty name="smtpPassword" source="spring.mail.password" />
     <appender name="EMAIL" class="ch.qos.logback.classic.net.SMTPAppender">

@@ -22,6 +22,8 @@ import org.springframework.util.Assert;
 
 import com.easleydp.tempctrl.dto.ChamberDto;
 import com.easleydp.tempctrl.dto.GyleDto;
+import com.easleydp.tempctrl.spring.config.AppProperties.Readings;
+import com.easleydp.tempctrl.spring.config.AppProperties.SwitchedOffCheck;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
@@ -35,6 +37,8 @@ public class Chamber extends ChamberDto {
 
     private final int id;
     private final Path chamberDir;
+    private final Readings readings;
+    private final SwitchedOffCheck switchedOffCheck;
     private List<Path> gyleDirs; // In reverse order by ID
     private Map<Integer, Path> gyleDirsById;
     private Gyle latestGyle;
@@ -42,8 +46,10 @@ public class Chamber extends ChamberDto {
     private Long jsonFileLastModified;
     private ChamberReadings latestChamberReadings;
 
-    public Chamber(Path chamberDir) {
+    public Chamber(Path chamberDir, Readings readings, SwitchedOffCheck switchedOffCheck) {
         this.chamberDir = chamberDir;
+        this.readings = readings;
+        this.switchedOffCheck = switchedOffCheck;
         this.id = Integer.parseInt(chamberDir.getFileName().toString());
 
         this.jsonFile = chamberDir.resolve("chamber.json");
@@ -106,7 +112,7 @@ public class Chamber extends ChamberDto {
     private synchronized Gyle determineLatestGyleIfAny() {
         // gyleDirs is sorted by id desc
         Path latestGyleDir = gyleDirs.isEmpty() ? null : gyleDirs.get(0);
-        return latestGyleDir != null ? new Gyle(this, latestGyleDir) : null;
+        return latestGyleDir != null ? new Gyle(this, latestGyleDir, readings, switchedOffCheck) : null;
     }
 
     /**
@@ -145,7 +151,7 @@ public class Chamber extends ChamberDto {
         Path gyleDir = gyleDirsById.get(id);
         if (gyleDir == null)
             throw new IllegalArgumentException("No gyle exists with ID " + id);
-        return new Gyle(this, gyleDir);
+        return new Gyle(this, gyleDir, readings, switchedOffCheck);
     }
 
     /** @returns gyles, latest first. */
@@ -153,7 +159,7 @@ public class Chamber extends ChamberDto {
         List<Path> gDirs = max != null && max < gyleDirs.size() ? gyleDirs.subList(0, max) : gyleDirs;
         // @formatter:off
         return gDirs.stream()
-            .map(gDir -> new Gyle(this, gDir))
+            .map(gDir -> new Gyle(this, gDir, readings, switchedOffCheck))
             .collect(Collectors.toList());
         // @formatter:on
     }

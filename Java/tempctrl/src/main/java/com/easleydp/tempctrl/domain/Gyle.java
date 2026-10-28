@@ -1,9 +1,6 @@
 package com.easleydp.tempctrl.domain;
 
 import static com.easleydp.tempctrl.domain.Gyle.LogFileDescriptor.buildLogFilename;
-import static com.easleydp.tempctrl.domain.PropertyUtils.getBoolean;
-import static com.easleydp.tempctrl.domain.PropertyUtils.getIntArray;
-import static com.easleydp.tempctrl.domain.PropertyUtils.getInteger;
 import static com.easleydp.tempctrl.domain.Utils.reduceUtcMillisPrecision;
 import static com.easleydp.tempctrl.domain.optimise.RedundantValues.nullOutRedundantValues;
 import static com.easleydp.tempctrl.domain.optimise.RedundantValues.removeRedundantIntermediateBeans;
@@ -43,6 +40,8 @@ import org.springframework.util.Assert;
 
 import com.easleydp.tempctrl.domain.optimise.Smoother;
 import com.easleydp.tempctrl.domain.optimise.Smoother.IntPropertyAccessor;
+import com.easleydp.tempctrl.spring.config.AppProperties.Readings;
+import com.easleydp.tempctrl.spring.config.AppProperties.SwitchedOffCheck;
 import com.easleydp.tempctrl.dto.GyleDto;
 import com.easleydp.tempctrl.dto.TemperatureProfileDto;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -75,6 +74,8 @@ public class Gyle extends GyleDto {
     private ChamberReadings latestChamberReadings;
 
     private long fileLastModified;
+    private final Readings readings;
+    private final SwitchedOffCheck switchedOffCheck;
     @JsonIgnore
     public final Chamber chamber;
     @JsonIgnore
@@ -88,21 +89,23 @@ public class Gyle extends GyleDto {
 
     // NOTE: Keep this ctor lightweight since it's called more regularly than you
     // might imagine, i.e. via `Chamber.checkForGyleUpdates()`.
-    public Gyle(Chamber chamber, Path gyleDir) {
+    public Gyle(Chamber chamber, Path gyleDir, Readings readings, SwitchedOffCheck switchedOffCheck) {
         this.chamber = chamber;
         this.gyleDir = gyleDir;
+        this.readings = readings;
+        this.switchedOffCheck = switchedOffCheck;
         this.id = Integer.parseInt(gyleDir.getFileName().toString());
         this.logsDir = gyleDir.resolve("logs");
 
-        int thresholdHeight = getInteger("readings.temp.smoothing.thresholdHeight", 2);
-        int[] thresholdWidths = getIntArray("readings.temp.smoothing.thresholdWidths", null);
+        int thresholdHeight = readings.getTemp().getSmoothing().getThresholdHeight();
+        int[] thresholdWidths = readings.getTemp().getSmoothing().getThresholdWidths();
         smoother = thresholdWidths == null ? new Smoother(thresholdHeight)
                 : new Smoother(thresholdHeight, thresholdWidths);
 
-        logBufferConfig = new LogBufferConfig(getInteger("readings.gen1.readingsCount", 30),
-                getBoolean("readings.optimise.smoothTemperatureReadings", true),
-                getBoolean("readings.optimise.nullOutRedundantValues", true),
-                getBoolean("readings.optimise.removeRedundantIntermediate", true));
+        logBufferConfig = new LogBufferConfig(readings.getGen().getGen1ReadingsCount(),
+                readings.getOptimise().isSmoothTemperatureReadings(),
+                readings.getOptimise().isNullOutRedundantValues(),
+                readings.getOptimise().isRemoveRedundantIntermediate());
 
         refreshFromJson();
     }
@@ -188,7 +191,7 @@ public class Gyle extends GyleDto {
         // log files as necessary.
         if (logBuffer != null) {
             if (logBuffer.isReadyToBeFlushed()) {
-                logBuffer.flush(logsDir, logAnalysis);
+                logBuffer.flush(logsDir, logAnalysis, readings.getTimestampResolutionMillis());
                 logBuffer = null;
                 logAnalysis.maybeConsolidateLogFiles();
             } else {
@@ -200,7 +203,7 @@ public class Gyle extends GyleDto {
 
         // Ensure we have a buffer and write the readings to it.
         if (logBuffer == null) {
-            if (!firstReadingsCollected && PropertyUtils.getBoolean("readings.staggerFirstReadings", true)) {
+            if (!firstReadingsCollected && readings.isStaggerFirstReadings()) {
                 // Stagger each active gyle storing its first buffer by inflating the initial
                 // reading count.
                 logBuffer = new LogBuffer(timeNow, logBufferConfig.withInflatedReadingsCount(chamberId), smoother);
@@ -213,7 +216,7 @@ public class Gyle extends GyleDto {
         // Lazy init rather than use ctor because ctor is called frequently (to see
         // whether latest gyle has been superseded).
         if (trendBuffer == null)
-            trendBuffer = new TrendBuffer(chamber);
+            trendBuffer = new TrendBuffer(chamber, readings, switchedOffCheck);
         trendBuffer.add(chamberReadings);
 
         firstReadingsCollected = true;
@@ -223,7 +226,7 @@ public class Gyle extends GyleDto {
     public void close() {
         if (logBuffer != null && !logBuffer.readingsList.isEmpty()) {
             logger.debug("Force flushing {} readings", logBuffer.readingsList.size());
-            logBuffer.flush(logsDir, logAnalysis);
+            logBuffer.flush(logsDir, logAnalysis, readings.getTimestampResolutionMillis());
             logBuffer = null;
             logAnalysis.maybeConsolidateLogFiles();
             logAnalysis.performAnyPostConsolidationCleanup();
@@ -275,16 +278,16 @@ public class Gyle extends GyleDto {
     // tests may wish to override the properties from which the constants get their
     // value, but if a prior test has already run then the value of the constant
     // would be fixed.
-    private static int getSwitchedOffCheckIgnoreFirstHours() {
-        return PropertyUtils.getInteger("switchedOffCheck.ignoreFirstHours", 4);
+    private int getSwitchedOffCheckIgnoreFirstHours() {
+        return switchedOffCheck.getIgnoreFirstHours();
     }
 
-    private static int getSwitchedOffCheckFridgeOnTimeMins() {
-        return PropertyUtils.getInteger("switchedOffCheck.fridgeOnTimeMins", 30);
+    private int getSwitchedOffCheckFridgeOnTimeMins() {
+        return switchedOffCheck.getFridgeOnTimeMins();
     }
 
-    private static int getSwitchedOffCheckHeaterOnTimeMins() {
-        return PropertyUtils.getInteger("switchedOffCheck.heaterOnTimeMins", 15);
+    private int getSwitchedOffCheckHeaterOnTimeMins() {
+        return switchedOffCheck.getHeaterOnTimeMins();
     }
 
     // The return value for our `checkLeftSwitchedOff()` method.
@@ -380,8 +383,8 @@ public class Gyle extends GyleDto {
         private List<LogFileDescriptor> awaitingCleanup = new ArrayList<>();
 
         LogAnalysis() {
-            genMultiplier = PropertyUtils.getInteger("readings.gen.multiplier", 10);
-            maxGenerations = PropertyUtils.getInteger("readings.gen.max", 4);
+            genMultiplier = readings.getGen().getMultiplier();
+            maxGenerations = readings.getGen().getMax();
             Assert.state(genMultiplier >= 2, "readings.gen.multiplier must be at least 2");
             Assert.state(maxGenerations >= 2, "readings.gen.max must be at least 2");
 
@@ -544,9 +547,11 @@ public class Gyle extends GyleDto {
             return generation + sep + dtStart + sep + dtEnd + ".ndjson";
         }
 
-        public static String buildLogFilename(int generation, Date dtStart, Date dtEnd) {
-            return buildLogFilename(generation, reduceUtcMillisPrecision(dtStart.getTime()),
-                    reduceUtcMillisPrecision(dtEnd.getTime()));
+        public static String buildLogFilename(int generation, Date dtStart, Date dtEnd,
+                int timestampResolutionMillis) {
+            return buildLogFilename(generation,
+                    reduceUtcMillisPrecision(dtStart.getTime(), timestampResolutionMillis),
+                    reduceUtcMillisPrecision(dtEnd.getTime(), timestampResolutionMillis));
         }
     }
 
@@ -575,7 +580,9 @@ public class Gyle extends GyleDto {
 
         @JsonIgnore
         public boolean isReadyToBeFlushed() {
-            return readingsList.size() >= config.gen1ReadingsCount;
+            final int size = readingsList.size();
+            logger.debug("isReadyToBeFlushed(): size {}, gen1ReadingsCount: {}", size, config.gen1ReadingsCount);
+            return size >= config.gen1ReadingsCount;
         }
 
         /** For Jackson */
@@ -587,11 +594,11 @@ public class Gyle extends GyleDto {
          * Flush this buffer to disk file. Impl note: passing params rather than make
          * the class non-static because Jackson needs static class when deserialising.
          */
-        public void flush(Path logsDir, LogAnalysis logAnalysis) {
+        public void flush(Path logsDir, LogAnalysis logAnalysis, int timestampResolutionMillis) {
             optimiseReadings();
 
             try {
-                String logFileName = buildLogFilename(1, createdAt, lastAddedAt);
+                String logFileName = buildLogFilename(1, createdAt, lastAddedAt, timestampResolutionMillis);
                 Path logFile = logsDir.resolve(logFileName);
                 Files.createFile(logFile);
                 logAnalysis.addLogFileDescriptor(logFile);
@@ -666,17 +673,21 @@ public class Gyle extends GyleDto {
     private static class TrendBuffer {
         private List<ChamberReadings> fifo = new LinkedList<>();
         private final int maxSize;
+        private final Readings readings;
+        private final SwitchedOffCheck switchedOffCheck;
 
-        TrendBuffer(Chamber chamber) {
+        TrendBuffer(Chamber chamber, Readings readings, SwitchedOffCheck switchedOffCheck) {
+            this.readings = readings;
+            this.switchedOffCheck = switchedOffCheck;
             // The buffer is a FIFO deque of recent records. Must be big enough to support
             // `gettChamberTrend(periodMins)`, which would throw IllegalStateException if
             // `periodMins` were to exceed this buffer's size.
             int sizeInMinutes = Math.max(
-                    Gyle.getSwitchedOffCheckFridgeOnTimeMins() + chamber.getFridgeSwitchOnLagMins(),
-                    Gyle.getSwitchedOffCheckHeaterOnTimeMins()) * 2;
+                    switchedOffCheck.getFridgeOnTimeMins() + chamber.getFridgeSwitchOnLagMins(),
+                    switchedOffCheck.getHeaterOnTimeMins()) * 2;
             // Given our sample rate, transform that into a size in terms of number of
             // records.
-            maxSize = sizeInMinutes * 60 * 1000 / PropertyUtils.getReadingsPeriodMillis();
+            maxSize = sizeInMinutes * 60 * 1000 / readings.getPeriodMillis();
             logger.debug("TrendBuffer maxSize is {}", maxSize);
         }
 
@@ -797,7 +808,8 @@ public class Gyle extends GyleDto {
         }
 
         private int minutesDifferenceAtLeastOne(ChamberReadings lastRecord, ChamberReadings earlierRecord) {
-            long periodMs = Utils.restoreUtcMillisPrecision(lastRecord.getDt() - earlierRecord.getDt());
+            long periodMs = Utils.restoreUtcMillisPrecision(lastRecord.getDt() - earlierRecord.getDt(),
+                    readings.getTimestampResolutionMillis());
             int periodMins = (int) (periodMs / 1000L / 60);
             return periodMins == 0 ? 1 : periodMins; // Always return at least 1
         }
@@ -822,10 +834,13 @@ public class Gyle extends GyleDto {
                 final int size = fifo.size();
                 ChamberReadings firstRecord = fifo.get(0);
                 ChamberReadings lastRecord = fifo.get(size - 1);
-                long maxPeriodMs = Utils.restoreUtcMillisPrecision(lastRecord.getDt() - firstRecord.getDt());
+                long maxPeriodMs = Utils.restoreUtcMillisPrecision(lastRecord.getDt() - firstRecord.getDt(),
+                        readings.getTimestampResolutionMillis());
                 int maxPeriodMins = (int) (maxPeriodMs / 1000L / 60);
                 if (maxPeriodMins > periodMins) {
-                    int soughtDt = lastRecord.getDt() - Utils.reduceUtcMillisPrecision(periodMins * 1000L * 60);
+                    int soughtDt = lastRecord.getDt()
+                            - Utils.reduceUtcMillisPrecision(periodMins * 1000L * 60,
+                                    readings.getTimestampResolutionMillis());
                     ListIterator<ChamberReadings> li = fifo.listIterator(size); // Start just after the last element.
                     while (li.hasPrevious()) {
                         ChamberReadings record = li.previous();

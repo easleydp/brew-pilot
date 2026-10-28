@@ -28,10 +28,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.mock.env.MockEnvironment;
 import org.springframework.util.Assert;
 import org.springframework.util.FileSystemUtils;
+import org.springframework.boot.context.properties.bind.Binder;
 
 import com.easleydp.tempctrl.domain.Gyle.LeftSwitchedOffDetectionAction;
 import com.easleydp.tempctrl.domain.Gyle.LogFileDescriptor;
 import com.easleydp.tempctrl.dto.GyleDto;
+import com.easleydp.tempctrl.spring.config.AppProperties;
+import com.easleydp.tempctrl.spring.config.AppProperties.Readings;
+import com.easleydp.tempctrl.spring.config.AppProperties.SwitchedOffCheck;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.MappingIterator;
@@ -46,6 +50,8 @@ public class GyleTests {
     private Date startTime;
     private Date timeNow;
     private MockEnvironment env;
+    private Readings readings;
+    private SwitchedOffCheck switchedOffCheck;
 
     private static final int gen1ReadingsCount = 10;
     private static final int genMultiplier = 4;
@@ -69,26 +75,27 @@ public class GyleTests {
     @BeforeEach
     public void beforeEach() throws Exception {
         env = new MockEnvironment();
-        env.setProperty("readings.gen.multiplier", "" + genMultiplier);
-        env.setProperty("readings.gen1.readingsCount", "" + gen1ReadingsCount);
-        env.setProperty("readings.gen.max", "" + maxGenerations);
-        env.setProperty("readings.periodMillis", "60000");
-        env.setProperty("readings.temp.smoothing.thresholdHeight", "2");
-        env.setProperty("readings.temp.smoothing.thresholdWidths", "2, 1");
-        env.setProperty("readings.optimise.smoothTemperatureReadings", "" + false);
-        env.setProperty("readings.optimise.nullOutRedundantValues", "" + false);
-        env.setProperty("readings.optimise.removeRedundantIntermediate", "" + false);
-        env.setProperty("readings.staggerFirstReadings", "" + false);
-        env.setProperty("switchedOffCheck.periodMinutes", "" + 5);
-        env.setProperty("switchedOffCheck.ignoreFirstHours", "" + 4);
-        env.setProperty("switchedOffCheck.fridgeOnTimeMins", "" + 5);
-        env.setProperty("switchedOffCheck.heaterOnTimeMins", "" + 10);
-
-        PropertyUtils.setEnv(env);
+        env.setProperty("app.readings.gen.multiplier", "" + genMultiplier);
+        env.setProperty("app.readings.gen.gen1-readings-count", "" + gen1ReadingsCount);
+        env.setProperty("app.readings.gen.max", "" + maxGenerations);
+        env.setProperty("app.readings.period-millis", "60000");
+        env.setProperty("app.readings.temp.smoothing.threshold-height", "2");
+        env.setProperty("app.readings.temp.smoothing.threshold-widths", "2, 1");
+        env.setProperty("app.readings.optimise.smooth-temperature-readings", "" + false);
+        env.setProperty("app.readings.optimise.null-out-redundant-values", "" + false);
+        env.setProperty("app.readings.optimise.remove-redundant-intermediate", "" + false);
+        env.setProperty("app.readings.stagger-first-readings", "" + false);
+        env.setProperty("app.switched-off-check.period-minutes", "" + 5);
+        env.setProperty("app.switched-off-check.ignore-first-hours", "" + 4);
+        env.setProperty("app.switched-off-check.fridge-on-time-mins", "" + 5);
+        env.setProperty("app.switched-off-check.heater-on-time-mins", "" + 10);
+        AppProperties appProperties = Binder.get(env).bind("app", AppProperties.class).orElseGet(AppProperties::new);
+        readings = appProperties.getReadings();
+        switchedOffCheck = appProperties.getSwitchedOffCheck();
 
         Path dataDir = Paths.get(".", "src/test/resources/testData");
         Assert.state(Files.exists(dataDir), "data dir should exist.");
-        chambers = new ChamberRepository(dataDir);
+        chambers = new ChamberRepository(dataDir, readings, switchedOffCheck);
 
         // Remove any "logs" dirs left over from a previous test
         for (Chamber ch : chambers.getChambers())
@@ -109,7 +116,7 @@ public class GyleTests {
         // Actually, getGyleById will already have checked not null.
         assertNotNull(gyle, "Chamber 2 gyle 1 should be found");
         gyle.setDtStarted(startTime.getTime()); // So now it's the active gyle
-        chamberManagerSim = new MockChamberManager(startTime, gyle.getTemperatureProfileDomain(), env);
+        chamberManagerSim = new MockChamberManager(startTime, gyle.getTemperatureProfileDomain(), readings);
     }
 
     /**
@@ -135,7 +142,8 @@ public class GyleTests {
         // flushed to a file.
         String expectedLogFileName =
                 // "<generation>-<dtStart>-<dtEnd>.ndjson"
-                "1-" + reduceUtcMillisPrecision(addMinutes(startTime, 1)) + "-" + reduceUtcMillisPrecision(timeNow)
+                "1-" + reduceUtcMillisPrecision(addMinutes(startTime, 1), 30000) + "-"
+                        + reduceUtcMillisPrecision(timeNow, 30000)
                         + ".ndjson";
         timeNow = addMinutes(timeNow, 1);
         collectReadings();
@@ -156,7 +164,8 @@ public class GyleTests {
         // Take one more reading. Confirm all the readings are now flushed to a file.
         expectedLogFileName =
                 // "<generation>-<dtStart>-<dtEnd>.ndjson"
-                "1-" + reduceUtcMillisPrecision(addMinutes(startTime, 1)) + "-" + reduceUtcMillisPrecision(timeNow)
+                "1-" + reduceUtcMillisPrecision(addMinutes(startTime, 1), 30000) + "-"
+                        + reduceUtcMillisPrecision(timeNow, 30000)
                         + ".ndjson";
         timeNow = addMinutes(timeNow, 1);
         collectReadings();
@@ -169,7 +178,7 @@ public class GyleTests {
 
     @Test
     public void shouldStaggerFirstReadingsOfEachChamber() throws Exception {
-        env.setProperty("readings.staggerFirstReadings", "" + true);
+        env.setProperty("app.readings.stagger-first-readings", "" + true);
         // TODO
     }
 
@@ -356,7 +365,7 @@ public class GyleTests {
 
         // First off we need to accumulate a few hours worth of readings because these
         // will be ignored by the analysis.
-        int minutes = PropertyUtils.getInt("switchedOffCheck.ignoreFirstHours") * 60;
+        int minutes = switchedOffCheck.getIgnoreFirstHours() * 60;
         for (int i = 0; i < minutes; i++) {
             timeNow = addMinutes(timeNow, 1);
             collectReadings(massager);
@@ -366,7 +375,7 @@ public class GyleTests {
 
         // Next, run for a few minutes with fridge ON and tChamber ramping upwards
         // despite fridge being on.
-        minutes = PropertyUtils.getInt("switchedOffCheck.fridgeOnTimeMins") - 1;
+        minutes = switchedOffCheck.getFridgeOnTimeMins() - 1;
 
         fridgeOn[0] = true;
         for (int i = 0; i < minutes; i++) {
@@ -420,7 +429,7 @@ public class GyleTests {
 
         // First off we need to accumulate a few hours worth of readings because these
         // will be ignored by the analysis.
-        int minutes = PropertyUtils.getInt("switchedOffCheck.ignoreFirstHours") * 60;
+        int minutes = switchedOffCheck.getIgnoreFirstHours() * 60;
         for (int i = 0; i < minutes; i++) {
             timeNow = addMinutes(timeNow, 1);
             collectReadings(massager);
@@ -430,7 +439,7 @@ public class GyleTests {
 
         // Next, run for a several minutes with heater ON and tChamber ramping downwards
         // despite heater being on.
-        minutes = PropertyUtils.getInt("switchedOffCheck.heaterOnTimeMins") - 1;
+        minutes = switchedOffCheck.getHeaterOnTimeMins() - 1;
 
         heaterOutput[0] = 30;
         for (int i = 0; i < minutes; i++) {

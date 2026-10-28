@@ -20,8 +20,8 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.TestPropertySource;
 
 @SpringBootTest
-@TestPropertySource(properties = { "spring.profiles.active: test", "mail.from: test@example.com",
-        "mail.to: test@example.com" })
+@TestPropertySource(properties = { "spring.profiles.active: test", "app.mail.from: test@example.com",
+        "app.mail.to: test@example.com" })
 @DirtiesContext
 class EmailServiceImplTests {
     @Autowired

@@ -16,24 +16,31 @@ import java.util.stream.Stream;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.util.Assert;
 
+import com.easleydp.tempctrl.spring.config.AppProperties.Readings;
+import com.easleydp.tempctrl.spring.config.AppProperties.SwitchedOffCheck;
+
 /**
  * Produces and collects Chamber instances.
  */
 public class ChamberRepository {
     private final Path chambersDir;
+    private final Readings readings;
+    private final SwitchedOffCheck switchedOffCheck;
 
     // Note that Chamber is stateful. Therefore we have to can't just create
     // chambers a new without due consideration.
     private final Queue<Chamber> chambers = new ConcurrentLinkedQueue<>();
 
-    public ChamberRepository(Path dataDir) {
+    public ChamberRepository(Path dataDir, Readings readings, SwitchedOffCheck switchedOffCheck) {
         Assert.state(Files.exists(dataDir), "data dir should exist");
         chambersDir = dataDir.resolve("chambers");
         Assert.state(Files.exists(chambersDir), "chambers dir should exist");
+        this.readings = readings;
+        this.switchedOffCheck = switchedOffCheck;
 
         // @formatter:off
         getChamberDirs().stream()
-            .map(cd -> new Chamber(cd))
+            .map(cd -> new Chamber(cd, readings, switchedOffCheck))
             .forEach(c -> {
                 chambers.add(c);
             });

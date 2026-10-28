@@ -35,7 +35,7 @@ public class CollectReadingsScheduler {
     private IntSummaryStatistics durationStats = new IntSummaryStatistics();
     private boolean first = true;
 
-    @Scheduled(fixedRateString = "${readings.periodMillis}")
+    @Scheduled(fixedRateString = "${app.readings.period-millis}")
     public void collectReadings() {
         logger.debug("collectReadings called");
 

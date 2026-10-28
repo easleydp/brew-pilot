@@ -3,13 +3,14 @@ package com.easleydp.tempctrl.spring;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.env.Environment;
 import org.springframework.mail.MailSendException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
+
+import com.easleydp.tempctrl.spring.config.AppProperties;
 
 @Service
 public class EmailSender {
@@ -18,8 +19,11 @@ public class EmailSender {
     @Autowired(required = false) // 'required = false' for sake of tests (it is required in prod)
     private JavaMailSender mailSender;
 
-    @Autowired
-    private Environment env;
+    private final AppProperties.Mail mail;
+
+    public EmailSender(AppProperties appProperties) {
+        this.mail = appProperties.getMail();
+    }
 
     // This public method is invoked through this separate Spring bean's proxy from
     // EmailServiceImpl, so retry advice can catch failures from the actual mail send.
@@ -36,8 +40,8 @@ public class EmailSender {
     }
 
     private void sendMessage(String subject, String text) {
-        String from = env.getProperty("mail.from");
-        String to = env.getProperty("mail.to");
+        String from = mail.getFrom();
+        String to = mail.getTo();
         boolean smtpIsConfigured = to != null && from != null;
 
         logger.debug("{}\n\tSubject: {}\n\tText: {}",

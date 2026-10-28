@@ -20,8 +20,8 @@ import com.easleydp.tempctrl.domain.ChamberRepository;
 import com.easleydp.tempctrl.domain.Gyle;
 
 @SpringBootTest
-@TestPropertySource(properties = { "spring.profiles.active: test", "coldCrashCheck.periodMinutes: 20",
-        "coldCrashCheck.priorNoticeHours: 6", "coldCrashCheck.postCrashDwellHours: 24" })
+@TestPropertySource(properties = { "spring.profiles.active: test", "app.cold-crash-check.period-minutes: 20",
+        "app.cold-crash-check.prior-notice-hours: 6", "app.cold-crash-check.post-crash-dwell-hours: 24" })
 @DirtiesContext // Hack to allow multiple Spring integration test suites, otherwise the first
                 // suite seems to leave the application context instantiated.
 class EmailMessageSchedulerTests {
@@ -132,7 +132,7 @@ class EmailMessageSchedulerTests {
      *
      * Given that in this test suite we have set the properties as follows:
      * <ul>
-     * <li>"coldCrashCheck.periodMinutes: 20"
+     * <li>"app.cold-crash-check.period-minutes: 20"
      * </ul>
      * emails should be triggered at:
      * <ul>
@@ -187,8 +187,8 @@ class EmailMessageSchedulerTests {
      *
      * Given that in this test suite we have set the properties as follows:
      * <ul>
-     * <li>"coldCrashCheck.periodMinutes: 20"
-     * <li>"coldCrashCheck.priorNoticeHours: 6"
+     * <li>"app.cold-crash-check.period-minutes: 20"
+     * <li>"app.cold-crash-check.prior-notice-hours: 6"
      * </ul>
      * emails should be triggered at:
      * <ul>
@@ -243,8 +243,8 @@ class EmailMessageSchedulerTests {
      *
      * Given that in this test suite we have set the properties as follows:
      * <ul>
-     * <li>"coldCrashCheck.periodMinutes: 20"
-     * <li>"coldCrashCheck.postCrashDwellHours: 24"
+     * <li>"app.cold-crash-check.period-minutes: 20"
+     * <li>"app.cold-crash-check.post-crash-dwell-hours: 24"
      * </ul>
      * emails should be triggered at:
      * <ul>

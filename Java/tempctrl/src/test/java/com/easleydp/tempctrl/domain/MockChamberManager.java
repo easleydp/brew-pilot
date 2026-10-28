@@ -6,8 +6,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
-import org.springframework.core.env.Environment;
 import org.springframework.util.Assert;
+
+import com.easleydp.tempctrl.spring.config.AppProperties.Readings;
 
 /** A mock ChamberManager for testing purposes. */
 public class MockChamberManager implements ChamberManager {
@@ -21,9 +22,10 @@ public class MockChamberManager implements ChamberManager {
      * @param startTime
      *            Some point in time >= startTime
      */
-    public MockChamberManager(Date startTime, TemperatureProfile temperatureProfile, Environment env) {
+    public MockChamberManager(Date startTime, TemperatureProfile temperatureProfile, Readings readings) {
         this.startTime = startTime;
         this.temperatureProfile = temperatureProfile;
+        this.readings = readings;
     }
 
     @Override
@@ -62,7 +64,7 @@ public class MockChamberManager implements ChamberManager {
         int heaterOutput = getDayOfMonthFromDate(timeNow) % 2 == 0 ? randomInt(1, 100) : 0;
         boolean fridgeOn = heaterOutput == 0;
         return new ChamberReadings(timeNow, tTarget, tBeer, tExternal, tChamber, tPi,
-                params.hasHeater ? heaterOutput : null, fridgeOn, Mode.AUTO);
+                params.hasHeater ? heaterOutput : null, fridgeOn, Mode.AUTO, readings.getTimestampResolutionMillis());
     }
 
     private Integer lastTExternal = null;
@@ -114,6 +116,7 @@ public class MockChamberManager implements ChamberManager {
      */
 
     private final TemperatureProfile temperatureProfile;
+    private final Readings readings;
     /** startTime provides the reference for when temperatureProfile was started. */
     private final Date startTime;
 

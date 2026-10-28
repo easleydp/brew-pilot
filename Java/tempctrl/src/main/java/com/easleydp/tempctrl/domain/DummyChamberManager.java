@@ -4,6 +4,8 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.Random;
 
+import com.easleydp.tempctrl.spring.config.AppProperties.Readings;
+
 /**
  * A ChamberManager that can be used for convenience to remove the need for
  * actual hardware.
@@ -11,14 +13,16 @@ import java.util.Random;
 public class DummyChamberManager implements ChamberManager {
     private ChamberRepository chamberRepository;
     private ChamberParameters chamberParameters;
+    private final Readings readings;
 
     /** startTime provides the reference for when temperatureProfile was started. */
     private final Date startTime;
 
     private Random random;
 
-    public DummyChamberManager(ChamberRepository chamberRepository) {
+    public DummyChamberManager(ChamberRepository chamberRepository, Readings readings) {
         this.chamberRepository = chamberRepository;
+        this.readings = readings;
         this.startTime = new Date();
     }
 
@@ -62,7 +66,7 @@ public class DummyChamberManager implements ChamberManager {
         boolean fridgeOn = heaterOutput == 0;
         Mode mode = Mode.AUTO;
         return new ChamberReadings(timeNow, tTarget, tBeer, tExternal, tChamber, tPi,
-                params.hasHeater ? heaterOutput : null, fridgeOn, mode);
+                params.hasHeater ? heaterOutput : null, fridgeOn, mode, readings.getTimestampResolutionMillis());
     }
 
     private static int getDayOfMonthFromDate(Date d) {

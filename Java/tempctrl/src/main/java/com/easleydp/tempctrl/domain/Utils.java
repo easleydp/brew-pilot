@@ -1,7 +1,5 @@
 package com.easleydp.tempctrl.domain;
 
-import static com.easleydp.tempctrl.domain.PropertyUtils.*;
-
 import java.util.Date;
 
 public class Utils {
@@ -9,18 +7,18 @@ public class Utils {
      * For time since epoch, save space in json files by using a precision less than
      * 1ms.
      */
-    static int reduceUtcMillisPrecision(long ms) {
-        return (int) (ms / getReadingsTimestampResolutionMillis());
+    static int reduceUtcMillisPrecision(long ms, int timestampResolutionMillis) {
+        return (int) (ms / timestampResolutionMillis);
     }
 
     // Convenience overload
-    static int reduceUtcMillisPrecision(Date date) {
-        return (int) (date.getTime() / getReadingsTimestampResolutionMillis());
+    static int reduceUtcMillisPrecision(Date date, int timestampResolutionMillis) {
+        return reduceUtcMillisPrecision(date.getTime(), timestampResolutionMillis);
     }
 
     // and the reverse
-    static long restoreUtcMillisPrecision(int timestamp) {
-        return ((long) timestamp) * getReadingsTimestampResolutionMillis();
+    static long restoreUtcMillisPrecision(int timestamp, int timestampResolutionMillis) {
+        return ((long) timestamp) * timestampResolutionMillis;
     }
 
     /**
@@ -42,12 +40,12 @@ public class Utils {
     }
 
     /** Handy helper, e.g. for XHR handlers */
-    public static void artificialDelayForDebugMode() {
-        artificialDelayForDebugMode(500);
+    public static void artificialDelayForDebugMode(boolean debug) {
+        artificialDelayForDebugMode(500, debug);
     }
 
-    public static void artificialDelayForDebugMode(long millis) {
-        if (isDebugMode()) {
+    public static void artificialDelayForDebugMode(long millis, boolean debug) {
+        if (debug) {
             sleep(millis);
         }
     }

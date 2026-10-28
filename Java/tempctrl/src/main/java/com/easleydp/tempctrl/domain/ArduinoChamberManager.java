@@ -16,6 +16,8 @@ import com.google.common.base.Joiner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.easleydp.tempctrl.spring.config.AppProperties.Readings;
+
 /**
  * Interfaces to an Arduino microcontroller
  */
@@ -30,9 +32,11 @@ public class ArduinoChamberManager implements ChamberManager {
 
     private Map<Integer, ChamberParameters> chamberParametersByChamberId = new HashMap<>();
     private ChamberRepository chamberRepository;
+    private Readings readings;
 
-    public ArduinoChamberManager(ChamberRepository chamberRepository) {
+    public ArduinoChamberManager(ChamberRepository chamberRepository, Readings readings) {
         this.chamberRepository = chamberRepository;
+        this.readings = readings;
     }
 
     @Override
@@ -147,7 +151,7 @@ public class ArduinoChamberManager implements ChamberManager {
         }
 
         return new ChamberReadings(timeNow, tTarget, tBeer, tExternal, tChamber, tPi, hasHeater ? heaterOutput : null,
-                fridgeOn, mode);
+                fridgeOn, mode, readings.getTimestampResolutionMillis());
     }
 
     @Override

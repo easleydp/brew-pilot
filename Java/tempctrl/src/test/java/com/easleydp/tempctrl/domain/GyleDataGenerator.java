@@ -11,10 +11,14 @@ import java.util.Date;
 
 import org.apache.commons.lang3.time.DateUtils;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.springframework.mock.env.MockEnvironment;
 import org.springframework.util.Assert;
 import org.springframework.util.FileSystemUtils;
+import org.springframework.mock.env.MockEnvironment;
+import org.springframework.boot.context.properties.bind.Binder;
+
+import com.easleydp.tempctrl.spring.config.AppProperties;
+import com.easleydp.tempctrl.spring.config.AppProperties.Readings;
+import com.easleydp.tempctrl.spring.config.AppProperties.SwitchedOffCheck;
 
 public class GyleDataGenerator {
     private MockChamberManager chamberManagerSim;
@@ -23,11 +27,8 @@ public class GyleDataGenerator {
     private Gyle gyle;
     private Date startTime;
     private Date timeNow;
-    private MockEnvironment env;
-
-    private static final int gen1ReadingsCount = 10;
-    private static final int genMultiplier = 4;
-    private static final int maxGenerations = 3;
+    private Readings readings;
+    private SwitchedOffCheck switchedOffCheck;
 
     private void collectReadings() throws IOException {
         ChamberReadings latestReadings = chamberManagerSim.collectReadings(chamber.getId(), timeNow);
@@ -37,12 +38,14 @@ public class GyleDataGenerator {
 
     @BeforeEach
     public void beforeEach() throws Exception {
-        env = new MockEnvironment();
-        PropertyUtils.setEnv(env);
+        AppProperties appProperties = Binder.get(new MockEnvironment()).bind("app", AppProperties.class)
+                .orElseGet(AppProperties::new);
+        readings = appProperties.getReadings();
+        switchedOffCheck = appProperties.getSwitchedOffCheck();
 
         Path dataDir = Paths.get(".", "src/test/resources/testData");
         Assert.state(Files.exists(dataDir), "data dir should exist.");
-        chambers = new ChamberRepository(dataDir);
+        chambers = new ChamberRepository(dataDir, readings, switchedOffCheck);
 
         // Remove any "logs" dirs left over from a previous test
         for (Chamber ch : chambers.getChambers())
@@ -61,7 +64,7 @@ public class GyleDataGenerator {
         assertNotNull(gyle, "Chamber 2 gyle 1 should be found"); // Actually, getGyleById will already have checked not
                                                                  // null.
         gyle.setDtStarted(startTime.getTime()); // So now it's the active gyle
-        chamberManagerSim = new MockChamberManager(startTime, gyle.getTemperatureProfileDomain(), env);
+        chamberManagerSim = new MockChamberManager(startTime, gyle.getTemperatureProfileDomain(), readings);
 
         timeNow = startTime;
         while (timeNow.getTime() < endTime.getTime()) {

@@ -16,7 +16,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
-import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -42,6 +41,7 @@ import org.springframework.util.Assert;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.util.WebUtils;
 
+import com.easleydp.tempctrl.spring.config.AppProperties;
 import com.easleydp.tempctrl.domain.Utils;
 
 @Configuration
@@ -50,7 +50,7 @@ public class SecurityConfig {
     private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
 
     @Autowired
-    private Environment env;
+    private AppProperties appProperties;
 
     private static final int loginFailureDelayMs_lowest = 1 * 1000;
     private static final int loginFailureDelayMs_highest = 64 * 1000; // Some power of 2 greater than lowest
@@ -60,11 +60,12 @@ public class SecurityConfig {
         InMemoryUserDetailsManager manager = new InMemoryUserDetailsManager();
 
         // For debug: String pwdHash = encoder().encode("?????");
-        String pwdHash = env.getProperty("pwdhash.guest").replaceAll("#dollar#", "\\$"); // For running from vscode
+        String pwdHash = appProperties.getPasswordHashes().getGuest().replaceAll("#dollar#", "\\$"); // For running from
+                                                                                                     // vscode
         Assert.state(pwdHash != null && pwdHash.length() > 0, "Guest password not specified");
         manager.createUser(User.withUsername("guest").password(pwdHash).roles("USER").build());
 
-        pwdHash = env.getProperty("pwdhash.admin").replaceAll("#dollar#", "\\$"); // For running from vscode
+        pwdHash = appProperties.getPasswordHashes().getAdmin().replaceAll("#dollar#", "\\$"); // For running from vscode
         Assert.state(pwdHash != null && pwdHash.length() > 0, "Admin password not specified");
         manager.createUser(User.withUsername("admin").password(pwdHash).roles("USER", "ADMIN").build());
 

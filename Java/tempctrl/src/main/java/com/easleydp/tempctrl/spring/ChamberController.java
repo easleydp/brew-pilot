@@ -29,10 +29,10 @@ import com.easleydp.tempctrl.domain.ChamberReadings;
 import com.easleydp.tempctrl.domain.ChamberRepository;
 import com.easleydp.tempctrl.domain.Gyle;
 import com.easleydp.tempctrl.domain.Mode;
-import com.easleydp.tempctrl.domain.PropertyUtils;
 import com.easleydp.tempctrl.dto.GyleDto;
 import com.easleydp.tempctrl.dto.PointDto;
 import com.easleydp.tempctrl.dto.TemperatureProfileDto;
+import com.easleydp.tempctrl.spring.config.AppProperties;
 
 @RestController
 public class ChamberController {
@@ -40,6 +40,9 @@ public class ChamberController {
 
     @Autowired
     private ChamberRepository chamberRepository;
+
+    @Autowired
+    private AppProperties appProperties;
 
     /**
      * This is the initial end point used by the FE home page. The FE may be calling
@@ -138,8 +141,8 @@ public class ChamberController {
         Gyle latestGyle = chamber.getLatestGyle();
         Assert.state(latestGyle != null, "No latest gyle for chamber " + chamberId);
         // @formatter:off
-        return new LatestGyleDetails(PropertyUtils.getReadingsTimestampResolutionMillis(),
-                PropertyUtils.getReadingsPeriodMillis(), chamber.getName(), chamber.isHasHeater(), latestGyle.id,
+        return new LatestGyleDetails(appProperties.getReadings().getTimestampResolutionMillis(),
+                appProperties.getReadings().getPeriodMillis(), chamber.getName(), chamber.isHasHeater(), latestGyle.id,
                 latestGyle.getName(), latestGyle.getTemperatureProfile(), latestGyle.getDtStarted(),
                 latestGyle.getDtEnded(), latestGyle.getRecentReadingsList(),
                 latestGyle.getReadingsLogFilePaths().stream()

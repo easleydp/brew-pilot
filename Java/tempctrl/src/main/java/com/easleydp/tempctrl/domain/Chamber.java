@@ -175,7 +175,7 @@ public class Chamber extends ChamberDto {
      */
     public synchronized Gyle constructNextGyle(GyleDto gyleToCopy, String newName) throws IOException {
         GyleDto newGyle = new GyleDto(gyleToCopy);
-        int nextId = latestGyle.id + 1;
+        int nextId = latestGyle == null ? 1 : latestGyle.id + 1;
         newGyle.setName(String.format(newName, nextId));
         newGyle.setDtStarted(null);
         newGyle.setDtEnded(null);

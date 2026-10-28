@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.springframework.mock.env.MockEnvironment;
 import org.springframework.util.Assert;
 import org.springframework.util.FileSystemUtils;
@@ -117,6 +118,22 @@ public class GyleTests {
         assertNotNull(gyle, "Chamber 2 gyle 1 should be found");
         gyle.setDtStarted(startTime.getTime()); // So now it's the active gyle
         chamberManagerSim = new MockChamberManager(startTime, gyle.getTemperatureProfileDomain(), readings);
+    }
+
+    @Test
+    public void shouldCreateFirstGyleForChamberWithoutGyles(@TempDir Path tempDir) throws Exception {
+        Path freshChamberDir = tempDir.resolve("1");
+        Files.createDirectories(freshChamberDir.resolve("gyles"));
+        Files.copy(chamber.getChamberDir().resolve("chamber.json"), freshChamberDir.resolve("chamber.json"));
+
+        Chamber freshChamber = new Chamber(freshChamberDir, readings, switchedOffCheck);
+        assertNull(freshChamber.getLatestGyle());
+
+        Gyle firstGyle = freshChamber.constructNextGyle(chamber.getGyleById(1), "#%d - First gyle");
+
+        assertEquals(1, firstGyle.id);
+        assertEquals(firstGyle, freshChamber.getLatestGyle());
+        assertTrue(Files.exists(freshChamberDir.resolve("gyles/1/gyle.json")));
     }
 
     /**

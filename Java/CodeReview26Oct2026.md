@@ -59,7 +59,7 @@ File: [Java/tempctrl/src/main/java/com/easleydp/tempctrl/domain/PropertyUtils.ja
 - Several methods make assumptions that `env` has already been set by `TempctrlApplication.init()`; if that setup is skipped or changed, the app fails late with an NPE or `IllegalStateException` instead of a clear application-level error.
 - This pattern is a poor fit for a stateful control system that should be easy to validate in isolation.
 
-### 7) The gyle creation path can throw a null-pointer error on a fresh chamber
+### [FIXED] 7) The gyle creation path can throw a null-pointer error on a fresh chamber
 
 File: [Java/tempctrl/src/main/java/com/easleydp/tempctrl/domain/Chamber.java](./tempctrl/src/main/java/com/easleydp/tempctrl/domain/Chamber.java)
 

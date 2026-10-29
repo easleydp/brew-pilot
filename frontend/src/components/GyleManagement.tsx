@@ -439,14 +439,9 @@ const GyleManagement = () => {
               <Form.Text className="text-error">{formik.errors.formDtEnded}</Form.Text>
             ) : null}
             <Form.Text className="text-muted">
-              When temperature control no longer required.<br></br>Note:
-              <ul>
-                <li>
-                  Can be left blank until known; when the temperature profile has completed, the
-                  chamber will be held at the last set temperature.
-                </li>
-                <li>The chamber will be deactivated when the specified date/time is reached.</li>
-              </ul>
+              Optional. When the temperature profile has completed, the chamber will be 
+              held at the last set temperature until this time is reached, whereupon 
+              the chamber will be deactivated.
             </Form.Text>
           </Col>
         </Row>

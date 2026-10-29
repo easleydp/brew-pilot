@@ -41,7 +41,7 @@ public class EmailMessageScheduler {
     private IpAddressUtils ipAddressUtils;
 
     @Autowired
-    private AppProperties appProperties;
+    private AppProperties appProps;
 
     @Scheduled(cron = "${app.still-alive-message.cron-schedule}")
     public void sendStillAliveMessage() throws IOException {
@@ -122,7 +122,7 @@ public class EmailMessageScheduler {
                 Gyle latestGyle = chamber.getLatestGyle();
                 if (latestGyle != null && latestGyle.isActive()) {
                     long dtStarted = latestGyle.getDtStarted();
-                    long periodMillis = appProperties.getColdCrashCheck().getPeriodMinutes() * 1000L * 60L;
+                    long periodMillis = appProps.getColdCrashCheck().getPeriodMinutes() * 1000L * 60L;
                     long timeNowMs = timeNow.getTime();
                     long millisSinceStart = timeNowMs - dtStarted;
                     maybeSendMidFermentationNotification(periodMillis, timeNowMs, millisSinceStart, latestGyle,
@@ -142,7 +142,7 @@ public class EmailMessageScheduler {
             // trigger the email when the crash start time - priorNoticeHours is less than
             // 30 minutes away. So, when this scheduled task next fires in 30 minutes time,
             // this figure will have gone -ve.
-            long priorNoticeMillis = appProperties.getColdCrashCheck().getPriorNoticeHours() * 1000L * 60 * 60;
+            long priorNoticeMillis = appProps.getColdCrashCheck().getPriorNoticeHours() * 1000L * 60 * 60;
 
             long millisUntilTrigger = crashStartPoint.getMillisSinceStart() - priorNoticeMillis - millisSinceStart;
             if (millisUntilTrigger > 0 && millisUntilTrigger < periodMillis) {
@@ -161,7 +161,7 @@ public class EmailMessageScheduler {
             // trigger the email when the crash end time + postCrashDwellHours is less than
             // 30 minutes away. So, when this scheduled task next fires in 30 minutes time,
             // this figure will have gone -ve.
-            long postCrashDwellMillis = appProperties.getColdCrashCheck().getPostCrashDwellHours() * 1000L * 60 * 60;
+            long postCrashDwellMillis = appProps.getColdCrashCheck().getPostCrashDwellHours() * 1000L * 60 * 60;
 
             long millisUntilTrigger = crashEndPoint.getMillisSinceStart() + postCrashDwellMillis - millisSinceStart;
             if (millisUntilTrigger > 0 && millisUntilTrigger < periodMillis) {
@@ -207,7 +207,7 @@ public class EmailMessageScheduler {
 
     private String formatAsLocalTime(String format, Date when) {
         SimpleDateFormat sdf = new SimpleDateFormat(format);
-        sdf.setTimeZone(TimeZone.getTimeZone(appProperties.getTimezone().getLocalId()));
+        sdf.setTimeZone(TimeZone.getTimeZone(appProps.getTimezone().getLocalId()));
         return sdf.format(when);
     }
 

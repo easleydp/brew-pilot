@@ -24,7 +24,7 @@ public class OfflineCheckScheduler {
     private static final String pingCount = isWindows ? "-n" : "-c";
 
     @Autowired
-    private AppProperties appProperties;
+    private AppProperties appProps;
 
     // Chronological list of timestamps when server was found to be offline, latest
     // last. So, new items are added to the end of list while expired items are
@@ -42,7 +42,7 @@ public class OfflineCheckScheduler {
     }
 
     private boolean online() {
-        String address = appProperties.getOfflineCheck().getRouterAddress();
+        String address = appProps.getOfflineCheck().getRouterAddress();
         String stdout = OsCommandExecuter.executeWithNoExitCodeError("ping", pingCount, "1", address);
         return stdout != null; // A diagnostic warning message will be logged if null
     }
@@ -60,7 +60,7 @@ public class OfflineCheckScheduler {
     }
 
     private void purgeBuffer(Date timeNow) {
-        Date expired = addHours(timeNow, -1 * appProperties.getOfflineCheck().getBufferSizeHours());
+        Date expired = addHours(timeNow, -1 * appProps.getOfflineCheck().getBufferSizeHours());
         buffer.removeIf(d -> d.before(expired));
     }
 

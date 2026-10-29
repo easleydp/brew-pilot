@@ -40,6 +40,7 @@ import org.springframework.util.Assert;
 
 import com.easleydp.tempctrl.domain.optimise.Smoother;
 import com.easleydp.tempctrl.domain.optimise.Smoother.IntPropertyAccessor;
+import com.easleydp.tempctrl.spring.config.AppProperties;
 import com.easleydp.tempctrl.spring.config.AppProperties.Readings;
 import com.easleydp.tempctrl.spring.config.AppProperties.SwitchedOffCheck;
 import com.easleydp.tempctrl.dto.GyleDto;
@@ -74,8 +75,7 @@ public class Gyle extends GyleDto {
     private ChamberReadings latestChamberReadings;
 
     private long fileLastModified;
-    private final Readings readings;
-    private final SwitchedOffCheck switchedOffCheck;
+    private final AppProperties appProps;
     @JsonIgnore
     public final Chamber chamber;
     @JsonIgnore
@@ -89,23 +89,20 @@ public class Gyle extends GyleDto {
 
     // NOTE: Keep this ctor lightweight since it's called more regularly than you
     // might imagine, i.e. via `Chamber.checkForGyleUpdates()`.
-    public Gyle(Chamber chamber, Path gyleDir, Readings readings, SwitchedOffCheck switchedOffCheck) {
+    public Gyle(Chamber chamber, Path gyleDir, AppProperties appProps) {
         this.chamber = chamber;
         this.gyleDir = gyleDir;
-        this.readings = readings;
-        this.switchedOffCheck = switchedOffCheck;
+        this.appProps = appProps;
         this.id = Integer.parseInt(gyleDir.getFileName().toString());
         this.logsDir = gyleDir.resolve("logs");
 
+        Readings readings = appProps.getReadings();
         int thresholdHeight = readings.getTemp().getSmoothing().getThresholdHeight();
         int[] thresholdWidths = readings.getTemp().getSmoothing().getThresholdWidths();
         smoother = thresholdWidths == null ? new Smoother(thresholdHeight)
                 : new Smoother(thresholdHeight, thresholdWidths);
 
-        logBufferConfig = new LogBufferConfig(readings.getGen().getGen1ReadingsCount(),
-                readings.getOptimise().isSmoothTemperatureReadings(),
-                readings.getOptimise().isNullOutRedundantValues(),
-                readings.getOptimise().isRemoveRedundantIntermediate());
+        logBufferConfig = new LogBufferConfig(readings);
 
         refreshFromJson();
     }
@@ -131,7 +128,7 @@ public class Gyle extends GyleDto {
     @JsonIgnore
     public TemperatureProfile getTemperatureProfileDomain() {
         TemperatureProfileDto dto = getTemperatureProfile();
-        return new TemperatureProfile(dto);
+        return new TemperatureProfile(dto, appProps.getTempProfile().getTransitionHours());
     }
 
     @JsonIgnore
@@ -191,7 +188,7 @@ public class Gyle extends GyleDto {
         // log files as necessary.
         if (logBuffer != null) {
             if (logBuffer.isReadyToBeFlushed()) {
-                logBuffer.flush(logsDir, logAnalysis, readings.getTimestampResolutionMillis());
+                logBuffer.flush(logsDir, logAnalysis, appProps.getReadings().getTimestampResolutionMillis());
                 logBuffer = null;
                 logAnalysis.maybeConsolidateLogFiles();
             } else {
@@ -203,7 +200,7 @@ public class Gyle extends GyleDto {
 
         // Ensure we have a buffer and write the readings to it.
         if (logBuffer == null) {
-            if (!firstReadingsCollected && readings.isStaggerFirstReadings()) {
+            if (!firstReadingsCollected && appProps.getReadings().isStaggerFirstReadings()) {
                 // Stagger each active gyle storing its first buffer by inflating the initial
                 // reading count.
                 logBuffer = new LogBuffer(timeNow, logBufferConfig.withInflatedReadingsCount(chamberId), smoother);
@@ -216,7 +213,7 @@ public class Gyle extends GyleDto {
         // Lazy init rather than use ctor because ctor is called frequently (to see
         // whether latest gyle has been superseded).
         if (trendBuffer == null)
-            trendBuffer = new TrendBuffer(chamber, readings, switchedOffCheck);
+            trendBuffer = new TrendBuffer(chamber, appProps.getReadings(), appProps.getSwitchedOffCheck());
         trendBuffer.add(chamberReadings);
 
         firstReadingsCollected = true;
@@ -226,7 +223,7 @@ public class Gyle extends GyleDto {
     public void close() {
         if (logBuffer != null && !logBuffer.readingsList.isEmpty()) {
             logger.debug("Force flushing {} readings", logBuffer.readingsList.size());
-            logBuffer.flush(logsDir, logAnalysis, readings.getTimestampResolutionMillis());
+            logBuffer.flush(logsDir, logAnalysis, appProps.getReadings().getTimestampResolutionMillis());
             logBuffer = null;
             logAnalysis.maybeConsolidateLogFiles();
             logAnalysis.performAnyPostConsolidationCleanup();
@@ -279,15 +276,15 @@ public class Gyle extends GyleDto {
     // value, but if a prior test has already run then the value of the constant
     // would be fixed.
     private int getSwitchedOffCheckIgnoreFirstHours() {
-        return switchedOffCheck.getIgnoreFirstHours();
+        return appProps.getSwitchedOffCheck().getIgnoreFirstHours();
     }
 
     private int getSwitchedOffCheckFridgeOnTimeMins() {
-        return switchedOffCheck.getFridgeOnTimeMins();
+        return appProps.getSwitchedOffCheck().getFridgeOnTimeMins();
     }
 
     private int getSwitchedOffCheckHeaterOnTimeMins() {
-        return switchedOffCheck.getHeaterOnTimeMins();
+        return appProps.getSwitchedOffCheck().getHeaterOnTimeMins();
     }
 
     // The return value for our `checkLeftSwitchedOff()` method.
@@ -383,8 +380,8 @@ public class Gyle extends GyleDto {
         private List<LogFileDescriptor> awaitingCleanup = new ArrayList<>();
 
         LogAnalysis() {
-            genMultiplier = readings.getGen().getMultiplier();
-            maxGenerations = readings.getGen().getMax();
+            genMultiplier = appProps.getReadings().getGen().getMultiplier();
+            maxGenerations = appProps.getReadings().getGen().getMax();
             Assert.state(genMultiplier >= 2, "readings.gen.multiplier must be at least 2");
             Assert.state(maxGenerations >= 2, "readings.gen.max must be at least 2");
 
@@ -647,18 +644,22 @@ public class Gyle extends GyleDto {
         final boolean smoothTemperatureReadings;
         final boolean nullOutRedundantValues;
         final boolean removeRedundantIntermediateReadings;
+        private final Readings readings;
 
-        public LogBufferConfig(int gen1ReadingsCount, boolean smoothTemperatureReadings, boolean nullOutRedundantValues,
-                boolean removeRedundantIntermediateReadings) {
-            this.gen1ReadingsCount = gen1ReadingsCount;
-            this.smoothTemperatureReadings = smoothTemperatureReadings;
-            this.nullOutRedundantValues = nullOutRedundantValues;
-            this.removeRedundantIntermediateReadings = removeRedundantIntermediateReadings;
+        public LogBufferConfig(Readings readings) {
+            this(readings, 0);
+        }
+
+        private LogBufferConfig(Readings readings, int extraReadingsCount) {
+            this.readings = readings;
+            this.gen1ReadingsCount = readings.getGen().getGen1ReadingsCount() + extraReadingsCount;
+            this.smoothTemperatureReadings = readings.getOptimise().isSmoothTemperatureReadings();
+            this.nullOutRedundantValues = readings.getOptimise().isNullOutRedundantValues();
+            this.removeRedundantIntermediateReadings = readings.getOptimise().isRemoveRedundantIntermediate();
         }
 
         public LogBufferConfig withInflatedReadingsCount(int extraReadingsCount) {
-            return new LogBufferConfig(gen1ReadingsCount + extraReadingsCount, smoothTemperatureReadings,
-                    nullOutRedundantValues, removeRedundantIntermediateReadings);
+            return new LogBufferConfig(readings, extraReadingsCount);
         }
 
     }

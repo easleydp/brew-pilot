@@ -36,12 +36,17 @@ public class TemperatureProfileDto {
         for (PointDto point : points) {
             if (point == null)
                 throw new IllegalArgumentException("point cannot be null");
+            // Note: It IS legal to have a step change (i.e. two adjacent points with the
+            // same time). For example, a user might want to configure a snap cold crash
+            // (though, in practise, `TemperatureProfile.getTargetTempAt` will apply
+            // smoothing either side).
             if (point.getHoursSinceStart() < lastHoursSinceStart)
-                throw new IllegalArgumentException("Each point must have hoursSinceStart > the previous point");
+                throw new IllegalArgumentException("Each point must have hoursSinceStart >= the previous point");
             lastHoursSinceStart = point.getHoursSinceStart();
         }
         if (points.get(0).getHoursSinceStart() != 0)
-            throw new IllegalArgumentException("First profile point isn't at t0: " + points.get(0).getHoursSinceStart());
+            throw new IllegalArgumentException(
+                    "First profile point isn't at t0: " + points.get(0).getHoursSinceStart());
     }
 
     @Override

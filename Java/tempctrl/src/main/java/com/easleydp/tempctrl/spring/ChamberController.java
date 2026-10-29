@@ -42,7 +42,7 @@ public class ChamberController {
     private ChamberRepository chamberRepository;
 
     @Autowired
-    private AppProperties appProperties;
+    private AppProperties appProps;
 
     /**
      * This is the initial end point used by the FE home page. The FE may be calling
@@ -141,8 +141,8 @@ public class ChamberController {
         Gyle latestGyle = chamber.getLatestGyle();
         Assert.state(latestGyle != null, "No latest gyle for chamber " + chamberId);
         // @formatter:off
-        return new LatestGyleDetails(appProperties.getReadings().getTimestampResolutionMillis(),
-                appProperties.getReadings().getPeriodMillis(), chamber.getName(), chamber.isHasHeater(), latestGyle.id,
+        return new LatestGyleDetails(appProps.getReadings().getTimestampResolutionMillis(),
+                appProps.getReadings().getPeriodMillis(), chamber.getName(), chamber.isHasHeater(), latestGyle.id,
                 latestGyle.getName(), latestGyle.getTemperatureProfile(), latestGyle.getDtStarted(),
                 latestGyle.getDtEnded(), latestGyle.getRecentReadingsList(),
                 latestGyle.getReadingsLogFilePaths().stream()
@@ -255,7 +255,8 @@ public class ChamberController {
 
             latestGyle.updateJsonFile();
         } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid temperature profile: " + e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid temperature profile: " + e.getMessage(),
+                    e);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

@@ -50,8 +50,8 @@ public class TempctrlApplication {
     }
 
     @Bean
-    public Path dataDir(AppProperties appProperties) {
-        String strPath = appProperties.getDataDir();
+    public Path dataDir(AppProperties appProps) {
+        String strPath = appProps.getDataDir();
         Assert.hasText(strPath, "app.data-dir must be specified");
         Path path = Paths.get(strPath);
         Assert.state(Files.exists(path), "dataDir '" + strPath + "' does not exist.");
@@ -59,22 +59,22 @@ public class TempctrlApplication {
     }
 
     @Bean
-    public ChamberRepository chamberRepository(Path dataDir, AppProperties appProperties) {
-        return new ChamberRepository(dataDir, appProperties.getReadings(), appProperties.getSwitchedOffCheck());
+    public ChamberRepository chamberRepository(Path dataDir, AppProperties appProps) {
+        return new ChamberRepository(dataDir, appProps);
     }
 
     @Bean
-    public ChamberManager chamberManager(ChamberRepository chamberRepository, AppProperties appProperties) {
-        boolean useDummyChamberManager = appProperties.isDummyChambers();
+    public ChamberManager chamberManager(ChamberRepository chamberRepository, AppProperties appProps) {
+        boolean useDummyChamberManager = appProps.isDummyChambers();
         logger.info("Using {}", useDummyChamberManager ? "DummyChamberManager" : "ArduinoChamberManager");
-        Readings readings = appProperties.getReadings();
+        Readings readings = appProps.getReadings();
         return useDummyChamberManager ? new DummyChamberManager(chamberRepository, readings)
                 : new ArduinoChamberManager(chamberRepository, readings);
     }
 
     @Bean
-    public IpAddressUtils ipAddressUtils(AppProperties appProperties) {
-        return new IpAddressUtils(appProperties.getPublicIpChange());
+    public IpAddressUtils ipAddressUtils(AppProperties appProps) {
+        return new IpAddressUtils(appProps.getPublicIpChange());
     }
 
     public static void main(String[] args) {

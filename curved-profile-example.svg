@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="408" viewBox="0 0 1040 590" role="img" aria-labelledby="title description">
+  <title id="title">12-hour example synthesised temperature profile</title>
+  <desc id="description">A profile rises straight from 10 degrees Celsius at hour zero to 22 degrees at hour six, then holds at 22 degrees until hour twelve. The synthesised curve rounds the right-angle at hour six over three hours either side.</desc>
+  <style>
+    text { font-family: Arial, Helvetica, sans-serif; fill: #243247; }
+    path { fill: none; }
+    .grid { stroke: #e4e9f0; stroke-width: 1; }
+    .axis { stroke: #748196; stroke-width: 1.5; }
+    .difference { fill: #1769aa; fill-opacity: 0.16; stroke: none; }
+    .tick { font-size: 13px; fill: #5f6e82; }
+    .label { font-size: 15px; font-weight: 600; }
+    .title { font-size: 23px; font-weight: 700; }
+    .subtitle { font-size: 14px; fill: #5f6e82; }
+  </style>
+
+  <rect width="1040" height="590" fill="#ffffff"/>
+  <text class="title" x="120" y="39">A right-angle profile transition, smoothed</text>
+  <text class="subtitle" x="120" y="64">12-hour example · 3-hour transition window either side · temperatures in °C</text>
+
+  <!-- Plot grid: 0–12 hours and 8–24 °C -->
+  <g class="grid">
+    <path d="M120 430H940 M120 387.5H940 M120 345H940 M120 302.5H940 M120 260H940 M120 217.5H940 M120 175H940 M120 132.5H940 M120 90H940"/>
+    <path d="M120 90V430 M256.67 90V430 M393.33 90V430 M530 90V430 M666.67 90V430 M803.33 90V430 M940 90V430"/>
+  </g>
+  <path class="axis" d="M120 90V430H940"/>
+
+  <g class="tick" text-anchor="end">
+    <text x="108" y="435">8</text>
+    <text x="108" y="392.5">10</text>
+    <text x="108" y="350">12</text>
+    <text x="108" y="307.5">14</text>
+    <text x="108" y="265">16</text>
+    <text x="108" y="222.5">18</text>
+    <text x="108" y="180">20</text>
+    <text x="108" y="137.5">22</text>
+    <text x="108" y="95">24</text>
+  </g>
+  <g class="tick" text-anchor="middle">
+    <text x="120" y="452">0</text>
+    <text x="256.67" y="452">2</text>
+    <text x="393.33" y="452">4</text>
+    <text x="530" y="452">6</text>
+    <text x="666.67" y="452">8</text>
+    <text x="803.33" y="452">10</text>
+    <text x="940" y="452">12</text>
+  </g>
+  <text class="label" x="530" y="483" text-anchor="middle">Hours since profile start</text>
+  <text class="label" transform="translate(39 260) rotate(-90)" text-anchor="middle">Target temperature (°C)</text>
+
+  <!-- Highlight the area cut from the right-angle corner. -->
+  <path class="difference" d="M325 260 L530 132.5
+           L735 132.5 Q530 132.5 325 260 Z"/>
+
+  <!-- Profile editor's straight rise and flat hold. -->
+  <path d="M120 387.5 L530 132.5 L940 132.5"
+        stroke="#9aa5b4" stroke-width="3" stroke-dasharray="9 7"
+        stroke-linejoin="round"/>
+
+  <!-- Backend target: straight to hour 3, then a quadratic Bezier corner cut. -->
+  <path d="M120 387.5 L325 260
+           Q530 132.5 735 132.5
+           L940 132.5"
+        fill="none" stroke="#1769aa" stroke-width="4" stroke-linecap="round"
+        stroke-linejoin="round"/>
+
+  <!-- Original user-defined profile waypoints. -->
+  <g fill="#ffffff" stroke="#243247" stroke-width="2.5">
+    <circle cx="120" cy="387.5" r="6"/>
+    <circle cx="530" cy="132.5" r="6"/>
+    <circle cx="940" cy="132.5" r="6"/>
+  </g>
+  <g class="tick" font-weight="600">
+    <text x="132" y="380">10°C</text>
+    <text x="542" y="123">22°C</text>
+  </g>
+
+  <!-- Legend -->
+  <g transform="translate(195 520)">
+    <path d="M0 0H44" stroke="#9aa5b4" stroke-width="3" stroke-dasharray="9 7"/>
+    <text x="54" y="5" font-size="14">Profile editor (straight lines)</text>
+    <path d="M330 0H374" stroke="#1769aa" stroke-width="4" stroke-linecap="round"/>
+    <text x="384" y="5" font-size="14">Synthesised target</text>
+  </g>
+  <text class="subtitle" x="120" y="565">Waypoints: 0 h / 10°C, 6 h / 22°C, 12 h / 22°C. The corner rounds from hour 3 to hour 9.</text>
+</svg>

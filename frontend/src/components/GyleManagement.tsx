@@ -468,7 +468,7 @@ const GyleManagement = () => {
               One line per profile point, each consisting of two integers separated by a comma:
               <ol>
                 <li>Hours since start (must be zero for the first profile point),</li>
-                <li>Target temperature in °C x10 (e.g. 175 for 17.5°C).</li>
+                <li>Target temperature in tenths of °C (e.g. 175 for 17.5°C).</li>
               </ol>
             </Form.Text>
           </Col>
@@ -506,7 +506,7 @@ const GyleManagement = () => {
               <Form.Text className="text-error">{formik.errors.formTHold}</Form.Text>
             ) : null}
             <Form.Text className="text-muted">
-            Target temperature in °C x10 (e.g. 175 for 17.5°C). Leave blank to hold at current temperature.
+            Target temperature in tenths of °C (e.g. 175 for 17.5°C). Leave blank to hold at current temperature.
             </Form.Text>
           </Col>
         </Row>

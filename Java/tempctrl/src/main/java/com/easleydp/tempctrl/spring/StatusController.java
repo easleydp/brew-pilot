@@ -61,6 +61,9 @@ public class StatusController {
     @Autowired
     private IpAddressUtils ipAddressUtils;
 
+    @Autowired
+    private ClockTrustService clockTrustService;
+
     private final String MOCK_IWCONFIG_STATS = String.join(System.getProperty("line.separator"),
             "wlan0     IEEE 802.11  ESSID:\"SSID123\"",
             "          Mode:Managed  Frequency:2.412 GHz  Access Point: 3C:45:7A:CD:AC:BA",
@@ -173,13 +176,15 @@ public class StatusController {
         }
     }
 
-    @JsonPropertyOrder({ "uptime", "socTemperature", "cpuTemperature", "clockMHz", "localIP", "publicIP", "macAddress",
-            "wireless" })
+    @JsonPropertyOrder({ "uptime", "clockTrusted", "socTemperature", "cpuTemperature", "clockMHz", "localIP",
+            "publicIP", "macAddress", "wireless" })
     private class PiStats {
         @JsonIgnore
         private final boolean isAdmin; // If false, certain details are not leaked
 
         private final String uptime; // This is in Linux's `uptime -p` format, e.g. "up 19 hours, 31 minutes"
+
+        public final String clockTrusted;
 
         @SuppressWarnings("unused")
         public final MemoryStatsFileSystem fileSystem;
@@ -198,11 +203,12 @@ public class StatusController {
         private final String iwConfigStats;
 
         // Handy for testing
-        public PiStats(boolean isAdmin, String uptime, MemoryStatsPi memory, MemoryStatsFileSystem fileSystem,
-                JvmStatus jvm, String socTemperature, String cpuTemperature, String volts, String clock,
-                String iwConfigStats) {
+        public PiStats(boolean isAdmin, String uptime, String clockTrusted, MemoryStatsPi memory,
+                MemoryStatsFileSystem fileSystem, JvmStatus jvm, String socTemperature, String cpuTemperature,
+                String volts, String clock, String iwConfigStats) {
             this.isAdmin = isAdmin;
             this.uptime = uptime;
+            this.clockTrusted = clockTrusted;
             this.memory = memory;
             this.fileSystem = fileSystem;
             this.socTemperature = socTemperature;
@@ -217,6 +223,7 @@ public class StatusController {
             this(
                     isAdmin,
                     OsCommandExecuter.execute("uptime", "-p"),
+                    clockTrustService.isClockTrusted() ? "yes 🙂" : "no 😟",
                     new MemoryStatsPi(),
                     new MemoryStatsFileSystem(File.listRoots()[0]),
                     new JvmStatus(),

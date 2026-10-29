@@ -23,6 +23,8 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.easleydp.tempctrl.spring.config.AppProperties;
 
 @SpringBootTest
@@ -36,6 +38,9 @@ class TempctrlApplicationTests {
 
         @Autowired
         private MockMvc mockMvc;
+
+        @Autowired
+        private StatusController statusController;
 
         @Test
         void contextLoads() {
@@ -56,6 +61,14 @@ class TempctrlApplicationTests {
                 assertTrue(appProps.getReadings().getOptimise().isNullOutRedundantValues());
                 assertTrue(appProps.getReadings().getOptimise().isRemoveRedundantIntermediate());
                 assertTrue(appProps.getReadings().isStaggerFirstReadings());
+        }
+
+        @Test
+        void statusReportIncludesClockTrustUnderRaspberryPi() {
+                JsonNode status = new ObjectMapper().valueToTree(statusController.buildStatusReportResponse(false));
+                String clockTrusted = status.path("raspberryPi").path("clockTrusted").asText();
+
+                assertTrue(clockTrusted.equals("yes 🙂") || clockTrusted.equals("no 😟"));
         }
 
         @Test

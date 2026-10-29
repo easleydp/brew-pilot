@@ -14,6 +14,7 @@ public class AppProperties {
     private String dataDir;
     private boolean dummyChambers;
     private boolean debug;
+    private TempProfile tempProfile = new TempProfile();
     private PasswordHashes passwordHashes = new PasswordHashes();
     private Mail mail = new Mail();
     private Readings readings = new Readings();
@@ -62,6 +63,14 @@ public class AppProperties {
 
     public void setDebug(boolean debug) {
         this.debug = debug;
+    }
+
+    public TempProfile getTempProfile() {
+        return tempProfile;
+    }
+
+    public void setTempProfile(TempProfile tempProfile) {
+        this.tempProfile = tempProfile;
     }
 
     public PasswordHashes getPasswordHashes() {
@@ -267,17 +276,6 @@ public class AppProperties {
 
     public static class Temperature {
         private Smoothing smoothing = new Smoothing();
-        private int profileTransitionHours = 3;
-
-        public int getProfileTransitionHours() {
-            return profileTransitionHours;
-        }
-
-        public void setProfileTransitionHours(int profileTransitionHours) {
-            if (profileTransitionHours < 0)
-                throw new IllegalArgumentException("profileTransitionHours must not be negative");
-            this.profileTransitionHours = profileTransitionHours;
-        }
 
         public Smoothing getSmoothing() {
             return smoothing;
@@ -285,6 +283,20 @@ public class AppProperties {
 
         public void setSmoothing(Smoothing smoothing) {
             this.smoothing = smoothing;
+        }
+    }
+
+    public static class TempProfile {
+        private int transitionHours = 3;
+
+        public int getTransitionHours() {
+            return transitionHours;
+        }
+
+        public void setTransitionHours(int transitionHours) {
+            if (transitionHours < 0)
+                throw new IllegalArgumentException("transitionHours must not be negative");
+            this.transitionHours = transitionHours;
         }
     }
 

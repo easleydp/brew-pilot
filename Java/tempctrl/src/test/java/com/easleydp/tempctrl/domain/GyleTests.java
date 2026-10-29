@@ -52,6 +52,8 @@ public class GyleTests {
     private Date timeNow;
     private MockEnvironment env;
     private Readings readings;
+    private AppProperties appProps;
+    private int profileTransitionHours;
     private SwitchedOffCheck switchedOffCheck;
 
     private static final int gen1ReadingsCount = 10;
@@ -76,6 +78,7 @@ public class GyleTests {
     @BeforeEach
     public void beforeEach() throws Exception {
         env = new MockEnvironment();
+        env.setProperty("app.temp-profile.transition-hours", "2");
         env.setProperty("app.readings.gen.multiplier", "" + genMultiplier);
         env.setProperty("app.readings.gen.gen1-readings-count", "" + gen1ReadingsCount);
         env.setProperty("app.readings.gen.max", "" + maxGenerations);
@@ -90,13 +93,14 @@ public class GyleTests {
         env.setProperty("app.switched-off-check.ignore-first-hours", "" + 4);
         env.setProperty("app.switched-off-check.fridge-on-time-mins", "" + 5);
         env.setProperty("app.switched-off-check.heater-on-time-mins", "" + 10);
-        AppProperties appProperties = Binder.get(env).bind("app", AppProperties.class).orElseGet(AppProperties::new);
-        readings = appProperties.getReadings();
-        switchedOffCheck = appProperties.getSwitchedOffCheck();
+        appProps = Binder.get(env).bind("app", AppProperties.class).orElseGet(AppProperties::new);
+        readings = appProps.getReadings();
+        profileTransitionHours = appProps.getTempProfile().getTransitionHours();
+        switchedOffCheck = appProps.getSwitchedOffCheck();
 
         Path dataDir = Paths.get(".", "src/test/resources/testData");
         Assert.state(Files.exists(dataDir), "data dir should exist.");
-        chambers = new ChamberRepository(dataDir, readings, switchedOffCheck);
+        chambers = new ChamberRepository(dataDir, appProps);
 
         // Remove any "logs" dirs left over from a previous test
         for (Chamber ch : chambers.getChambers())
@@ -126,7 +130,7 @@ public class GyleTests {
         Files.createDirectories(freshChamberDir.resolve("gyles"));
         Files.copy(chamber.getChamberDir().resolve("chamber.json"), freshChamberDir.resolve("chamber.json"));
 
-        Chamber freshChamber = new Chamber(freshChamberDir, readings, switchedOffCheck);
+        Chamber freshChamber = new Chamber(freshChamberDir, appProps);
         assertNull(freshChamber.getLatestGyle());
 
         Gyle firstGyle = freshChamber.constructNextGyle(chamber.getGyleById(1), "#%d - First gyle");
@@ -134,6 +138,11 @@ public class GyleTests {
         assertEquals(1, firstGyle.id);
         assertEquals(firstGyle, freshChamber.getLatestGyle());
         assertTrue(Files.exists(freshChamberDir.resolve("gyles/1/gyle.json")));
+    }
+
+    @Test
+    public void shouldBindTemperatureProfileTransitionHours() {
+        assertEquals(2, profileTransitionHours);
     }
 
     /**

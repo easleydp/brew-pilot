@@ -21,14 +21,16 @@ public class EmailSender {
 
     private final AppProperties.Mail mail;
 
-    public EmailSender(AppProperties appProperties) {
-        this.mail = appProperties.getMail();
+    public EmailSender(AppProperties appProps) {
+        this.mail = appProps.getMail();
     }
 
     // This public method is invoked through this separate Spring bean's proxy from
-    // EmailServiceImpl, so retry advice can catch failures from the actual mail send.
-    // Keeping @Retryable here, rather than combining it with @Async, ensures retries
-    // run in the asynchronous task instead of ending when that task is merely submitted.
+    // EmailServiceImpl, so retry advice can catch failures from the actual mail
+    // send.
+    // Keeping @Retryable here, rather than combining it with @Async, ensures
+    // retries run in the asynchronous task instead of ending when that task is
+    // merely submitted.
     @Retryable(value = MailSendException.class, maxAttempts = 4, backoff = @Backoff(delay = 60L
             * 1000, multiplier = 2.0))
     public void sendSimpleMessage(String subject, String text) {

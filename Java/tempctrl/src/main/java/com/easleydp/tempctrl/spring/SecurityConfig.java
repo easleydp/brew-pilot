@@ -49,7 +49,7 @@ public class SecurityConfig {
     private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
 
     @Autowired
-    private AppProperties appProperties;
+    private AppProperties appProps;
 
     private static final int loginFailureDelayMs_lowest = 1 * 1000;
     private static final int loginFailureDelayMs_highest = 64 * 1000; // Some power of 2 greater than lowest
@@ -61,12 +61,12 @@ public class SecurityConfig {
         InMemoryUserDetailsManager manager = new InMemoryUserDetailsManager();
 
         // For debug: String pwdHash = encoder().encode("?????");
-        String pwdHash = appProperties.getPasswordHashes().getGuest().replaceAll("#dollar#", "\\$"); // For running from
-                                                                                                     // vscode
+        String pwdHash = appProps.getPasswordHashes().getGuest().replaceAll("#dollar#", "\\$"); // For running from
+                                                                                                // vscode
         Assert.state(pwdHash != null && pwdHash.length() > 0, "Guest password not specified");
         manager.createUser(User.withUsername("guest").password(pwdHash).roles("USER").build());
 
-        pwdHash = appProperties.getPasswordHashes().getAdmin().replaceAll("#dollar#", "\\$"); // For running from vscode
+        pwdHash = appProps.getPasswordHashes().getAdmin().replaceAll("#dollar#", "\\$"); // For running from vscode
         Assert.state(pwdHash != null && pwdHash.length() > 0, "Admin password not specified");
         manager.createUser(User.withUsername("admin").password(pwdHash).roles("USER", "ADMIN").build());
 

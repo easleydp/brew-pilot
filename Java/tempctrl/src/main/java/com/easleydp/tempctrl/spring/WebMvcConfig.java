@@ -15,7 +15,7 @@ import com.easleydp.tempctrl.spring.config.AppProperties;
 @Configuration
 public class WebMvcConfig implements WebMvcConfigurer {
     @Autowired
-    private AppProperties appProperties;
+    private AppProperties appProps;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
@@ -23,7 +23,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
             @Override
             public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
                     throws Exception {
-                Utils.artificialDelayForDebugMode(appProperties.isDebug());
+                Utils.artificialDelayForDebugMode(appProps.isDebug());
                 return true;
             }
         });

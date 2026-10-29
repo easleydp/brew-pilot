@@ -18,7 +18,6 @@ import org.springframework.boot.context.properties.bind.Binder;
 
 import com.easleydp.tempctrl.spring.config.AppProperties;
 import com.easleydp.tempctrl.spring.config.AppProperties.Readings;
-import com.easleydp.tempctrl.spring.config.AppProperties.SwitchedOffCheck;
 
 public class GyleDataGenerator {
     private MockChamberManager chamberManagerSim;
@@ -27,8 +26,8 @@ public class GyleDataGenerator {
     private Gyle gyle;
     private Date startTime;
     private Date timeNow;
+    private AppProperties appProps;
     private Readings readings;
-    private SwitchedOffCheck switchedOffCheck;
 
     private void collectReadings() throws IOException {
         ChamberReadings latestReadings = chamberManagerSim.collectReadings(chamber.getId(), timeNow);
@@ -38,14 +37,13 @@ public class GyleDataGenerator {
 
     @BeforeEach
     public void beforeEach() throws Exception {
-        AppProperties appProperties = Binder.get(new MockEnvironment()).bind("app", AppProperties.class)
+        appProps = Binder.get(new MockEnvironment()).bind("app", AppProperties.class)
                 .orElseGet(AppProperties::new);
-        readings = appProperties.getReadings();
-        switchedOffCheck = appProperties.getSwitchedOffCheck();
+        readings = appProps.getReadings();
 
         Path dataDir = Paths.get(".", "src/test/resources/testData");
         Assert.state(Files.exists(dataDir), "data dir should exist.");
-        chambers = new ChamberRepository(dataDir, readings, switchedOffCheck);
+        chambers = new ChamberRepository(dataDir, appProps);
 
         // Remove any "logs" dirs left over from a previous test
         for (Chamber ch : chambers.getChambers())

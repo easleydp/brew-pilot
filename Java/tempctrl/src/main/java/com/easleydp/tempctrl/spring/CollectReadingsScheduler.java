@@ -32,12 +32,20 @@ public class CollectReadingsScheduler {
     @Autowired
     private ChamberManager chamberManager;
 
+    @Autowired
+    private ClockTrustService clockTrustService;
+
     private IntSummaryStatistics durationStats = new IntSummaryStatistics();
     private boolean first = true;
 
     @Scheduled(fixedRateString = "${app.readings.period-millis}")
     public void collectReadings() {
         logger.debug("collectReadings called");
+
+        if (!clockTrustService.isClockTrusted()) {
+            logger.debug("Skipping readings collection because the system clock is not synchronised.");
+            return;
+        }
 
         Date timeNow = new Date();
         // @formatter:off

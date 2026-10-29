@@ -44,6 +44,9 @@ public class ChamberController {
     @Autowired
     private AppProperties appProps;
 
+    @Autowired
+    private ClockTrustService clockTrustService;
+
     /**
      * This is the initial end point used by the FE home page. The FE may be calling
      * this prospectively, not knowing whether the user is logged-in. Clearly, if
@@ -68,7 +71,8 @@ public class ChamberController {
             .collect(Collectors.toList());
         // @formatter:on
 
-        return new ChamberSummariesAndUserType(chamberSummaries, request.isUserInRole("ADMIN"));
+        return new ChamberSummariesAndUserType(chamberSummaries, request.isUserInRole("ADMIN"),
+                clockTrustService.isClockTrusted());
     }
 
     private static final class ChamberSummariesAndUserType {
@@ -76,10 +80,14 @@ public class ChamberController {
         public final List<ChamberSummary> chamberSummaries;
         @SuppressWarnings("unused")
         public final boolean isAdmin;
+        @SuppressWarnings("unused")
+        public final boolean clockTrusted;
 
-        public ChamberSummariesAndUserType(List<ChamberSummary> chamberSummaries, boolean isAdmin) {
+        public ChamberSummariesAndUserType(List<ChamberSummary> chamberSummaries, boolean isAdmin,
+                boolean clockTrusted) {
             this.chamberSummaries = chamberSummaries;
             this.isAdmin = isAdmin;
+            this.clockTrusted = clockTrusted;
         }
     }
 

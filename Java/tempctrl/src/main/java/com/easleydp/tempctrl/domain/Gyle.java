@@ -131,7 +131,7 @@ public class Gyle extends GyleDto {
     @JsonIgnore
     public TemperatureProfile getTemperatureProfileDomain() {
         TemperatureProfileDto dto = getTemperatureProfile();
-        return new TemperatureProfile(dto);
+        return new TemperatureProfile(dto, readings.getTemp().getProfileTransitionHours());
     }
 
     @JsonIgnore

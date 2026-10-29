@@ -21,16 +21,28 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
  * be held indefinitely.
  *
  * This class takes care of interpolating between set points to calculate a
- * target temperature at any point in time.
+ * target temperature at any point in time. Stored points remain unchanged;
+ * target temperatures cut corners around each waypoint.
  */
 public class TemperatureProfile extends TemperatureProfileDto {
     private static final Logger logger = LoggerFactory.getLogger(TemperatureProfile.class);
+    private static final long MILLIS_PER_HOUR = 1000L * 60 * 60;
+    private static final int DEFAULT_TRANSITION_HOURS = 3;
+    private final long transitionHalfWidthMillis;
 
     public TemperatureProfile(TemperatureProfileDto temperatureProfileDto) {
+        this(temperatureProfileDto, DEFAULT_TRANSITION_HOURS);
+    }
+
+    public TemperatureProfile(TemperatureProfileDto temperatureProfileDto, int transitionHours) {
+        if (transitionHours < 0)
+            throw new IllegalArgumentException("transitionHours must not be negative");
         BeanUtils.copyProperties(temperatureProfileDto, this);
+        this.transitionHalfWidthMillis = transitionHours * MILLIS_PER_HOUR;
     }
 
     public TemperatureProfile() {
+        this.transitionHalfWidthMillis = DEFAULT_TRANSITION_HOURS * MILLIS_PER_HOUR;
     }
 
     /**
@@ -46,9 +58,8 @@ public class TemperatureProfile extends TemperatureProfileDto {
         if (points.isEmpty()) {
             if (hoursSinceStart != 0)
                 throw new IllegalArgumentException("First point must have be at t0");
-        } else {
-            if (hoursSinceStart <= points.get(points.size() - 1).getHoursSinceStart())
-                throw new IllegalArgumentException("Point being added must occur after last point");
+        } else if (hoursSinceStart < points.get(points.size() - 1).getHoursSinceStart()) {
+            throw new IllegalArgumentException("Point being added must not precede the last point");
         }
         points.add(point);
     }
@@ -57,11 +68,32 @@ public class TemperatureProfile extends TemperatureProfileDto {
      * @return the target temperature (degrees x 10) at any given time since the
      *         profile started.
      *
-     *         If the specified millisSinceStart is between two points an
-     *         interpolated value is calculated.
+     *         Evaluation order matters: a coincident-time step is checked first
+     *         and smoothed across a window centred on the step. Otherwise, a
+     *         waypoint corner is cut when the time falls within its transition
+     *         window. At all other times, the original profile is linearly
+     *         interpolated (or held beyond its final point).
      *
-     *         If the specified millisSinceStart is before/after the first/last
-     *         point the first/last set point temperature is returned.
+     *         If the specified `millisSinceStart` is between two points an
+     *         interpolated value is calculated. In addition, if `millisSinceStart`
+     *         is within `transitionHours` of either point then a corner-cutting
+     *         function is applied to smooth the transition from one segment of the
+     *         profile to the next. (This is analogous to the way an aircraft
+     *         follows a flight plan's waypoints in the horizontal domain.)
+     *
+     *         If the specified millisSinceStart is before the first point then the
+     *         first set point temperature is returned.
+     *         If the specified millisSinceStart is after the last point then the
+     *         last set point temperature is returned UNLESS the time since the last
+     *         point is less than `transitionHours` in which case the usual
+     *         corner-cutting function is applied (i.e. we cut into the 'held'
+     *         temperature).
+     *
+     *         Consistent with the smoothing policy, if `millisSinceStart` coincides
+     *         precisely with a profile step change (i.e. two adjacent points with
+     *         the same time) then the the mid-way set temperature of the two
+     *         coincident points is returned (visualise an 'S' curve for an upward
+     *         step change).
      */
     public int getTargetTempAt(final long millisSinceStart) {
         if (points.isEmpty())
@@ -75,6 +107,122 @@ public class TemperatureProfile extends TemperatureProfileDto {
         if (millisSinceStart < 0)
             return firstPoint.getTargetTemp();
 
+        // Check coincident-time points first: these represent instantaneous steps
+        // and use a smooth S-curve rather than waypoint corner cutting.
+        for (int i = 1; i < points.size(); i++) {
+            PointDto beforeStep = points.get(i - 1);
+            PointDto afterStep = points.get(i);
+            if (beforeStep.getMillisSinceStart() == afterStep.getMillisSinceStart()
+                    && beforeStep.getTargetTemp() != afterStep.getTargetTemp()) {
+                long transitionHalfWidthMillis = getStepTransitionHalfWidthMillis(i);
+                long stepMillis = afterStep.getMillisSinceStart();
+                if (transitionHalfWidthMillis > 0
+                        && millisSinceStart >= stepMillis - transitionHalfWidthMillis
+                        && millisSinceStart <= stepMillis + transitionHalfWidthMillis) {
+                    return getStepChangeTargetTempAt(beforeStep, afterStep, stepMillis, millisSinceStart,
+                            transitionHalfWidthMillis);
+                }
+            }
+        }
+
+        // Otherwise, look for a waypoint whose corner-cut window contains this time.
+        for (int i = 1; i < points.size(); i++) {
+            PointDto point = points.get(i);
+            long halfWidthMillis = getTransitionHalfWidthMillis(i);
+            long pointMillis = point.getMillisSinceStart();
+            if (halfWidthMillis > 0 && millisSinceStart >= pointMillis - halfWidthMillis
+                    && millisSinceStart <= pointMillis + halfWidthMillis) {
+                return getCornerCutTargetTempAt(i, millisSinceStart, halfWidthMillis);
+            }
+        }
+
+        return (int) Math.round(getLinearTargetTempAt(millisSinceStart));
+    }
+
+    /**
+     * Returns the step's configured half-window, capped to half the time gap to
+     * the nearest distinct-time point on either side. This keeps the smoothed
+     * step within its surrounding profile segments; a zero-width result leaves
+     * the step unsmoothed.
+     */
+    private long getStepTransitionHalfWidthMillis(int stepIndex) {
+        long halfWidth = transitionHalfWidthMillis;
+        long stepMillis = points.get(stepIndex).getMillisSinceStart();
+
+        // Find the closest earlier point at a distinct time to cap the left side.
+        for (int i = stepIndex - 1; i >= 0; i--) {
+            long pointMillis = points.get(i).getMillisSinceStart();
+            if (pointMillis < stepMillis) {
+                halfWidth = Math.min(halfWidth, (stepMillis - pointMillis) / 2);
+                break;
+            }
+        }
+        // Find the closest later point at a distinct time to cap the right side.
+        for (int i = stepIndex + 1; i < points.size(); i++) {
+            long pointMillis = points.get(i).getMillisSinceStart();
+            if (pointMillis > stepMillis) {
+                halfWidth = Math.min(halfWidth, (pointMillis - stepMillis) / 2);
+                break;
+            }
+        }
+        return halfWidth;
+    }
+
+    /**
+     * Smooths an instantaneous step with a cubic smoothstep. The transition
+     * begins and ends at the configured window boundaries with zero slope, and
+     * reaches the midpoint temperature at the step time.
+     */
+    private int getStepChangeTargetTempAt(PointDto beforeStep, PointDto afterStep, long stepMillis,
+            long millisSinceStart, long halfWidthMillis) {
+        double progress = (double) (millisSinceStart - (stepMillis - halfWidthMillis))
+                / (2 * halfWidthMillis);
+        double easedProgress = progress * progress * (3 - 2 * progress);
+        double targetTemp = beforeStep.getTargetTemp()
+                + (afterStep.getTargetTemp() - beforeStep.getTargetTemp()) * easedProgress;
+        return (int) Math.round(targetTemp);
+    }
+
+    private long getTransitionHalfWidthMillis(int pointIndex) {
+        if (transitionHalfWidthMillis == 0)
+            return 0;
+        long previousGap = points.get(pointIndex).getMillisSinceStart()
+                - points.get(pointIndex - 1).getMillisSinceStart();
+        long halfWidth = Math.min(transitionHalfWidthMillis, previousGap / 2);
+        if (pointIndex < points.size() - 1) {
+            long nextGap = points.get(pointIndex + 1).getMillisSinceStart()
+                    - points.get(pointIndex).getMillisSinceStart();
+            halfWidth = Math.min(halfWidth, nextGap / 2);
+        }
+        return halfWidth;
+    }
+
+    /**
+     * Cuts the waypoint corner with a quadratic Bezier fillet. The waypoint is
+     * the Bezier control point, so the curve approaches and leaves it tangentially
+     * without passing through it. Outside the fillet, the original straight
+     * profile segments are followed exactly.
+     */
+    private int getCornerCutTargetTempAt(int pointIndex, long millisSinceStart, long halfWidthMillis) {
+        PointDto point = points.get(pointIndex);
+        long pointMillis = point.getMillisSinceStart();
+        long startMillis = pointMillis - halfWidthMillis;
+        long endMillis = pointMillis + halfWidthMillis;
+        double startTemp = getLinearTargetTempAt(startMillis);
+        double endTemp = pointIndex == points.size() - 1 ? point.getTargetTemp()
+                : getLinearTargetTempAt(endMillis);
+
+        // The fillet endpoints are equally spaced from the waypoint in time, so
+        // the Bezier parameter advances linearly with millisSinceStart.
+        double progress = (double) (millisSinceStart - startMillis) / (2 * halfWidthMillis);
+        double remaining = 1 - progress;
+        double targetTemp = remaining * remaining * startTemp
+                + 2 * remaining * progress * point.getTargetTemp()
+                + progress * progress * endTemp;
+        return (int) Math.round(targetTemp);
+    }
+
+    private double getLinearTargetTempAt(long millisSinceStart) {
         PointDto prevPoint = null;
         PointDto point = null;
         for (Iterator<PointDto> iter = points.iterator(); iter.hasNext();) {
@@ -93,7 +241,7 @@ public class TemperatureProfile extends TemperatureProfileDto {
                 final long xB = point.getMillisSinceStart();
                 final long x = millisSinceStart;
                 // https://en.wikipedia.org/wiki/Interpolation#Linear_interpolation
-                return Math.round(yA + (yB - yA) * (x - xA) / (xB - xA));
+                return yA + (double) (yB - yA) * (x - xA) / (xB - xA);
             }
         }
         return point.getTargetTemp();
@@ -128,7 +276,7 @@ public class TemperatureProfile extends TemperatureProfileDto {
                 int tempDrop = pt.getTargetTemp() - nextPt.getTargetTemp();
                 if (tempDrop >= 50) { // Remember, temperature values are degrees x10
                     int hours = nextPt.getHoursSinceStart() - pt.getHoursSinceStart();
-                    int gradient = tempDrop / hours;
+                    int gradient = hours == 0 ? Integer.MAX_VALUE : tempDrop / hours;
                     if (gradient >= 5) { // i.e. must be 0.5°C/hr or steeper
                         return pt;
                     }

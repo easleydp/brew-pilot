@@ -267,6 +267,18 @@ public class AppProperties {
 
     public static class Temperature {
         private Smoothing smoothing = new Smoothing();
+        private int profileTransitionHours = 3;
+
+        public int getProfileTransitionHours() {
+            return profileTransitionHours;
+        }
+
+        public void setProfileTransitionHours(int profileTransitionHours) {
+            if (profileTransitionHours < 0)
+                throw new IllegalArgumentException("profileTransitionHours must not be negative");
+            this.profileTransitionHours = profileTransitionHours;
+        }
+
         public Smoothing getSmoothing() {
             return smoothing;
         }

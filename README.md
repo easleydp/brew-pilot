@@ -20,6 +20,10 @@ The management interface supports:
 - Charting the progress of a gyle over time (in terms of target vs. actual temperature, heater & fridge activity, etc.)
 - System status report (health, uptime, free resources, etc.)
 
+Synthesised temperature targets cut the corners around profile waypoints, rather than passing directly through them. The profile editor continues to show straight lines between the points; the diagram below illustrates how the runtime target rounds an angled transition.
+
+![Example of a synthesised temperature profile cutting the corner at a waypoint](README.resources/curved-profile-example.svg)
+
 The frontend code currently assumes one fermenter and one beer fridge, and the Arduino code currently assumes no more than two chambers. Throughout the stack, though, the software lends itself to straightforward adaptation to support other setups.
 
 ## Key components

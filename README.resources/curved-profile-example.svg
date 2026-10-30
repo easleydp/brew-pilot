@@ -14,7 +14,7 @@
   </style>
 
   <rect width="1040" height="590" fill="#ffffff"/>
-  <text class="title" x="120" y="39">A right-angle profile transition, smoothed</text>
+  <text class="title" x="120" y="39">A profile transition, smoothed</text>
   <text class="subtitle" x="120" y="64">12-hour example · 3-hour transition window either side · temperatures in °C</text>
 
   <!-- Plot grid: 0–12 hours and 8–24 °C -->

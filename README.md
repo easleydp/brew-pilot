@@ -144,6 +144,10 @@ Seriously, unless you really know what you're doing it's a good idea to get an e
 For the Spring Boot app, you should review and modify as necessary all the properties in
 `application-local.properties`. The properties in `application.properties` generally don't need to be changed but but you
 are free to override them in your `application-local.properties`.
+If a battery-backed RTC is installed and configured on the Raspberry Pi, set
+`app.clock-trust.rtc-enabled=true` in `application-local.properties`. When NTP is unavailable at startup,
+the app will then permit control only if the system clock is later than 1 January 2020 UTC.
+
 Best to install the app as a service. (In my case the `init.d` service file is `/lib/systemd/system/brewpilot.service`.)
 Your paths may vary but here are the commands I use:
 

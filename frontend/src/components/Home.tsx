@@ -11,6 +11,8 @@ import Loading from './Loading';
 import Gauge from './Gauge';
 import IChamberSummary from '../api/IChamberSummary';
 
+const STATUS_REFRESH_INTERVAL_MILLIS = 180000;
+
 type HomeProps = {
   errorMessage: string | null;
 };
@@ -22,6 +24,7 @@ const Home = ({ errorMessage }: HomeProps) => {
   const [loading, setLoading] = useState<boolean>(true);
   const { state, dispatch } = useAppState();
   const [chamberSummaries, setChamberSummaries] = useState<IChamberSummary[] | null>(null);
+  const [controlTimeEstablished, setControlTimeEstablished] = useState<boolean | null>(null);
   const isAuth = state && state.isAuth;
 
   const handleAuthError = () => {
@@ -33,26 +36,27 @@ const Home = ({ errorMessage }: HomeProps) => {
   useEffect(() => {
     console.info(Auth[isAuth], '=================== Home useEffect invoked ======================');
 
-    // Returns promise for retrieving chamber summaries
-    const getChamberSummaries = (): Promise<IChamberSummary[]> => {
+    let active = true;
+    const getChamberSummaries = () => {
       const url = '/tempctrl/guest/chamber-summaries-and-user-type';
-      return new Promise((resolve, reject) => {
-        axios
-          .get(url)
-          .then((response) => {
-            return resolve(response.data.chamberSummaries);
-          })
-          .catch((error) => {
-            console.debug(url + ' ERROR', error);
-            const status = error?.response?.status;
-            if (status === 403 || status === 401) {
-              console.debug(`Redirecting to signin after ${status}`);
-              history.push({ pathname: '/signin', state: { from: location.pathname } });
-              dispatch({ type: 'LOGOUT' });
-            }
-            reject(error);
-          });
-      });
+      axios
+        .get(url)
+        .then((response) => {
+          if (active) {
+            setLoading(false);
+            setChamberSummaries(response.data.chamberSummaries);
+            setControlTimeEstablished(response.data.controlTimeEstablished);
+          }
+        })
+        .catch((error) => {
+          console.debug(url + ' ERROR', error);
+          const status = error?.response?.status;
+          if (status === 403 || status === 401) {
+            console.debug(`Redirecting to signin after ${status}`);
+            history.push({ pathname: '/signin', state: { from: location.pathname } });
+            dispatch({ type: 'LOGOUT' });
+          }
+        });
     };
 
     if (isAuth === Auth.NotLoggedIn) {
@@ -65,10 +69,12 @@ const Home = ({ errorMessage }: HomeProps) => {
       // and update the isAuth state variable, which will cause this useEffect hook to re-execute.
       console.debug('user has hit F5?');
     } else {
-      getChamberSummaries().then((summaries) => {
-        setLoading(false);
-        setChamberSummaries(summaries);
-      });
+      getChamberSummaries();
+      const interval = window.setInterval(getChamberSummaries, STATUS_REFRESH_INTERVAL_MILLIS);
+      return () => {
+        active = false;
+        window.clearInterval(interval);
+      };
     }
   }, [dispatch, history, isAuth, location.pathname]);
 
@@ -92,9 +98,16 @@ const Home = ({ errorMessage }: HomeProps) => {
   if (loading) {
     return <Loading />;
   }
-  if (chamberSummaries && chamberSummaries.length) {
-    return (
-      <div className="home container-fluid">
+  return (
+    <div className="home container-fluid">
+      {controlTimeEstablished === false && (
+        <div className="alert alert-warning" role="status">
+          <strong>System clock not synchronised.</strong> Profile updates and readings are paused.
+          The Arduino will continue using its last saved chamber settings. Normal operation will
+          resume automatically when the system clock is synchronised.
+        </div>
+      )}
+      {chamberSummaries && chamberSummaries.length ? (
         <div className="row">
           {chamberSummaries.map((cs) => {
             return (
@@ -104,10 +117,11 @@ const Home = ({ errorMessage }: HomeProps) => {
             );
           })}
         </div>
-      </div>
-    );
-  }
-  return <div className="error">No chamber summaries!</div>;
+      ) : (
+        <div className="error">No chamber summaries!</div>
+      )}
+    </div>
+  );
 };
 
 export default Home;

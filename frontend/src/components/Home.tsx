@@ -24,7 +24,7 @@ const Home = ({ errorMessage }: HomeProps) => {
   const [loading, setLoading] = useState<boolean>(true);
   const { state, dispatch } = useAppState();
   const [chamberSummaries, setChamberSummaries] = useState<IChamberSummary[] | null>(null);
-  const [clockTrusted, setClockTrusted] = useState<boolean | null>(null);
+  const [controlTimeEstablished, setControlTimeEstablished] = useState<boolean | null>(null);
   const isAuth = state && state.isAuth;
 
   const handleAuthError = () => {
@@ -45,7 +45,7 @@ const Home = ({ errorMessage }: HomeProps) => {
           if (active) {
             setLoading(false);
             setChamberSummaries(response.data.chamberSummaries);
-            setClockTrusted(response.data.clockTrusted);
+            setControlTimeEstablished(response.data.controlTimeEstablished);
           }
         })
         .catch((error) => {
@@ -100,7 +100,7 @@ const Home = ({ errorMessage }: HomeProps) => {
   }
   return (
     <div className="home container-fluid">
-      {clockTrusted === false && (
+      {controlTimeEstablished === false && (
         <div className="alert alert-warning" role="status">
           <strong>System clock not synchronised.</strong> Profile updates and readings are paused.
           The Arduino will continue using its last saved chamber settings. Normal operation will

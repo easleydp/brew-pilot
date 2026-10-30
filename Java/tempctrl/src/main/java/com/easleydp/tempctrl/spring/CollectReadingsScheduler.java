@@ -42,8 +42,8 @@ public class CollectReadingsScheduler {
     public void collectReadings() {
         logger.debug("collectReadings called");
 
-        if (!clockTrustService.isClockTrusted()) {
-            logger.debug("Skipping readings collection because the system clock is not synchronised.");
+        if (!clockTrustService.isControlTimeEstablished()) {
+            logger.debug("Skipping readings collection because clock time has not been established this run.");
             return;
         }
 

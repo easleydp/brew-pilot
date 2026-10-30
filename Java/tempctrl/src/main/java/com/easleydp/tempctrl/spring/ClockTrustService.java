@@ -16,7 +16,12 @@ public class ClockTrustService {
             "timedatectl", "show", "--property=NTPSynchronized", "--value"
     };
 
+    // `clockTrusted` can flip between true and false as NTP access comes and goes,
+    // whereas `controlTimeEstablished` latches true (the hardware clock continues
+    // keeping time).
     private volatile boolean clockTrusted;
+    private volatile boolean controlTimeEstablished;
+
     private Boolean previousClockTrusted;
 
     @PostConstruct
@@ -33,16 +38,26 @@ public class ClockTrustService {
         return clockTrusted;
     }
 
+    public boolean isControlTimeEstablished() {
+        return controlTimeEstablished;
+    }
+
     synchronized void updateClockTrust(String commandOutput) {
         boolean trusted = "yes".equals(commandOutput);
         if (previousClockTrusted == null || previousClockTrusted != trusted) {
             if (trusted) {
                 logger.info("System clock is synchronised.");
+            } else if (controlTimeEstablished) {
+                logger.warn(
+                        "System clock is no longer synchronised; control continues using the established system time.");
             } else {
-                logger.warn("System clock is not synchronised; chamber control and readings collection are paused.");
+                logger.warn("System clock is not synchronised; control remains paused until synchronisation.");
             }
             previousClockTrusted = trusted;
         }
         clockTrusted = trusted;
+        if (trusted) {
+            controlTimeEstablished = true;
+        }
     }
 }

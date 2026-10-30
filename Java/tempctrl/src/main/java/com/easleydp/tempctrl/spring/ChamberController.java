@@ -72,7 +72,7 @@ public class ChamberController {
         // @formatter:on
 
         return new ChamberSummariesAndUserType(chamberSummaries, request.isUserInRole("ADMIN"),
-                clockTrustService.isClockTrusted());
+                clockTrustService.isClockTrusted(), clockTrustService.isControlTimeEstablished());
     }
 
     private static final class ChamberSummariesAndUserType {
@@ -82,12 +82,15 @@ public class ChamberController {
         public final boolean isAdmin;
         @SuppressWarnings("unused")
         public final boolean clockTrusted;
+        @SuppressWarnings("unused")
+        public final boolean controlTimeEstablished;
 
         public ChamberSummariesAndUserType(List<ChamberSummary> chamberSummaries, boolean isAdmin,
-                boolean clockTrusted) {
+                boolean clockTrusted, boolean controlTimeEstablished) {
             this.chamberSummaries = chamberSummaries;
             this.isAdmin = isAdmin;
             this.clockTrusted = clockTrusted;
+            this.controlTimeEstablished = controlTimeEstablished;
         }
     }
 
